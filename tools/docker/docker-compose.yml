@@ -1,0 +1,43 @@
+version: '3.8'
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: rms_identity_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: rms_identity
+      MYSQL_USER: rms_user
+      MYSQL_PASSWORD: rms_pass
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./RMS.Identity.Service/reference/db/sql_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  identity:
+    build:
+      context: ../..   # adjust depending on how you run compose
+      dockerfile: tools/docker/Dockerfile
+    image: rms/identity:dev
+    container_name: rms_identity_api
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - ConnectionStrings__Default=Server=mysql;Port=3306;Database=rms_identity;User=rms_user;Password=rms_pass;
+      - Jwt__Issuer=rms.identity
+      - Jwt__Audience=rms.api
+      - Jwt__SigningKeyEnvVar=JWT_SIGNING_KEY
+      - JWT_SIGNING_KEY=local-dev-super-secret-change-me
+      - ASPNETCORE_ENVIRONMENT=Development
+    ports:
+      - "8080:8080"
+    restart: on-failure
+
+volumes:
+  mysql_data:

@@ -1,0 +1,215 @@
+openapi: 3.0.3
+info:
+  title: Retail Identity Service API
+  version: "1.0.0"
+  description: |
+    Identity & Tenant service for Retail Management System.
+    Issues JWTs containing `companyUuid`, `userUuid`, and `roles`.
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+        - companyUuid
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        companyUuid:
+          type: string
+          description: Company UUID (client may supply to select tenant during login)
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+        tokenType:
+          type: string
+          default: Bearer
+        user:
+          $ref: '#/components/schemas/UserResponse'
+    RefreshRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+    RefreshResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+    CreateUserRequest:
+      type: object
+      required:
+        - username
+        - password
+        - roles
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        displayName:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+            enum: [COMPANY_ADMIN, STORE_MANAGER, CASHIER, INVENTORY_STAFF]
+    UserResponse:
+      type: object
+      properties:
+        userUuid:
+          type: string
+        username:
+          type: string
+        displayName:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+
+    CompanyResponse:
+      type: object
+      properties:
+        companyUuid:
+          type: string
+        companyCode:
+          type: string
+        companyName:
+          type: string
+        companyGstin:
+          type: string
+
+paths:
+  /api/v1/auth/login:
+    post:
+      summary: Login and receive JWT + refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+
+  /api/v1/auth/refresh:
+    post:
+      summary: Exchange refresh token for new access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+        '401':
+          description: Invalid or expired refresh token
+
+  /api/v1/users:
+    post:
+      summary: Create a new user in the tenant (Company)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthorized
+
+  /api/v1/users/{userUuid}:
+    get:
+      summary: Get user by UUID (within tenant)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userUuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          description: Not found
+        '401':
+          description: Unauthorized
+
+  /api/v1/tenants/{companyUuid}:
+    get:
+      summary: Get tenant (company) metadata
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: companyUuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Company metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyResponse'
+        '404':
+          description: Not found
+
+security:
+  - bearerAuth: []
