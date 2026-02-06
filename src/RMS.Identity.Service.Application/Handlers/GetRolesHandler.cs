@@ -9,7 +9,10 @@ namespace RMS.Identity.Service.Application.Handlers
         private readonly UserRoleRepository _userRoleRepo;
         public GetRolesHandler(UserRoleRepository userRoleRepo) => _userRoleRepo = userRoleRepo;
 
-        public Task<List<Domain.Entities.Role>> Handle(GetRolesQuery request, CancellationToken cancellationToken)
-            => _userRoleRepo.GetRolesForUserAsync(request.UserId) ?? Task.FromResult(new List<Domain.Entities.Role>());
+        public async Task<List<Domain.Entities.Role>> Handle(GetRolesQuery request, CancellationToken cancellationToken)
+        {
+            var roles = await _userRoleRepo.GetRolesForUserAsync(request.UserId);
+            return roles?.ToList() ?? new List<Domain.Entities.Role>();
+        }
     }
 }
