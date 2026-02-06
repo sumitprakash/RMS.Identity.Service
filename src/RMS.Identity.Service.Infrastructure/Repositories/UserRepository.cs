@@ -1,10 +1,11 @@
 using MySqlConnector;
+using RMS.Identity.Service.Application.Repositories;
 using RMS.Identity.Service.Domain.Entities;
 using RMS.Identity.Service.Infrastructure.Data;
 using RMS.Identity.Service.Infrastructure.Utils;
 using System.Data.Common;
 
-namespace RMS.Identity.Service.Infrastructure.Repositories.Implementation
+namespace RMS.Identity.Service.Infrastructure.Repositories
 {
     public class UserRepository : IUserRepository
     {
@@ -36,7 +37,7 @@ LIMIT 1;";
                 IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive")),
                 IsDeleted = reader.GetBoolean(reader.GetOrdinal("IsDeleted")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                CreatedBy = reader.IsDBNull(reader.GetOrdinal("CreatedBy")) ? null : (long?)reader.GetInt64(reader.GetOrdinal("CreatedBy")),
+                CreatedBy = reader.IsDBNull(reader.GetOrdinal("CreatedBy")) ? null : reader.GetInt64(reader.GetOrdinal("CreatedBy")),
                 Roles = new List<Role>()
             };
 
@@ -67,7 +68,7 @@ LIMIT 1;";
                 IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive")),
                 IsDeleted = reader.GetBoolean(reader.GetOrdinal("IsDeleted")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                CreatedBy = reader.IsDBNull(reader.GetOrdinal("CreatedBy")) ? null : (long?)reader.GetInt64(reader.GetOrdinal("CreatedBy")),
+                CreatedBy = reader.IsDBNull(reader.GetOrdinal("CreatedBy")) ? null : reader.GetInt64(reader.GetOrdinal("CreatedBy")),
                 Roles = new List<Role>()
             };
 
@@ -98,7 +99,7 @@ LIMIT 1;";
                 IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive")),
                 IsDeleted = reader.GetBoolean(reader.GetOrdinal("IsDeleted")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                CreatedBy = reader.IsDBNull(reader.GetOrdinal("CreatedBy")) ? null : (long?)reader.GetInt64(reader.GetOrdinal("CreatedBy")),
+                CreatedBy = reader.IsDBNull(reader.GetOrdinal("CreatedBy")) ? null : reader.GetInt64(reader.GetOrdinal("CreatedBy")),
                 Roles = new List<Role>()
             };
 
@@ -138,7 +139,7 @@ WHERE u.CompanyID = @CompanyID AND u.Username = @Username AND u.IsDeleted = 0;";
                         IsActive = reader.GetBoolean(reader.GetOrdinal("IsActive")),
                         IsDeleted = reader.GetBoolean(reader.GetOrdinal("IsDeleted")),
                         CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                        CreatedBy = reader.IsDBNull(reader.GetOrdinal("CreatedBy")) ? null : (long?)reader.GetInt64(reader.GetOrdinal("CreatedBy")),
+                        CreatedBy = reader.IsDBNull(reader.GetOrdinal("CreatedBy")) ? null : reader.GetInt64(reader.GetOrdinal("CreatedBy")),
                         Roles = new List<Role>()
                     };
                 }
@@ -164,7 +165,7 @@ WHERE u.CompanyID = @CompanyID AND u.Username = @Username AND u.IsDeleted = 0;";
         public async Task<long> CreateAsync(UserAccount user)
         {
             using var conn = await _dbFactory.CreateOpenConnectionAsync();
-            using var tx = await ((MySqlConnector.MySqlConnection)conn).BeginTransactionAsync();
+            using var tx = await ((MySqlConnection)conn).BeginTransactionAsync();
             try
             {
                 using var cmd = conn.CreateCommand();

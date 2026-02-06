@@ -1,9 +1,10 @@
+using RMS.Identity.Service.Application.Repositories;
 using RMS.Identity.Service.Domain.Entities;
 using RMS.Identity.Service.Infrastructure.Data;
 using RMS.Identity.Service.Infrastructure.Utils;
 using System.Data.Common;
 
-namespace RMS.Identity.Service.Infrastructure.Repositories.Implementation
+namespace RMS.Identity.Service.Infrastructure.Repositories
 {
     public class RefreshTokenRepository : IRefreshTokenRepository
     {
@@ -42,7 +43,7 @@ SELECT LAST_INSERT_ID();";
                 TokenHash = reader.GetString(reader.GetOrdinal("TokenHash")),
                 ExpiresAt = reader.GetDateTime(reader.GetOrdinal("ExpiresAt")),
                 CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                RevokedAt = reader.IsDBNull(reader.GetOrdinal("RevokedAt")) ? null : (DateTime?)reader.GetDateTime(reader.GetOrdinal("RevokedAt")),
+                RevokedAt = reader.IsDBNull(reader.GetOrdinal("RevokedAt")) ? null : reader.GetDateTime(reader.GetOrdinal("RevokedAt")),
                 ReplacedByTokenHash = reader.IsDBNull(reader.GetOrdinal("ReplacedByTokenHash")) ? null : reader.GetString(reader.GetOrdinal("ReplacedByTokenHash"))
             };
         }
@@ -55,6 +56,11 @@ SELECT LAST_INSERT_ID();";
             ((MySqlConnector.MySqlParameterCollection)cmd.Parameters).Add(DbParameterFactory.Create("@ReplacedBy", replacedByTokenHash ?? (object)DBNull.Value));
             ((MySqlConnector.MySqlParameterCollection)cmd.Parameters).Add(DbParameterFactory.Create("@Id", refreshTokenId, System.Data.DbType.Int64));
             await ((DbCommand)cmd).ExecuteNonQueryAsync();
+        }
+
+        public Task<RefreshToken> GetByHashAsync(string hashed)
+        {
+            throw new NotImplementedException();
         }
     }
 }

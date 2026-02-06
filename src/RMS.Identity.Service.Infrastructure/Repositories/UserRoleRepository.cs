@@ -1,9 +1,10 @@
+using RMS.Identity.Service.Application.Repositories;
 using RMS.Identity.Service.Domain.Entities;
 using RMS.Identity.Service.Infrastructure.Data;
 using RMS.Identity.Service.Infrastructure.Utils;
 using System.Data.Common;
 
-namespace RMS.Identity.Service.Infrastructure.Repositories.Implementation
+namespace RMS.Identity.Service.Infrastructure.Repositories
 {
     public class UserRoleRepository : IUserRoleRepository
     {

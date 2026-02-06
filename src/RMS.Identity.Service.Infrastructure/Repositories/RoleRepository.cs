@@ -1,9 +1,10 @@
+using RMS.Identity.Service.Application.Repositories;
 using RMS.Identity.Service.Domain.Entities;
 using RMS.Identity.Service.Infrastructure.Data;
 using RMS.Identity.Service.Infrastructure.Utils;
 using System.Data.Common;
 
-namespace RMS.Identity.Service.Infrastructure.Repositories.Implementation
+namespace RMS.Identity.Service.Infrastructure.Repositories
 {
     public class RoleRepository : IRoleRepository
     {
@@ -15,7 +16,7 @@ namespace RMS.Identity.Service.Infrastructure.Repositories.Implementation
             using var conn = await _dbFactory.CreateOpenConnectionAsync();
             using var cmd = conn.CreateCommand();
             cmd.CommandText = @"SELECT RoleID, RoleUUID, Name, Description, IsSystemRole, IsDeleted, CreatedAt FROM Role WHERE Name = @Name AND IsDeleted = 0 LIMIT 1;";
-            ((MySqlConnector.MySqlParameterCollection)cmd.Parameters).Add(RMS.Identity.Service.Infrastructure.Utils.DbParameterFactory.Create("@Name", name));
+            ((MySqlConnector.MySqlParameterCollection)cmd.Parameters).Add(DbParameterFactory.Create("@Name", name));
             using var reader = await ((DbCommand)cmd).ExecuteReaderAsync();
             if (!await reader.ReadAsync()) return null;
             return new Role

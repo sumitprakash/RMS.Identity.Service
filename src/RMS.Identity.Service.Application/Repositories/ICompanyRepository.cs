@@ -1,6 +1,6 @@
 using RMS.Identity.Service.Domain.Entities;
 
-namespace RMS.Identity.Service.Infrastructure.Repositories
+namespace RMS.Identity.Service.Application.Repositories
 {
     public interface ICompanyRepository
     {

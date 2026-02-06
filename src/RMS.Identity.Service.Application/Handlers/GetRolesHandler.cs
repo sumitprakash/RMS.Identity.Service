@@ -1,13 +1,13 @@
 ﻿using MediatR;
 using RMS.Identity.Service.Application.Queries;
-using RMS.Identity.Service.Infrastructure.Repositories.Implementation;
+using RMS.Identity.Service.Application.Repositories;
 
 namespace RMS.Identity.Service.Application.Handlers
 {
     public class GetRolesHandler : IRequestHandler<GetRolesQuery, List<Domain.Entities.Role>>
     {
-        private readonly UserRoleRepository _userRoleRepo;
-        public GetRolesHandler(UserRoleRepository userRoleRepo) => _userRoleRepo = userRoleRepo;
+        private readonly IUserRoleRepository _userRoleRepo;
+        public GetRolesHandler(IUserRoleRepository userRoleRepo) => _userRoleRepo = userRoleRepo;
 
         public async Task<List<Domain.Entities.Role>> Handle(GetRolesQuery request, CancellationToken cancellationToken)
         {

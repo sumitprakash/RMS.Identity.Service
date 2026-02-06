@@ -2,32 +2,36 @@
 using RMS.Identity.Service.Infrastructure.Data;
 using RMS.Identity.Service.Application.Commands;
 
-public class TransactionBehavior<TRequest, TResponse>
-    : IPipelineBehavior<TRequest, TResponse>
+namespace RMS.Identity.Service.Infrastructure.MediatR
 {
-    private readonly IUnitOfWork _uow;
-
-    public TransactionBehavior(IUnitOfWork uow)
+    public class TransactionBehavior<TRequest, TResponse>
+        : IPipelineBehavior<TRequest, TResponse>
+        where TRequest : notnull
     {
-        _uow = uow;
-    }
+        private readonly IUnitOfWork _uow;
 
-    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
-    {
-        if (request is not ITransactionalCommand)
-            return await next();
-
-        _uow.Begin();
-        try
+        public TransactionBehavior(IUnitOfWork uow)
         {
-            var response = await next();
-            _uow.Commit();
-            return response;
+            _uow = uow;
         }
-        catch
+
+        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
         {
-            _uow.Rollback();
-            throw;
+            if (request is not ITransactionalCommand)
+                return await next();
+
+            _uow.Begin();
+            try
+            {
+                var response = await next();
+                _uow.Commit();
+                return response;
+            }
+            catch
+            {
+                _uow.Rollback();
+                throw;
+            }
         }
     }
 }

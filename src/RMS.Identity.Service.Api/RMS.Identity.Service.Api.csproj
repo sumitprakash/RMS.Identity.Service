@@ -15,8 +15,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\RMS.Identity.Service.Application\RMS.Identity.Service.Application.csproj" />
-    <ProjectReference Include="..\RMS.Identity.Service.Domain\RMS.Identity.Service.Domain.csproj" />
     <ProjectReference Include="..\RMS.Identity.Service.Infrastructure\RMS.Identity.Service.Infrastructure.csproj" />
   </ItemGroup>
 

@@ -1,30 +1,26 @@
 ﻿using MediatR;
 using RMS.Identity.Service.Application.Commands;
 using RMS.Identity.Service.Application.DTOs;
-using RMS.Identity.Service.Infrastructure.Repositories;
-using System;
-using System.Linq;
+using RMS.Identity.Service.Application.Repositories;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace RMS.Identity.Service.Application.Handlers
 {
     public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, AuthResult>
     {
-        private readonly RefreshTokenRepository _refreshRepo;
-        private readonly UserRepository _userRepo;
-        private readonly UserRoleRepository _userRoleRepo;
-        private readonly RMS.Identity.Service.Infrastructure.Auth.ITokenGenerator _tokenGenerator;
+        private readonly IRefreshTokenRepository _refreshRepo;
+        private readonly IUserRepository _userRepo;
+        private readonly IUserRoleRepository _userRoleRepo;
+        private readonly ITokenGenerator _tokenGenerator;
 
         // Note: repositories use DbExecutor internally and rely on IUnitOfWork for transaction context
         public RefreshTokenHandler(
-            RefreshTokenRepository refreshRepo,
-            UserRepository userRepo,
-            UserRoleRepository userRoleRepo,
-            RMS.Identity.Service.Infrastructure.Auth.ITokenGenerator tokenGenerator)
+            IRefreshTokenRepository refreshRepo,
+            IUserRepository userRepo,
+            IUserRoleRepository userRoleRepo,
+            ITokenGenerator tokenGenerator)
         {
             _refreshRepo = refreshRepo;
             _userRepo = userRepo;
@@ -47,7 +43,7 @@ namespace RMS.Identity.Service.Application.Handlers
             await _refreshRepo.RevokeAsync(existing.RefreshTokenID);
 
             // create new token (write)
-            var newToken = RMS.Identity.Service.Domain.Entities.RefreshToken.CreateForUser(existing.UserID); // implement factory in Domain
+            var newToken = _refreshRepo.CreateForUser(existing.UserID); // implement factory in Domain
             await _refreshRepo.SaveAsync(newToken);
 
             // create access token (reads)
@@ -56,9 +52,9 @@ namespace RMS.Identity.Service.Application.Handlers
 
             var roles = (await _userRoleRepo.GetRolesForUserAsync(user.UserID)).Select(r => r.Name!).ToArray();
 
-            var access = _tokenGenerator.CreateAccessToken(user.UserUUID, user.CompanyUUID, roles);
+            var access = _tokenGenerator.CreateAccessToken(user.UserUUID, user.CompanyID, roles);
 
-            return new AuthResult { AccessToken = access, RefreshToken = newToken.RawToken };
+            return new AuthResult { AccessToken = access, RefreshToken = newToken.TokenHash };
         }
 
         private static string ComputeHash(string raw)

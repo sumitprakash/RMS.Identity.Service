@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
-namespace RMS.Identity.Service.Infrastructure.Auth
+namespace RMS.Identity.Service.Application.Auth
 {
     public interface ITokenService
     {

@@ -1,14 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using RMS.Identity.Service.Application.Auth;
+using RMS.Identity.Service.Application.Repositories;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using RMS.Identity.Service.Infrastructure.Repositories;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace RMS.Identity.Service.Infrastructure.Auth
 {
