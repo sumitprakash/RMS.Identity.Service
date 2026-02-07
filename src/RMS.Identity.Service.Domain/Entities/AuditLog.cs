@@ -9,7 +9,7 @@ public class AuditLog
 
     public string TableName { get; set; } = null!;
 
-    public string RecordId { get; set; } = null!;
+    public Guid RecordUuid { get; set; }
 
     public string Action { get; set; } = null!;
 
@@ -17,5 +17,13 @@ public class AuditLog
 
     public string PayloadJson { get; set; } = "{}";
 
+    public bool IsDeleted { get; set; }
+
     public DateTime CreatedAt { get; set; }
+
+    public long? CreatedBy { get; set; }
+
+    public DateTime? UpdatedAt { get; set; }
+
+    public long? UpdatedBy { get; set; }
 }
