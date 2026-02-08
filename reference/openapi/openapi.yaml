@@ -1,13 +1,22 @@
 openapi: 3.0.3
+
 info:
   title: Retail Identity Service API
   version: "1.0.0"
   description: |
     Identity & Tenant service for Retail Management System.
-    Issues JWTs containing `companyUuid`, `userUuid`, and `roles`.
+
+    Key concepts:
+    - Users exist before companies (platform-level identity)
+    - Company context is optional during login
+    - JWTs may contain userUuid, companyUuid (optional), and roles
+
 servers:
   - url: http://localhost:8080
     description: Local development
+
+security:
+  - bearerAuth: []
 
 components:
   securitySchemes:
@@ -16,26 +25,44 @@ components:
       scheme: bearer
       bearerFormat: JWT
 
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: Prevents duplicate POST requests
+
   schemas:
+    # ---------- AUTH ----------
     LoginRequest:
       type: object
       required:
         - username
         - password
-        - companyUuid
       properties:
         username:
           type: string
+          format: email
         password:
           type: string
         companyUuid:
           type: string
-          description: Company UUID (client may supply to select tenant during login)
+          description: Optional tenant hint if user belongs to a company
+
     LoginResponse:
       type: object
       properties:
         accessToken:
           type: string
+          description: >
+            JWT with claims:
+            - sub: userUuid
+            - companyUuid (optional)
+            - roles
+            - exp
         refreshToken:
           type: string
         expiresIn:
@@ -45,6 +72,7 @@ components:
           default: Bearer
         user:
           $ref: '#/components/schemas/UserResponse'
+
     RefreshRequest:
       type: object
       required:
@@ -52,6 +80,7 @@ components:
       properties:
         refreshToken:
           type: string
+
     RefreshResponse:
       type: object
       properties:
@@ -61,17 +90,33 @@ components:
           type: string
         expiresIn:
           type: integer
-    CreateUserRequest:
+
+    # ---------- USER ----------
+    SignupRequest:
       type: object
       required:
         - username
         - password
-        - roles
       properties:
         username:
           type: string
+          format: email
         password:
           type: string
+          minLength: 8
+        displayName:
+          type: string
+        phone:
+          type: string
+
+    CreateTenantUserRequest:
+      type: object
+      required:
+        - username
+      properties:
+        username:
+          type: string
+          format: email
         displayName:
           type: string
         roles:
@@ -79,6 +124,7 @@ components:
           items:
             type: string
             enum: [COMPANY_ADMIN, STORE_MANAGER, CASHIER, INVENTORY_STAFF]
+
     UserResponse:
       type: object
       properties:
@@ -92,7 +138,14 @@ components:
           type: array
           items:
             type: string
+        status:
+          type: string
+          enum: [pending, active, suspended]
+        createdAt:
+          type: string
+          format: date-time
 
+    # ---------- COMPANY ----------
     CompanyResponse:
       type: object
       properties:
@@ -105,7 +158,87 @@ components:
         companyGstin:
           type: string
 
+    # ---------- ERROR ----------
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
 paths:
+  # ---------- PUBLIC SIGNUP ----------
+  /api/v1/signup:
+    post:
+      summary: Public user signup
+      description: Creates a platform-level user (no company yet)
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '201':
+          description: User created (pending verification)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  # ---------- EMAIL VERIFICATION ----------
+  /api/v1/users/verify-email:
+    post:
+      summary: Verify user email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Email verified
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ---------- AUTH ----------
   /api/v1/auth/login:
     post:
       summary: Login and receive JWT + refresh token
@@ -123,7 +256,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
         '401':
-          description: Invalid credentials
+          $ref: '#/components/responses/Unauthorized'
 
   /api/v1/auth/refresh:
     post:
@@ -142,11 +275,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/RefreshResponse'
         '401':
-          description: Invalid or expired refresh token
+          $ref: '#/components/responses/Unauthorized'
 
+  # ---------- TENANT / ADMIN ----------
   /api/v1/users:
     post:
-      summary: Create a new user in the tenant (Company)
+      summary: Create a user inside a company (admin only)
       security:
         - bearerAuth: []
       requestBody:
@@ -154,22 +288,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateUserRequest'
+              $ref: '#/components/schemas/CreateTenantUserRequest'
       responses:
         '201':
-          description: User created
+          description: User created in tenant
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserResponse'
         '400':
-          description: Validation error
+          $ref: '#/components/responses/BadRequest'
         '401':
-          description: Unauthorized
+          $ref: '#/components/responses/Unauthorized'
 
   /api/v1/users/{userUuid}:
     get:
-      summary: Get user by UUID (within tenant)
+      summary: Get user by UUID (tenant-scoped)
       security:
         - bearerAuth: []
       parameters:
@@ -188,7 +322,7 @@ paths:
         '404':
           description: Not found
         '401':
-          description: Unauthorized
+          $ref: '#/components/responses/Unauthorized'
 
   /api/v1/tenants/{companyUuid}:
     get:
@@ -210,6 +344,3 @@ paths:
                 $ref: '#/components/schemas/CompanyResponse'
         '404':
           description: Not found
-
-security:
-  - bearerAuth: []
