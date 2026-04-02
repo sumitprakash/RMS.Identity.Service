@@ -1,4 +1,4 @@
-namespace RMS.Identity.Service.Application.Shared.Security;
+namespace RMS.Identity.Service.Domain.Interfaces.Security;
 
 public interface IPasswordHasher
 {

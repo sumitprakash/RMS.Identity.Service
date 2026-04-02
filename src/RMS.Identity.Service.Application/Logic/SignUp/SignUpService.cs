@@ -1,7 +1,9 @@
 using System.Text.Json;
-using RMS.Identity.Service.Application.Shared.Security;
 using RMS.Identity.Service.Application.Shared.Validation;
+using RMS.Identity.Service.Domain.Contracts.SignUp;
 using RMS.Identity.Service.Domain.Entities.SignUp;
+using RMS.Identity.Service.Domain.Interfaces.Security;
+using RMS.Identity.Service.Domain.Interfaces.SignUp;
 
 namespace RMS.Identity.Service.Application.Logic.SignUp;
 

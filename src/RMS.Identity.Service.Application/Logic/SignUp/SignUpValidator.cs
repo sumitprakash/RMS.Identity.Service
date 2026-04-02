@@ -1,6 +1,7 @@
 using System.Net;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
+using RMS.Identity.Service.Domain.Contracts.SignUp;
 
 namespace RMS.Identity.Service.Application.Logic.SignUp;
 

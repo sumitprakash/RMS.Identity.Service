@@ -1,4 +1,4 @@
-namespace RMS.Identity.Service.Application.Logic.SignUp;
+namespace RMS.Identity.Service.Domain.Contracts.SignUp;
 
 public sealed record SignUpCommand(
     string Username,

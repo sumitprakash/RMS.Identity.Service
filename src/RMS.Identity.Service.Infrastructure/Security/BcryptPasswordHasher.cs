@@ -1,4 +1,4 @@
-using RMS.Identity.Service.Application.Shared.Security;
+using RMS.Identity.Service.Domain.Interfaces.Security;
 
 namespace RMS.Identity.Service.Infrastructure.Security;
 

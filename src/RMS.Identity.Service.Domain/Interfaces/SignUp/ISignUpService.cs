@@ -1,6 +1,7 @@
+using RMS.Identity.Service.Domain.Contracts.SignUp;
 using RMS.Identity.Service.Domain.Entities.SignUp;
 
-namespace RMS.Identity.Service.Application.Logic.SignUp;
+namespace RMS.Identity.Service.Domain.Interfaces.SignUp;
 
 public interface ISignUpService
 {

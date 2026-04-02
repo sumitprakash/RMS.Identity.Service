@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using RMS.Identity.Service.Application.Logic.SignUp;
+using RMS.Identity.Service.Domain.Interfaces.SignUp;
 
 namespace RMS.Identity.Service.Application.DependencyInjection;
 

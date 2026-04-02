@@ -1,11 +1,11 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RMS.Identity.Service.Application.DependencyInjection;
-using RMS.Identity.Service.Application.Logic.SignUp;
-using RMS.Identity.Service.Application.Shared.Security;
 using RMS.Identity.Service.Infrastructure.Data;
 using RMS.Identity.Service.Infrastructure.Persistence.SignUp;
 using RMS.Identity.Service.Infrastructure.Security;
+using RMS.Identity.Service.Domain.Interfaces.Security;
+using RMS.Identity.Service.Domain.Interfaces.SignUp;
 
 namespace RMS.Identity.Service.Infrastructure.DependencyInjection;
 

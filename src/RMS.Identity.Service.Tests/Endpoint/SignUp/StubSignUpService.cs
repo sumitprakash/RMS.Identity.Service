@@ -1,5 +1,6 @@
-using RMS.Identity.Service.Application.Logic.SignUp;
+using RMS.Identity.Service.Domain.Contracts.SignUp;
 using RMS.Identity.Service.Domain.Entities.SignUp;
+using RMS.Identity.Service.Domain.Interfaces.SignUp;
 
 namespace RMS.Identity.Service.Tests.Endpoint.SignUp;
 

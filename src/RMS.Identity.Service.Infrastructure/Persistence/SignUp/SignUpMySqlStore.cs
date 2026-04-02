@@ -2,9 +2,10 @@ using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
-using RMS.Identity.Service.Application.Logic.SignUp;
 using RMS.Identity.Service.Application.Shared.Errors;
+using RMS.Identity.Service.Domain.Contracts.SignUp;
 using RMS.Identity.Service.Domain.Entities.SignUp;
+using RMS.Identity.Service.Domain.Interfaces.SignUp;
 using RMS.Identity.Service.Infrastructure.Data;
 
 namespace RMS.Identity.Service.Infrastructure.Persistence.SignUp;
