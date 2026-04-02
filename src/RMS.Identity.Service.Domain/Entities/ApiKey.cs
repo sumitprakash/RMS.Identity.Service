@@ -1,8 +1,5 @@
-﻿namespace RMS.Identity.Service.Domain.Entities;
+namespace RMS.Identity.Service.Domain.Entities;
 
-/// <summary>
-/// API Keys for store integrations or machine-to-machine auth.
-/// </summary>
 public class ApiKey
 {
     public long ApiKeyID { get; set; }
@@ -15,15 +12,11 @@ public class ApiKey
 
     public string KeyHash { get; set; } = null!;
 
-    public bool IsActive { get; set; }
+    public string? Description { get; set; }
 
-    public bool IsDeleted { get; set; }
+    public bool IsActive { get; set; }
 
     public DateTime CreatedAt { get; set; }
 
     public long? CreatedBy { get; set; }
-
-    public DateTime? UpdatedAt { get; set; }
-
-    public long? UpdatedBy { get; set; }
 }
