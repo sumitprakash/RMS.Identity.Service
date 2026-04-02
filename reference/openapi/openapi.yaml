@@ -35,7 +35,34 @@ components:
         format: uuid
       description: Prevents duplicate POST requests
 
+    UserUuidPath:
+      name: userUuid
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: User UUID
+
+    CompanyUuidPath:
+      name: companyUuid
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Company UUID
+
   schemas:
+    # ---------- COMMON ----------
+    UUID:
+      type: string
+      format: uuid
+
+    DateTime:
+      type: string
+      format: date-time
+
     # ---------- AUTH ----------
     LoginRequest:
       type: object
@@ -46,32 +73,43 @@ components:
         username:
           type: string
           format: email
+          example: user@example.com
         password:
           type: string
+          format: password
+          example: StrongPass@123
         companyUuid:
-          type: string
+          allOf:
+            - $ref: '#/components/schemas/UUID'
+          nullable: true
           description: Optional tenant hint if user belongs to a company
+      additionalProperties: false
 
     LoginResponse:
       type: object
+      required:
+        - accessToken
+        - refreshToken
+        - expiresIn
+        - tokenType
+        - user
       properties:
         accessToken:
           type: string
-          description: >
-            JWT with claims:
-            - sub: userUuid
-            - companyUuid (optional)
-            - roles
-            - exp
+          description: 'JWT with claims: sub=userUuid, companyUuid (optional), roles, exp'
         refreshToken:
           type: string
         expiresIn:
           type: integer
+          format: int32
+          example: 3600
         tokenType:
           type: string
           default: Bearer
+          example: Bearer
         user:
           $ref: '#/components/schemas/UserResponse'
+      additionalProperties: false
 
     RefreshRequest:
       type: object
@@ -80,9 +118,14 @@ components:
       properties:
         refreshToken:
           type: string
+      additionalProperties: false
 
     RefreshResponse:
       type: object
+      required:
+        - accessToken
+        - refreshToken
+        - expiresIn
       properties:
         accessToken:
           type: string
@@ -90,6 +133,9 @@ components:
           type: string
         expiresIn:
           type: integer
+          format: int32
+          example: 3600
+      additionalProperties: false
 
     # ---------- USER ----------
     SignupRequest:
@@ -101,13 +147,19 @@ components:
         username:
           type: string
           format: email
+          example: user@example.com
         password:
           type: string
+          format: password
           minLength: 8
+          example: StrongPass@123
         displayName:
           type: string
+          example: Sumit Prakash
         phone:
           type: string
+          example: "+919876543210"
+      additionalProperties: false
 
     CreateTenantUserRequest:
       type: object
@@ -117,23 +169,35 @@ components:
         username:
           type: string
           format: email
+          example: cashier@example.com
         displayName:
           type: string
+          example: Store Cashier
         roles:
           type: array
           items:
             type: string
             enum: [COMPANY_ADMIN, STORE_MANAGER, CASHIER, INVENTORY_STAFF]
+          example: [CASHIER]
+      additionalProperties: false
 
     UserResponse:
       type: object
+      required:
+        - userUuid
+        - username
+        - status
+        - createdAt
       properties:
         userUuid:
-          type: string
+          allOf:
+            - $ref: '#/components/schemas/UUID'
         username:
           type: string
+          format: email
         displayName:
           type: string
+          nullable: true
         roles:
           type: array
           items:
@@ -142,33 +206,74 @@ components:
           type: string
           enum: [pending, active, suspended]
         createdAt:
+          $ref: '#/components/schemas/DateTime'
+      additionalProperties: false
+
+    EmailVerificationRequest:
+      type: object
+      required:
+        - token
+      properties:
+        token:
           type: string
-          format: date-time
+          example: verif-1234567890
+      additionalProperties: false
+
+    EmailVerificationResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Email verified successfully
+      additionalProperties: false
 
     # ---------- COMPANY ----------
     CompanyResponse:
       type: object
+      required:
+        - companyUuid
+        - companyCode
+        - companyName
       properties:
         companyUuid:
-          type: string
+          allOf:
+            - $ref: '#/components/schemas/UUID'
         companyCode:
           type: string
+          example: RET001
         companyName:
           type: string
+          example: Retail One Pvt Ltd
         companyGstin:
           type: string
+          nullable: true
+          example: 29ABCDE1234F1Z5
+      additionalProperties: false
 
     # ---------- ERROR ----------
     ErrorResponse:
       type: object
+      required:
+        - code
+        - message
       properties:
         code:
           type: string
+          example: VALIDATION_ERROR
         message:
           type: string
+          example: Request validation failed
         details:
           type: object
           nullable: true
+          additionalProperties: true
+      additionalProperties: false
 
   responses:
     BadRequest:
@@ -180,6 +285,20 @@ components:
 
     Unauthorized:
       description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Not found
       content:
         application/json:
           schema:
@@ -227,16 +346,18 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [token]
-              properties:
-                token:
-                  type: string
+              $ref: '#/components/schemas/EmailVerificationRequest'
       responses:
         '200':
           description: Email verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailVerificationResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   # ---------- AUTH ----------
   /api/v1/auth/login:
@@ -257,6 +378,8 @@ paths:
                 $ref: '#/components/schemas/LoginResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /api/v1/auth/refresh:
     post:
@@ -300,6 +423,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /api/v1/users/{userUuid}:
     get:
@@ -307,11 +432,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: userUuid
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/UserUuidPath'
       responses:
         '200':
           description: User record
@@ -320,9 +441,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserResponse'
         '404':
-          description: Not found
+          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /api/v1/tenants/{companyUuid}:
     get:
@@ -330,11 +453,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: companyUuid
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/CompanyUuidPath'
       responses:
         '200':
           description: Company metadata
@@ -343,4 +462,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/CompanyResponse'
         '404':
-          description: Not found
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
