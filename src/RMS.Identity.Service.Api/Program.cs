@@ -51,3 +51,5 @@ app.MapControllers();
 app.MapGet("/", () => Results.Ok(new { service = "RMS.Identity.Service", version = "1.0.0" }));
 
 app.Run();
+
+public partial class Program;
