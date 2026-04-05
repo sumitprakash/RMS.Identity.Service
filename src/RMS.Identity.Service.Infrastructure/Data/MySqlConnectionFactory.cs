@@ -9,8 +9,15 @@ public sealed class MySqlConnectionFactory : IMySqlConnectionFactory
 
     public MySqlConnectionFactory(IConfiguration configuration)
     {
-        _connectionString = configuration.GetConnectionString("Default")
-            ?? throw new InvalidOperationException("Connection string 'Default' is required.");
+        var connectionString = configuration.GetConnectionString("Default");
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                "Connection string 'Default' is required. Set the ConnectionStrings__Default environment variable.");
+        }
+
+        _connectionString = connectionString;
     }
 
     public async Task<MySqlConnection> OpenConnectionAsync(CancellationToken cancellationToken)
