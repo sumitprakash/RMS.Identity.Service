@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    
+    {
+      "name": "RMS Identity API (http)",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/src/RMS.Identity.Service.Api/RMS.Identity.Service.Api.csproj"
+    }
+  ]
+}
