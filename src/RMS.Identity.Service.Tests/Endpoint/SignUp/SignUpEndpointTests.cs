@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using MySqlConnector;
 using RMS.Identity.Service.Api.Endpoint.SignUp;
+using RMS.Identity.Service.Domain.Entities.SignUp;
 
 namespace RMS.Identity.Service.Tests.Endpoint.SignUp;
 
@@ -133,6 +134,102 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             {
                 await CleanupSignUpDataAsync(normalizedUsername, body.UserUuid, idempotencyKey);
             }
+        }
+    }
+
+    [Fact]
+    public async Task Post_WhenIdempotencyReservationCollidesWithCommittedResponse_ReturnsStoredResponse()
+    {
+        var uniqueSuffix = Guid.NewGuid().ToString("N");
+        var normalizedUsername = $"race.{uniqueSuffix}@example.com";
+        var password = "StrongPass@123";
+        var idempotencyKey = Guid.NewGuid().ToString();
+        var storedUser = new SignUpUser(
+            Guid.NewGuid(),
+            normalizedUsername,
+            null,
+            "pending",
+            DateTime.SpecifyKind(DateTime.UtcNow.AddSeconds(-1), DateTimeKind.Utc));
+        var requestHash = ComputeSha256Hex(JsonSerializer.Serialize(new
+        {
+            username = normalizedUsername,
+            displayName = (string?)null,
+            phone = (string?)null
+        }));
+        var committed = false;
+
+        await using var connection = await _factory.OpenDatabaseConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        try
+        {
+            await ExecuteNonQueryAsync(
+                connection,
+                """
+                INSERT INTO IdempotencyKey (KeyValue, Method, Route, RequestHash)
+                VALUES (@KeyValue, 'POST', '/api/v1/signup', @RequestHash);
+                """,
+                command =>
+                {
+                    command.Parameters.AddWithValue("@KeyValue", idempotencyKey);
+                    command.Parameters.AddWithValue("@RequestHash", requestHash);
+                },
+                transaction);
+
+            using var client = _factory.CreateClient();
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/signup")
+            {
+                Content = JsonContent.Create(new
+                {
+                    username = normalizedUsername,
+                    password
+                })
+            };
+            request.Headers.Add("Idempotency-Key", idempotencyKey);
+
+            var blockedResponseTask = client.SendAsync(request);
+            await WaitForBlockedIdempotencyInsertAsync(connection, transaction, blockedResponseTask);
+
+            await ExecuteNonQueryAsync(
+                connection,
+                """
+                UPDATE IdempotencyKey
+                SET ResponseCode = 201,
+                    ResponseBody = CAST(@ResponseBody AS JSON)
+                WHERE KeyValue = @KeyValue;
+                """,
+                command =>
+                {
+                    command.Parameters.AddWithValue("@KeyValue", idempotencyKey);
+                    command.Parameters.AddWithValue("@ResponseBody", JsonSerializer.Serialize(storedUser));
+                },
+                transaction);
+
+            await transaction.CommitAsync();
+            committed = true;
+
+            using var response = await blockedResponseTask.WaitAsync(TimeSpan.FromSeconds(10));
+
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+            var body = await response.Content.ReadFromJsonAsync<SignUpResponse>(_jsonOptions);
+            Assert.NotNull(body);
+            Assert.Equal(storedUser.UserUuid, body.UserUuid);
+            Assert.Equal(storedUser.Username, body.Username);
+            Assert.Equal(storedUser.DisplayName, body.DisplayName);
+            Assert.Equal(storedUser.Status, body.Status);
+        }
+        finally
+        {
+            if (!committed)
+            {
+                await transaction.RollbackAsync();
+            }
+
+            await ExecuteNonQueryAsync(
+                connection,
+                "DELETE FROM IdempotencyKey WHERE KeyValue = @KeyValue;",
+                command => command.Parameters.AddWithValue("@KeyValue", idempotencyKey));
         }
     }
 
@@ -354,12 +451,50 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
     private static async Task ExecuteNonQueryAsync(
         MySqlConnection connection,
         string commandText,
-        Action<MySqlCommand> configure)
+        Action<MySqlCommand> configure,
+        MySqlTransaction? transaction = null)
     {
         await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = commandText;
         configure(command);
         await command.ExecuteNonQueryAsync();
+    }
+
+    private static async Task WaitForBlockedIdempotencyInsertAsync(
+        MySqlConnection connection,
+        MySqlTransaction transaction,
+        Task<HttpResponseMessage> responseTask)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+        while (!timeout.IsCancellationRequested)
+        {
+            if (responseTask.IsCompleted)
+            {
+                throw new InvalidOperationException("The idempotent request completed before reaching the reservation collision.");
+            }
+
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText =
+                """
+                SELECT COUNT(*)
+                FROM information_schema.PROCESSLIST
+                WHERE ID <> CONNECTION_ID()
+                  AND INFO LIKE '%INSERT INTO IdempotencyKey%';
+                """;
+
+            var matchingProcesses = Convert.ToInt32(await command.ExecuteScalarAsync(timeout.Token));
+            if (matchingProcesses > 0)
+            {
+                return;
+            }
+
+            await Task.Delay(50, timeout.Token);
+        }
+
+        throw new TimeoutException("Timed out waiting for the idempotent request to block on the duplicate key insert.");
     }
 
     private static string ComputeSha256Hex(string value)

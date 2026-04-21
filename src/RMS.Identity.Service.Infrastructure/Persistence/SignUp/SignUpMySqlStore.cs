@@ -39,7 +39,12 @@ public sealed class SignUpMySqlStore : ISignUpStore
                 return existingResponse;
             }
 
-            await ReserveIdempotencyKeyAsync(connection, transaction, command, cancellationToken);
+            existingResponse = await ReserveIdempotencyKeyAsync(connection, transaction, command, cancellationToken);
+            if (existingResponse is not null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+                return existingResponse;
+            }
         }
 
         if (await UsernameExistsAsync(connection, transaction, command.Username, cancellationToken))
@@ -76,16 +81,18 @@ public sealed class SignUpMySqlStore : ISignUpStore
         MySqlConnection connection,
         MySqlTransaction transaction,
         SignUpStorageCommand command,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool lockForUpdate = false)
     {
         var selectCommand = connection.CreateCommand();
         selectCommand.Transaction = transaction;
         selectCommand.CommandText =
-            """
+            $"""
             SELECT Method, Route, RequestHash, ResponseCode, CAST(ResponseBody AS CHAR) AS ResponseBody
             FROM IdempotencyKey
             WHERE KeyValue = @KeyValue
-            LIMIT 1;
+            LIMIT 1
+            {GetLockClause(lockForUpdate)};
             """;
         selectCommand.Parameters.AddWithValue("@KeyValue", command.IdempotencyKey);
 
@@ -119,7 +126,7 @@ public sealed class SignUpMySqlStore : ISignUpStore
         return JsonSerializer.Deserialize<SignUpUser>(responseBody);
     }
 
-    private static async Task ReserveIdempotencyKeyAsync(
+    private static async Task<SignUpUser?> ReserveIdempotencyKeyAsync(
         MySqlConnection connection,
         MySqlTransaction transaction,
         SignUpStorageCommand command,
@@ -143,9 +150,21 @@ public sealed class SignUpMySqlStore : ISignUpStore
         }
         catch (MySqlException exception) when (exception.Number == 1062)
         {
-            throw new ServiceException((int)HttpStatusCode.Conflict, "IDEMPOTENCY_IN_PROGRESS", "Idempotent request is already in progress.");
+            var existingResponse = await TryGetStoredResponseAsync(
+                connection,
+                transaction,
+                command,
+                cancellationToken,
+                lockForUpdate: true);
+
+            return existingResponse
+                ?? throw new ServiceException((int)HttpStatusCode.Conflict, "IDEMPOTENCY_IN_PROGRESS", "Idempotent request is already in progress.");
         }
+
+        return null;
     }
+
+    private static string GetLockClause(bool lockForUpdate) => lockForUpdate ? "FOR UPDATE" : string.Empty;
 
     private static async Task<bool> UsernameExistsAsync(
         MySqlConnection connection,
