@@ -191,6 +191,12 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
 
             Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
 
+            var json = await response.Content.ReadAsStringAsync();
+            Assert.Contains("\"code\"", json);
+            Assert.Contains("\"message\"", json);
+            Assert.DoesNotContain("\"Code\"", json);
+            Assert.DoesNotContain("\"Message\"", json);
+
             var error = await response.Content.ReadFromJsonAsync<ApiErrorContract>(_jsonOptions);
             Assert.NotNull(error);
             Assert.Equal("USER_EXISTS", error.Code);
