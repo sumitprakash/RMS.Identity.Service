@@ -234,6 +234,54 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
     }
 
     [Fact]
+    public async Task Post_WhenOutboxInsertFails_ReturnsCreatedAndKeepsSignupData()
+    {
+        var uniqueSuffix = Guid.NewGuid().ToString("N");
+        var normalizedUsername = $"outbox-failure.{uniqueSuffix}@example.com";
+        var constraintName = $"chk_signup_outbox_failure_{uniqueSuffix[..16]}";
+        SignUpResponse? body = null;
+
+        await using var connection = await _factory.OpenDatabaseConnectionAsync();
+
+        try
+        {
+            await CreateOutboxFailureCheckConstraintAsync(connection, constraintName, normalizedUsername);
+
+            using var client = _factory.CreateClient();
+            using var response = await client.PostAsJsonAsync(
+                "/api/v1/signup",
+                new
+                {
+                    username = normalizedUsername,
+                    password = "StrongPass@123"
+                });
+
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+            body = await response.Content.ReadFromJsonAsync<SignUpResponse>(_jsonOptions);
+            Assert.NotNull(body);
+            Assert.Equal(normalizedUsername, body.Username);
+
+            var persisted = await LoadPersistedSignUpAsync(normalizedUsername, body.UserUuid);
+            Assert.NotNull(persisted);
+            Assert.Equal(body.UserUuid, persisted.UserUuid);
+            Assert.Equal(normalizedUsername, persisted.Username);
+            Assert.Equal(1, persisted.EmailVerificationCount);
+            Assert.Equal(1, persisted.AuditLogCount);
+            Assert.Equal(0, persisted.OutboxCount);
+        }
+        finally
+        {
+            await DropCheckConstraintAsync(connection, constraintName);
+
+            if (body is not null)
+            {
+                await CleanupSignUpDataAsync(normalizedUsername, body.UserUuid, null);
+            }
+        }
+    }
+
+    [Fact]
     public async Task Post_WithInvalidBody_ReturnsBadRequestValidationError()
     {
         using var client = _factory.CreateClient();
@@ -495,6 +543,29 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
         }
 
         throw new TimeoutException("Timed out waiting for the idempotent request to block on the duplicate key insert.");
+    }
+
+    private static Task CreateOutboxFailureCheckConstraintAsync(
+        MySqlConnection connection,
+        string constraintName,
+        string username)
+    {
+        return ExecuteNonQueryAsync(
+            connection,
+            $"""
+            ALTER TABLE Outbox
+            ADD CONSTRAINT `{constraintName}`
+            CHECK (JSON_UNQUOTE(JSON_EXTRACT(Payload, '$.username')) <> @Username);
+            """,
+            command => command.Parameters.AddWithValue("@Username", username));
+    }
+
+    private static Task DropCheckConstraintAsync(MySqlConnection connection, string constraintName)
+    {
+        return ExecuteNonQueryAsync(
+            connection,
+            $"ALTER TABLE Outbox DROP CHECK `{constraintName}`;",
+            _ => { });
     }
 
     private static string ComputeSha256Hex(string value)

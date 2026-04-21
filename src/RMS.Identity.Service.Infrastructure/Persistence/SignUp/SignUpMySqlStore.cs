@@ -66,7 +66,6 @@ public sealed class SignUpMySqlStore : ISignUpStore
 
         var createdUser = await LoadCreatedUserAsync(connection, transaction, userId, cancellationToken);
         await InsertAuditLogAsync(connection, transaction, createdUser, cancellationToken);
-        await InsertVerificationEmailOutboxAsync(connection, transaction, command, createdUser, cancellationToken);
 
         if (!string.IsNullOrWhiteSpace(command.IdempotencyKey))
         {
@@ -74,6 +73,9 @@ public sealed class SignUpMySqlStore : ISignUpStore
         }
 
         await transaction.CommitAsync(cancellationToken);
+
+        await TryInsertVerificationEmailOutboxAsync(connection, command, createdUser, cancellationToken);
+
         return createdUser;
     }
 
@@ -312,9 +314,25 @@ public sealed class SignUpMySqlStore : ISignUpStore
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private async Task InsertVerificationEmailOutboxAsync(
+    private async Task TryInsertVerificationEmailOutboxAsync(
         MySqlConnection connection,
-        MySqlTransaction transaction,
+        SignUpStorageCommand command,
+        SignUpUser createdUser,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await InsertVerificationEmailOutboxAsync(connection, null, command, createdUser, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Signup committed but failed to enqueue verification email for user {UserUuid}.", createdUser.UserUuid);
+        }
+    }
+
+    private static async Task InsertVerificationEmailOutboxAsync(
+        MySqlConnection connection,
+        MySqlTransaction? transaction,
         SignUpStorageCommand command,
         SignUpUser createdUser,
         CancellationToken cancellationToken)
@@ -353,16 +371,7 @@ public sealed class SignUpMySqlStore : ISignUpStore
             """;
         insertCommand.Parameters.AddWithValue("@UserUuid", createdUser.UserUuid.ToString());
         insertCommand.Parameters.AddWithValue("@Payload", payload);
-
-        try
-        {
-            await insertCommand.ExecuteNonQueryAsync(cancellationToken);
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(exception, "Failed to enqueue signup verification email for user {UserUuid}.", createdUser.UserUuid);
-            throw;
-        }
+        await insertCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static async Task StoreIdempotentResponseAsync(
