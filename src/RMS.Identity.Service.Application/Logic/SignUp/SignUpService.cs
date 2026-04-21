@@ -26,13 +26,13 @@ public sealed class SignUpService : ISignUpService
         _validator.Validate(command);
 
         var normalizedUsername = EmailAddressValidator.Normalize(command.Username);
+        var displayName = string.IsNullOrWhiteSpace(command.DisplayName) ? null : command.DisplayName.Trim();
         var requestHash = string.IsNullOrWhiteSpace(command.IdempotencyKey)
             ? null
             : _textHasher.Hash(JsonSerializer.Serialize(new
             {
                 username = normalizedUsername,
-                password = command.Password,
-                displayName = command.DisplayName,
+                displayName,
                 phone = command.Phone
             }));
 
@@ -41,7 +41,7 @@ public sealed class SignUpService : ISignUpService
             Guid.NewGuid(),
             normalizedUsername,
             _passwordHasher.Hash(command.Password),
-            string.IsNullOrWhiteSpace(command.DisplayName) ? null : command.DisplayName.Trim(),
+            displayName,
             verificationToken,
             _textHasher.Hash(verificationToken),
             DateTime.UtcNow.AddDays(1),

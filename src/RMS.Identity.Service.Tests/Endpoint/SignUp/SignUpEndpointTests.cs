@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using MySqlConnector;
@@ -82,6 +83,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
     {
         var uniqueSuffix = Guid.NewGuid().ToString("N");
         var normalizedUsername = $"retry.{uniqueSuffix}@example.com";
+        var password = "StrongPass@123";
         var idempotencyKey = Guid.NewGuid().ToString();
         SignUpResponse? body = null;
 
@@ -93,7 +95,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
                 Content = JsonContent.Create(new
                 {
                     username = normalizedUsername,
-                    password = "StrongPass@123"
+                    password
                 })
             };
             request.Headers.Add("Idempotency-Key", idempotencyKey);
@@ -109,6 +111,19 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             Assert.Equal("POST", idempotencyEntry.Method);
             Assert.Equal("/api/v1/signup", idempotencyEntry.Route);
             Assert.False(string.IsNullOrWhiteSpace(idempotencyEntry.RequestHash));
+            Assert.Equal(ComputeSha256Hex(JsonSerializer.Serialize(new
+            {
+                username = normalizedUsername,
+                displayName = (string?)null,
+                phone = (string?)null
+            })), idempotencyEntry.RequestHash);
+            Assert.NotEqual(ComputeSha256Hex(JsonSerializer.Serialize(new
+            {
+                username = normalizedUsername,
+                password,
+                displayName = (string?)null,
+                phone = (string?)null
+            })), idempotencyEntry.RequestHash);
             Assert.Equal(201, idempotencyEntry.ResponseCode);
             Assert.Contains(body.UserUuid.ToString(), idempotencyEntry.ResponseBody);
         }
@@ -345,6 +360,12 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
         command.CommandText = commandText;
         configure(command);
         await command.ExecuteNonQueryAsync();
+    }
+
+    private static string ComputeSha256Hex(string value)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
     private sealed record PersistedSignUpUser(
