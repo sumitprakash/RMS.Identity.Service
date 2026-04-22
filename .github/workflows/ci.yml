@@ -44,10 +44,21 @@ jobs:
         run: docker exec -i "${{ job.services.mysql.id }}" mysql -u root -p12345678 rms_identity < reference/db/sql_schema.sql
 
       - name: Restore
-        run: dotnet restore src/RMS.Identity.Service.Tests/RMS.Identity.Service.Tests.csproj
+        run: dotnet restore src/RMS.Identity.Service.sln
 
       - name: Build
-        run: dotnet build src/RMS.Identity.Service.Tests/RMS.Identity.Service.Tests.csproj --configuration Release --no-restore
+        run: dotnet build src/RMS.Identity.Service.sln --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test src/RMS.Identity.Service.Tests/RMS.Identity.Service.Tests.csproj --configuration Release --no-build --verbosity normal
+        shell: bash
+        run: |
+          mapfile -t test_projects < <(find src -name '*Tests.csproj' -o -name '*.Tests.csproj')
+
+          if [ ${#test_projects[@]} -eq 0 ]; then
+            echo "No test projects found."
+            exit 0
+          fi
+
+          for project in "${test_projects[@]}"; do
+            dotnet test "$project" --configuration Release --no-build --verbosity normal
+          done
