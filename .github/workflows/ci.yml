@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: 12345678
+          MYSQL_DATABASE: rms_identity
+          MYSQL_USER: rms_user
+          MYSQL_PASSWORD: 12345678
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root -p12345678"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      RMS_IDENTITY_TEST_CONNECTION_STRING: Server=127.0.0.1;Port=3306;Database=rms_identity;User ID=rms_user;Password=12345678;SslMode=None;
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Initialize database
+        run: docker exec -i "${{ job.services.mysql.id }}" mysql -u root -p12345678 rms_identity < reference/db/sql_schema.sql
+
+      - name: Restore
+        run: dotnet restore src/RMS.Identity.Service.Tests/RMS.Identity.Service.Tests.csproj
+
+      - name: Build
+        run: dotnet build src/RMS.Identity.Service.Tests/RMS.Identity.Service.Tests.csproj --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test src/RMS.Identity.Service.Tests/RMS.Identity.Service.Tests.csproj --configuration Release --no-build --verbosity normal
