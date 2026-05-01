@@ -26,29 +26,29 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
         var username = $"Alice.{uniqueSuffix}@Example.com";
         var normalizedUsername = username.ToLowerInvariant();
         var password = "StrongPass@123";
+        var idempotencyKey = Guid.NewGuid().ToString();
         var beforeRequest = DateTime.UtcNow;
         SignUpResponse? body = null;
 
         try
         {
             using var client = _factory.CreateClient();
-            using var response = await client.PostAsJsonAsync(
-                "/api/v1/signup",
-                new SignUpRequest
-                {
-                    Username = username,
-                    Password = password,
-                    DisplayName = " Alice Example ",
-                    Phone = "+919876543210"
-                });
+            using var request = CreateSignUpRequest(new SignUpRequestBody
+            {
+                EmailAddress = username,
+                Password = password,
+                FirstName = " Alice ",
+                LastName = " Example ",
+                PhoneNumber = "+919876543210"
+            }, idempotencyKey);
+            using var response = await client.SendAsync(request);
 
             Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
             body = await response.Content.ReadFromJsonAsync<SignUpResponse>(_jsonOptions);
             Assert.NotNull(body);
             Assert.NotEqual(Guid.Empty, body.UserUuid);
-            Assert.Equal(normalizedUsername, body.Username);
-            Assert.Equal("Alice Example", body.DisplayName);
+            Assert.Equal(normalizedUsername, body.EmailAddress);
             Assert.Equal("pending", body.Status);
             Assert.True(body.CreatedAt >= beforeRequest.AddSeconds(-5));
             Assert.True(body.CreatedAt <= DateTime.UtcNow.AddSeconds(5));
@@ -74,7 +74,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
         {
             if (body is not null)
             {
-                await CleanupSignUpDataAsync(normalizedUsername, body.UserUuid, null);
+                await CleanupSignUpDataAsync(normalizedUsername, body.UserUuid, idempotencyKey);
             }
         }
     }
@@ -95,8 +95,12 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             {
                 Content = JsonContent.Create(new
                 {
-                    username = normalizedUsername,
-                    password
+                    emailAddress = normalizedUsername,
+                    password,
+                    firstName = "Retry",
+                    middleName = (string?)null,
+                    lastName = "Example",
+                    phoneNumber = "+919876543210"
                 })
             };
             request.Headers.Add("Idempotency-Key", idempotencyKey);
@@ -114,16 +118,20 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             Assert.False(string.IsNullOrWhiteSpace(idempotencyEntry.RequestHash));
             Assert.Equal(ComputeSha256Hex(JsonSerializer.Serialize(new
             {
-                username = normalizedUsername,
-                displayName = (string?)null,
-                phone = (string?)null
+                emailAddress = normalizedUsername,
+                firstName = "Retry",
+                middleName = (string?)null,
+                lastName = "Example",
+                phoneNumber = "+919876543210"
             })), idempotencyEntry.RequestHash);
             Assert.NotEqual(ComputeSha256Hex(JsonSerializer.Serialize(new
             {
-                username = normalizedUsername,
+                emailAddress = normalizedUsername,
                 password,
-                displayName = (string?)null,
-                phone = (string?)null
+                firstName = "Retry",
+                middleName = (string?)null,
+                lastName = "Example",
+                phoneNumber = "+919876543210"
             })), idempotencyEntry.RequestHash);
             Assert.Equal(201, idempotencyEntry.ResponseCode);
             Assert.Contains(body.UserUuid.ToString(), idempotencyEntry.ResponseBody);
@@ -152,9 +160,11 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             DateTime.SpecifyKind(DateTime.UtcNow.AddSeconds(-1), DateTimeKind.Utc));
         var requestHash = ComputeSha256Hex(JsonSerializer.Serialize(new
         {
-            username = normalizedUsername,
-            displayName = (string?)null,
-            phone = (string?)null
+            emailAddress = normalizedUsername,
+            firstName = "Race",
+            middleName = (string?)null,
+            lastName = "Example",
+            phoneNumber = "+919876543210"
         }));
         var committed = false;
 
@@ -181,8 +191,12 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             {
                 Content = JsonContent.Create(new
                 {
-                    username = normalizedUsername,
-                    password
+                    emailAddress = normalizedUsername,
+                    password,
+                    firstName = "Race",
+                    middleName = (string?)null,
+                    lastName = "Example",
+                    phoneNumber = "+919876543210"
                 })
             };
             request.Headers.Add("Idempotency-Key", idempotencyKey);
@@ -215,8 +229,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             var body = await response.Content.ReadFromJsonAsync<SignUpResponse>(_jsonOptions);
             Assert.NotNull(body);
             Assert.Equal(storedUser.UserUuid, body.UserUuid);
-            Assert.Equal(storedUser.Username, body.Username);
-            Assert.Equal(storedUser.DisplayName, body.DisplayName);
+            Assert.Equal(storedUser.Username, body.EmailAddress);
             Assert.Equal(storedUser.Status, body.Status);
         }
         finally
@@ -239,6 +252,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
         var uniqueSuffix = Guid.NewGuid().ToString("N");
         var normalizedUsername = $"outbox-failure.{uniqueSuffix}@example.com";
         var constraintName = $"chk_signup_outbox_failure_{uniqueSuffix[..16]}";
+        var idempotencyKey = Guid.NewGuid().ToString();
         SignUpResponse? body = null;
 
         await using var connection = await _factory.OpenDatabaseConnectionAsync();
@@ -248,19 +262,14 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             await CreateOutboxFailureCheckConstraintAsync(connection, constraintName, normalizedUsername);
 
             using var client = _factory.CreateClient();
-            using var response = await client.PostAsJsonAsync(
-                "/api/v1/signup",
-                new
-                {
-                    username = normalizedUsername,
-                    password = "StrongPass@123"
-                });
+            using var request = CreateSignUpRequest(CreateValidBody(normalizedUsername), idempotencyKey);
+            using var response = await client.SendAsync(request);
 
             Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
             body = await response.Content.ReadFromJsonAsync<SignUpResponse>(_jsonOptions);
             Assert.NotNull(body);
-            Assert.Equal(normalizedUsername, body.Username);
+            Assert.Equal(normalizedUsername, body.EmailAddress);
 
             var persisted = await LoadPersistedSignUpAsync(normalizedUsername, body.UserUuid);
             Assert.NotNull(persisted);
@@ -276,7 +285,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
 
             if (body is not null)
             {
-                await CleanupSignUpDataAsync(normalizedUsername, body.UserUuid, null);
+                await CleanupSignUpDataAsync(normalizedUsername, body.UserUuid, idempotencyKey);
             }
         }
     }
@@ -285,13 +294,15 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
     public async Task Post_WithInvalidBody_ReturnsBadRequestValidationError()
     {
         using var client = _factory.CreateClient();
-        using var response = await client.PostAsJsonAsync(
-            "/api/v1/signup",
-            new
-            {
-                username = "not-an-email",
-                password = "short"
-            });
+        using var request = CreateSignUpRequest(new
+        {
+            emailAddress = "not-an-email",
+            password = "short",
+            firstName = "",
+            lastName = "",
+            phoneNumber = ""
+        });
+        using var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
@@ -308,17 +319,62 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
         using var content = new StringContent(
             """
             {
-              "username": "alice@example.com",
+              "emailAddress": "alice@example.com",
               "password": "StrongPass@123",
+              "firstName": "Alice",
+              "lastName": "Example",
+              "phoneNumber": "+919876543210",
               "unexpected": "value"
             }
             """,
             Encoding.UTF8,
             "application/json");
 
-        using var response = await client.PostAsync("/api/v1/signup", content);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/signup")
+        {
+            Content = content
+        };
+        request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString());
+        using var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_WithoutIdempotencyKey_ReturnsBadRequestValidationError()
+    {
+        using var client = _factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/signup")
+        {
+            Content = JsonContent.Create(CreateValidBody("missing-idempotency@example.com"))
+        };
+
+        using var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<ApiErrorContract>(_jsonOptions);
+        Assert.NotNull(body);
+        Assert.Equal("VALIDATION_ERROR", body.Code);
+        Assert.Equal("Idempotency-Key is required.", body.Message);
+    }
+
+    [Fact]
+    public async Task Post_WithInvalidIdempotencyKey_ReturnsBadRequestValidationError()
+    {
+        using var client = _factory.CreateClient();
+        using var request = CreateSignUpRequest(
+            CreateValidBody("invalid-idempotency@example.com"),
+            "not-a-guid");
+
+        using var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<ApiErrorContract>(_jsonOptions);
+        Assert.NotNull(body);
+        Assert.Equal("VALIDATION_ERROR", body.Code);
+        Assert.Equal("Idempotency-Key must be a valid UUID.", body.Message);
     }
 
     [Fact]
@@ -326,28 +382,22 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
     {
         var uniqueSuffix = Guid.NewGuid().ToString("N");
         var normalizedUsername = $"duplicate.{uniqueSuffix}@example.com";
+        var firstIdempotencyKey = Guid.NewGuid().ToString();
+        var secondIdempotencyKey = Guid.NewGuid().ToString();
         SignUpResponse? body = null;
 
         try
         {
             using var client = _factory.CreateClient();
-            using var firstResponse = await client.PostAsJsonAsync(
-                "/api/v1/signup",
-                new
-                {
-                    username = normalizedUsername,
-                    password = "StrongPass@123"
-                });
+            using var firstRequest = CreateSignUpRequest(CreateValidBody(normalizedUsername), firstIdempotencyKey);
+            using var firstResponse = await client.SendAsync(firstRequest);
             Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
             body = await firstResponse.Content.ReadFromJsonAsync<SignUpResponse>(_jsonOptions);
 
-            using var response = await client.PostAsJsonAsync(
-                "/api/v1/signup",
-                new
-                {
-                    username = normalizedUsername,
-                    password = "AnotherStrongPass@123"
-                });
+            using var secondRequest = CreateSignUpRequest(
+                CreateValidBody(normalizedUsername, "AnotherStrongPass@123"),
+                secondIdempotencyKey);
+            using var response = await client.SendAsync(secondRequest);
 
             Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
 
@@ -360,15 +410,37 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             var error = await response.Content.ReadFromJsonAsync<ApiErrorContract>(_jsonOptions);
             Assert.NotNull(error);
             Assert.Equal("USER_EXISTS", error.Code);
-            Assert.Equal("Username already exists.", error.Message);
+            Assert.Equal("Email address already exists.", error.Message);
         }
         finally
         {
             if (body is not null)
             {
-                await CleanupSignUpDataAsync(normalizedUsername, body.UserUuid, null);
+                await CleanupSignUpDataAsync(normalizedUsername, body.UserUuid, firstIdempotencyKey);
+                await CleanupSignUpDataAsync(normalizedUsername, body.UserUuid, secondIdempotencyKey);
             }
         }
+    }
+
+    private static SignUpRequestBody CreateValidBody(string emailAddress, string password = "StrongPass@123") =>
+        new()
+        {
+            EmailAddress = emailAddress,
+            Password = password,
+            FirstName = "Alice",
+            MiddleName = null,
+            LastName = "Example",
+            PhoneNumber = "+919876543210"
+        };
+
+    private static HttpRequestMessage CreateSignUpRequest(object body, string? idempotencyKey = null)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/signup")
+        {
+            Content = JsonContent.Create(body)
+        };
+        request.Headers.Add("Idempotency-Key", idempotencyKey ?? Guid.NewGuid().ToString());
+        return request;
     }
 
     private async Task<PersistedSignUpUser?> LoadPersistedSignUpAsync(string username, Guid userUuid)

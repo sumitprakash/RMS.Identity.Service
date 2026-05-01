@@ -9,9 +9,9 @@ public sealed class SignUpValidator
 {
     public void Validate(SignUpCommand command)
     {
-        if (!EmailAddressValidator.IsValid(command.Username))
+        if (!EmailAddressValidator.IsValid(command.EmailAddress))
         {
-            throw new ServiceException((int)HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Username must be a valid email address.");
+            throw new ServiceException((int)HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Email address must be a valid email address.");
         }
 
         if (string.IsNullOrWhiteSpace(command.Password) || command.Password.Length < 8)
@@ -19,9 +19,24 @@ public sealed class SignUpValidator
             throw new ServiceException((int)HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Password must be at least 8 characters long.");
         }
 
-        if (!string.IsNullOrWhiteSpace(command.IdempotencyKey) && !Guid.TryParse(command.IdempotencyKey, out _))
+        if (string.IsNullOrWhiteSpace(command.FirstName))
         {
-            throw new ServiceException((int)HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Idempotency-Key must be a valid UUID.");
+            throw new ServiceException((int)HttpStatusCode.BadRequest, "VALIDATION_ERROR", "First name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(command.LastName))
+        {
+            throw new ServiceException((int)HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Last name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(command.PhoneNumber))
+        {
+            throw new ServiceException((int)HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Phone number is required.");
+        }
+
+        if (command.IdempotencyKey == Guid.Empty)
+        {
+            throw new ServiceException((int)HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Idempotency-Key is required.");
         }
     }
 }

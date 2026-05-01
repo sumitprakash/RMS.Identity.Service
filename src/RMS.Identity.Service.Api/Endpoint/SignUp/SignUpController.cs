@@ -18,12 +18,10 @@ public sealed class SignUpController : ControllerBase
     [ProducesResponseType(typeof(SignUpResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(object), StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> PostAsync(
-        [FromBody] SignUpRequest request,
-        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> PostAsync(SignUpRequestBody body, CancellationToken cancellationToken)
     {
-        var user = await _service.ExecuteAsync(request.ToCommand(idempotencyKey), cancellationToken);
+        var request = SignUpRequest.FromHttpRequest(Request, body);
+        var user = await _service.ExecuteAsync(request.ToCommand(), cancellationToken);
         return StatusCode(StatusCodes.Status201Created, user.ToResponse());
     }
 }

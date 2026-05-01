@@ -1,20 +1,34 @@
-using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
+using RMS.Identity.Service.Application.Shared.Errors;
 
 namespace RMS.Identity.Service.Api.Endpoint.SignUp;
 
-[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed class SignUpRequest
 {
-    [Required]
-    [EmailAddress]
-    public string Username { get; init; } = string.Empty;
+    public const string IdempotencyKeyHeaderName = "Idempotency-Key";
 
-    [Required]
-    [MinLength(8)]
-    public string Password { get; init; } = string.Empty;
+    public SignUpRequest(Guid idempotencyKey, SignUpRequestBody body)
+    {
+        IdempotencyKey = idempotencyKey;
+        Body = body;
+    }
 
-    public string? DisplayName { get; init; }
+    public Guid IdempotencyKey { get; }
 
-    public string? Phone { get; init; }
+    public SignUpRequestBody Body { get; }
+
+    public static SignUpRequest FromHttpRequest(HttpRequest httpRequest, SignUpRequestBody body)
+    {
+        var idempotencyKey = httpRequest.Headers[IdempotencyKeyHeaderName].FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            throw new ServiceException(400, "VALIDATION_ERROR", "Idempotency-Key is required.");
+        }
+
+        if (!Guid.TryParse(idempotencyKey, out var parsedIdempotencyKey))
+        {
+            throw new ServiceException(400, "VALIDATION_ERROR", "Idempotency-Key must be a valid UUID.");
+        }
+
+        return new SignUpRequest(parsedIdempotencyKey, body);
+    }
 }

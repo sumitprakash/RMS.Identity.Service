@@ -62,8 +62,9 @@ public sealed class SignUpService : ISignUpService
     {
         _validator.Validate(command);
 
-        var normalizedUsername = EmailAddressValidator.Normalize(command.Username);
-        var displayName = string.IsNullOrWhiteSpace(command.DisplayName) ? null : command.DisplayName.Trim();
+        var normalizedUsername = EmailAddressValidator.Normalize(command.EmailAddress);
+        var displayName = BuildDisplayName(command.FirstName, command.MiddleName, command.LastName);
+        var phoneNumber = command.PhoneNumber.Trim();
         var createUserCommand = new CreateUserAccountCommand(
             Guid.NewGuid(),
             normalizedUsername,
@@ -80,18 +81,21 @@ public sealed class SignUpService : ISignUpService
             0,
             _textHasher.Hash(verificationToken),
             DateTime.UtcNow.AddDays(1));
-        var idempotencyRequest = CreateIdempotencyRequest(command.IdempotencyKey, normalizedUsername, displayName, command.Phone);
+        var idempotencyRequest = CreateIdempotencyRequest(
+            command.IdempotencyKey,
+            normalizedUsername,
+            command.FirstName,
+            command.MiddleName,
+            command.LastName,
+            phoneNumber);
 
         var executionResult = await _transactionExecutor.ExecuteAsync(
             async (transaction, ct) =>
             {
-                if (idempotencyRequest is not null)
+                var reservation = await _idempotencyCoordinator.ReserveAsync<SignUpUser>(transaction, idempotencyRequest, ct);
+                if (reservation.StoredResponse is not null)
                 {
-                    var reservation = await _idempotencyCoordinator.ReserveAsync<SignUpUser>(transaction, idempotencyRequest, ct);
-                    if (reservation.StoredResponse is not null)
-                    {
-                        return new SignUpExecutionResult(reservation.StoredResponse, false);
-                    }
+                    return new SignUpExecutionResult(reservation.StoredResponse, false);
                 }
 
                 if (await _userAccountRepository.ExistsByUsernameAsync(transaction, normalizedUsername, ct))
@@ -108,15 +112,12 @@ public sealed class SignUpService : ISignUpService
                 var createdUser = ToSignUpUser(await _userAccountRepository.GetByIdAsync(transaction, userId, ct));
                 await _auditLogRepository.InsertSignUpCreatedAsync(transaction, createdUser, ct);
 
-                if (idempotencyRequest is not null)
-                {
-                    await _idempotencyCoordinator.StoreResponseAsync(
-                        transaction,
-                        idempotencyRequest.Key,
-                        201,
-                        createdUser,
-                        ct);
-                }
+                await _idempotencyCoordinator.StoreResponseAsync(
+                    transaction,
+                    idempotencyRequest.Key,
+                    201,
+                    createdUser,
+                    ct);
 
                 return new SignUpExecutionResult(createdUser, true);
             },
@@ -130,26 +131,32 @@ public sealed class SignUpService : ISignUpService
         return executionResult.User;
     }
 
-    private IdempotencyRequest? CreateIdempotencyRequest(
-        string? idempotencyKey,
+    private IdempotencyRequest CreateIdempotencyRequest(
+        Guid idempotencyKey,
         string normalizedUsername,
-        string? displayName,
-        string? phone)
+        string firstName,
+        string? middleName,
+        string lastName,
+        string phoneNumber)
     {
-        if (string.IsNullOrWhiteSpace(idempotencyKey))
-        {
-            return null;
-        }
-
         var requestHash = _textHasher.Hash(JsonSerializer.Serialize(new
         {
-            username = normalizedUsername,
-            displayName,
-            phone
+            emailAddress = normalizedUsername,
+            firstName = firstName.Trim(),
+            middleName = string.IsNullOrWhiteSpace(middleName) ? null : middleName.Trim(),
+            lastName = lastName.Trim(),
+            phoneNumber
         }));
 
-        return new IdempotencyRequest(idempotencyKey, Method, Route, requestHash);
+        return new IdempotencyRequest(idempotencyKey.ToString(), Method, Route, requestHash);
     }
+
+    private static string BuildDisplayName(string firstName, string? middleName, string lastName) =>
+        string.Join(
+            ' ',
+            new[] { firstName, middleName, lastName }
+                .Where(part => !string.IsNullOrWhiteSpace(part))
+                .Select(part => part!.Trim()));
 
     private async Task TryEnqueueVerificationEmailAsync(
         VerificationEmailOutboxMessage message,
@@ -170,7 +177,7 @@ public sealed class SignUpService : ISignUpService
     }
 
     private static Exception UserAlreadyExists() =>
-        new ServiceException(409, "USER_EXISTS", "Username already exists.");
+        new ServiceException(409, "USER_EXISTS", "Email address already exists.");
 
     private static SignUpUser ToSignUpUser(UserAccount account) =>
         new(

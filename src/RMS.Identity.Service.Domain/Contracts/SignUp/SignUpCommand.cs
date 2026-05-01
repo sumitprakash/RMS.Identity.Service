@@ -1,8 +1,10 @@
 namespace RMS.Identity.Service.Domain.Contracts.SignUp;
 
 public sealed record SignUpCommand(
-    string Username,
+    string EmailAddress,
     string Password,
-    string? DisplayName,
-    string? Phone,
-    string? IdempotencyKey);
+    string FirstName,
+    string? MiddleName,
+    string LastName,
+    string PhoneNumber,
+    Guid IdempotencyKey);

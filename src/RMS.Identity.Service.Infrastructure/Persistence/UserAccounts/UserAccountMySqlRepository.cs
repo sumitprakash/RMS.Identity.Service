@@ -75,7 +75,7 @@ public sealed class UserAccountMySqlRepository : IUserAccountRepository
         }
         catch (MySqlException exception) when (exception.Number == 1062)
         {
-            throw new ServiceException((int)HttpStatusCode.Conflict, "USER_EXISTS", "Username already exists.");
+            throw new ServiceException((int)HttpStatusCode.Conflict, "USER_EXISTS", "Email address already exists.");
         }
     }
 
