@@ -1,4 +1,4 @@
-namespace RMS.Identity.Service.Domain.Contracts.SignUp;
+namespace RMS.Identity.Service.Domain.Contracts.EmailVerification;
 
 public sealed record CreateEmailVerificationCommand(
     long UserId,

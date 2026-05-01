@@ -1,9 +1,9 @@
-using RMS.Identity.Service.Domain.Contracts.SignUp;
+using RMS.Identity.Service.Domain.Contracts.EmailVerification;
+using RMS.Identity.Service.Domain.Interfaces.EmailVerification;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
-using RMS.Identity.Service.Domain.Interfaces.SignUp;
 using RMS.Identity.Service.Infrastructure.Data;
 
-namespace RMS.Identity.Service.Infrastructure.Persistence.SignUp;
+namespace RMS.Identity.Service.Infrastructure.Persistence.EmailVerification;
 
 public sealed class EmailVerificationMySqlRepository : IEmailVerificationRepository
 {

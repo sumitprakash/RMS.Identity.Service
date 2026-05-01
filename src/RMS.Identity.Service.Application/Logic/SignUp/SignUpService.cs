@@ -3,12 +3,20 @@ using Microsoft.Extensions.Logging;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
 using RMS.Identity.Service.Domain.Contracts.Idempotency;
+using RMS.Identity.Service.Domain.Contracts.EmailVerification;
+using RMS.Identity.Service.Domain.Contracts.Outbox;
 using RMS.Identity.Service.Domain.Contracts.SignUp;
+using RMS.Identity.Service.Domain.Contracts.UserAccounts;
+using RMS.Identity.Service.Domain.Entities.UserAccounts;
+using RMS.Identity.Service.Domain.Interfaces.AuditLog;
+using RMS.Identity.Service.Domain.Interfaces.EmailVerification;
 using RMS.Identity.Service.Domain.Interfaces.Idempotency;
+using RMS.Identity.Service.Domain.Interfaces.Outbox;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
 using RMS.Identity.Service.Domain.Entities.SignUp;
 using RMS.Identity.Service.Domain.Interfaces.Security;
 using RMS.Identity.Service.Domain.Interfaces.SignUp;
+using RMS.Identity.Service.Domain.Interfaces.UserAccounts;
 
 namespace RMS.Identity.Service.Application.Logic.SignUp;
 
@@ -22,7 +30,7 @@ public sealed class SignUpService : ISignUpService
     private readonly IUserAccountRepository _userAccountRepository;
     private readonly IEmailVerificationRepository _emailVerificationRepository;
     private readonly IAuditLogRepository _auditLogRepository;
-    private readonly IVerificationEmailOutboxRepository _verificationEmailOutboxRepository;
+    private readonly IOutboxRepository _outboxRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ITextHasher _textHasher;
     private readonly ILogger<SignUpService> _logger;
@@ -34,7 +42,7 @@ public sealed class SignUpService : ISignUpService
         IUserAccountRepository userAccountRepository,
         IEmailVerificationRepository emailVerificationRepository,
         IAuditLogRepository auditLogRepository,
-        IVerificationEmailOutboxRepository verificationEmailOutboxRepository,
+        IOutboxRepository outboxRepository,
         IPasswordHasher passwordHasher,
         ITextHasher textHasher,
         ILogger<SignUpService> logger)
@@ -44,7 +52,7 @@ public sealed class SignUpService : ISignUpService
         _userAccountRepository = userAccountRepository;
         _emailVerificationRepository = emailVerificationRepository;
         _auditLogRepository = auditLogRepository;
-        _verificationEmailOutboxRepository = verificationEmailOutboxRepository;
+        _outboxRepository = outboxRepository;
         _passwordHasher = passwordHasher;
         _textHasher = textHasher;
         _logger = logger;
@@ -97,7 +105,7 @@ public sealed class SignUpService : ISignUpService
                     createEmailVerificationCommand with { UserId = userId },
                     ct);
 
-                var createdUser = await _userAccountRepository.GetSignUpUserAsync(transaction, userId, ct);
+                var createdUser = ToSignUpUser(await _userAccountRepository.GetByIdAsync(transaction, userId, ct));
                 await _auditLogRepository.InsertSignUpCreatedAsync(transaction, createdUser, ct);
 
                 if (idempotencyRequest is not null)
@@ -150,7 +158,7 @@ public sealed class SignUpService : ISignUpService
     {
         try
         {
-            await _verificationEmailOutboxRepository.EnqueueAsync(message, cancellationToken);
+            await _outboxRepository.EnqueueAsync(message, cancellationToken);
         }
         catch (Exception exception)
         {
@@ -163,6 +171,14 @@ public sealed class SignUpService : ISignUpService
 
     private static Exception UserAlreadyExists() =>
         new ServiceException(409, "USER_EXISTS", "Username already exists.");
+
+    private static SignUpUser ToSignUpUser(UserAccount account) =>
+        new(
+            account.UserUuid,
+            account.Username,
+            account.DisplayName,
+            "pending",
+            account.CreatedAt);
 
     private sealed record SignUpExecutionResult(SignUpUser User, bool ShouldEnqueueVerificationEmail);
 }

@@ -1,7 +1,7 @@
 using RMS.Identity.Service.Domain.Entities.SignUp;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
 
-namespace RMS.Identity.Service.Domain.Interfaces.SignUp;
+namespace RMS.Identity.Service.Domain.Interfaces.AuditLog;
 
 public interface IAuditLogRepository
 {

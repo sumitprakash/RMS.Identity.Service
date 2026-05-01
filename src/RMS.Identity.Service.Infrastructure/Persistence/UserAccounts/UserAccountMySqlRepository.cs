@@ -1,13 +1,13 @@
-using System.Net;
 using MySqlConnector;
 using RMS.Identity.Service.Application.Shared.Errors;
-using RMS.Identity.Service.Domain.Contracts.SignUp;
-using RMS.Identity.Service.Domain.Entities.SignUp;
+using RMS.Identity.Service.Domain.Contracts.UserAccounts;
+using RMS.Identity.Service.Domain.Entities.UserAccounts;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
-using RMS.Identity.Service.Domain.Interfaces.SignUp;
+using RMS.Identity.Service.Domain.Interfaces.UserAccounts;
 using RMS.Identity.Service.Infrastructure.Data;
+using System.Net;
 
-namespace RMS.Identity.Service.Infrastructure.Persistence.SignUp;
+namespace RMS.Identity.Service.Infrastructure.Persistence.UserAccounts;
 
 public sealed class UserAccountMySqlRepository : IUserAccountRepository
 {
@@ -79,7 +79,7 @@ public sealed class UserAccountMySqlRepository : IUserAccountRepository
         }
     }
 
-    public async Task<SignUpUser> GetSignUpUserAsync(
+    public async Task<UserAccount> GetByIdAsync(
         IDatabaseTransaction transaction,
         long userId,
         CancellationToken cancellationToken)
@@ -93,6 +93,9 @@ public sealed class UserAccountMySqlRepository : IUserAccountRepository
                 BIN_TO_UUID(UserUUID) AS UserUuid,
                 Username,
                 DisplayName,
+                EmailVerified,
+                IsActive,
+                IsDeleted,
                 CreatedAt
             FROM UserAccount
             WHERE UserID = @UserId
@@ -105,15 +108,18 @@ public sealed class UserAccountMySqlRepository : IUserAccountRepository
         {
             throw new ServiceException(
                 (int)HttpStatusCode.InternalServerError,
-                "SIGNUP_READ_FAILED",
-                "Created user could not be loaded.");
+                "USER_ACCOUNT_READ_FAILED",
+                "User account could not be loaded.");
         }
 
-        return new SignUpUser(
+        return new UserAccount(
+            userId,
             Guid.Parse(reader.GetString("UserUuid")),
             reader.GetString("Username"),
             reader.GetNullableString("DisplayName"),
-            "pending",
+            reader.GetBoolean(reader.GetOrdinal("EmailVerified")),
+            reader.GetBoolean(reader.GetOrdinal("IsActive")),
+            reader.GetBoolean(reader.GetOrdinal("IsDeleted")),
             reader.GetUtcDateTime("CreatedAt"));
     }
 }

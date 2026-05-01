@@ -1,15 +1,15 @@
 using System.Text.Json;
-using RMS.Identity.Service.Domain.Contracts.SignUp;
-using RMS.Identity.Service.Domain.Interfaces.SignUp;
+using RMS.Identity.Service.Domain.Contracts.Outbox;
+using RMS.Identity.Service.Domain.Interfaces.Outbox;
 using RMS.Identity.Service.Infrastructure.Data;
 
-namespace RMS.Identity.Service.Infrastructure.Persistence.SignUp;
+namespace RMS.Identity.Service.Infrastructure.Persistence.Outbox;
 
-public sealed class VerificationEmailOutboxMySqlRepository : IVerificationEmailOutboxRepository
+public sealed class OutboxMySqlRepository : IOutboxRepository
 {
     private readonly IMySqlConnectionFactory _connectionFactory;
 
-    public VerificationEmailOutboxMySqlRepository(IMySqlConnectionFactory connectionFactory)
+    public OutboxMySqlRepository(IMySqlConnectionFactory connectionFactory)
     {
         _connectionFactory = connectionFactory;
     }

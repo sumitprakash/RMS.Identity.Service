@@ -3,7 +3,7 @@ using RMS.Identity.Service.Domain.Contracts.Idempotency;
 using RMS.Identity.Service.Domain.Interfaces.Idempotency;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
 using RMS.Identity.Service.Infrastructure.Data;
-using RMS.Identity.Service.Infrastructure.Persistence.SignUp;
+using RMS.Identity.Service.Infrastructure.Persistence;
 
 namespace RMS.Identity.Service.Infrastructure.Idempotency;
 

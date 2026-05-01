@@ -214,7 +214,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
 
             var body = await response.Content.ReadFromJsonAsync<SignUpResponse>(_jsonOptions);
             Assert.NotNull(body);
-            Assert.NotEqual(storedUser.UserUuid, body.UserUuid);
+            Assert.Equal(storedUser.UserUuid, body.UserUuid);
             Assert.Equal(storedUser.Username, body.Username);
             Assert.Equal(storedUser.DisplayName, body.DisplayName);
             Assert.Equal(storedUser.Status, body.Status);

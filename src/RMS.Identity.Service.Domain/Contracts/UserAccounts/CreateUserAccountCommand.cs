@@ -1,4 +1,4 @@
-namespace RMS.Identity.Service.Domain.Contracts.SignUp;
+namespace RMS.Identity.Service.Domain.Contracts.UserAccounts;
 
 public sealed record CreateUserAccountCommand(
     Guid UserUuid,

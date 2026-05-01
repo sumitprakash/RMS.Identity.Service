@@ -1,8 +1,8 @@
-using RMS.Identity.Service.Domain.Contracts.SignUp;
-using RMS.Identity.Service.Domain.Entities.SignUp;
+using RMS.Identity.Service.Domain.Contracts.UserAccounts;
+using RMS.Identity.Service.Domain.Entities.UserAccounts;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
 
-namespace RMS.Identity.Service.Domain.Interfaces.SignUp;
+namespace RMS.Identity.Service.Domain.Interfaces.UserAccounts;
 
 public interface IUserAccountRepository
 {
@@ -16,7 +16,7 @@ public interface IUserAccountRepository
         CreateUserAccountCommand command,
         CancellationToken cancellationToken);
 
-    Task<SignUpUser> GetSignUpUserAsync(
+    Task<UserAccount> GetByIdAsync(
         IDatabaseTransaction transaction,
         long userId,
         CancellationToken cancellationToken);

@@ -1,7 +1,7 @@
-using RMS.Identity.Service.Domain.Contracts.SignUp;
+using RMS.Identity.Service.Domain.Contracts.EmailVerification;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
 
-namespace RMS.Identity.Service.Domain.Interfaces.SignUp;
+namespace RMS.Identity.Service.Domain.Interfaces.EmailVerification;
 
 public interface IEmailVerificationRepository
 {

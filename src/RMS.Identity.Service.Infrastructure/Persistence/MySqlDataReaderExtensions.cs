@@ -1,6 +1,6 @@
 using System.Data.Common;
 
-namespace RMS.Identity.Service.Infrastructure.Persistence.SignUp;
+namespace RMS.Identity.Service.Infrastructure.Persistence;
 
 internal static class MySqlDataReaderExtensions
 {

@@ -1,10 +1,10 @@
 using System.Text.Json;
 using RMS.Identity.Service.Domain.Entities.SignUp;
+using RMS.Identity.Service.Domain.Interfaces.AuditLog;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
-using RMS.Identity.Service.Domain.Interfaces.SignUp;
 using RMS.Identity.Service.Infrastructure.Data;
 
-namespace RMS.Identity.Service.Infrastructure.Persistence.SignUp;
+namespace RMS.Identity.Service.Infrastructure.Persistence.AuditLog;
 
 public sealed class AuditLogMySqlRepository : IAuditLogRepository
 {
