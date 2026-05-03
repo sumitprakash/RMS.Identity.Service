@@ -7,7 +7,7 @@ namespace RMS.Identity.Service.Application.Logic.SignUp;
 
 public sealed class SignUpValidator
 {
-    public void Validate(SignUpCommand command)
+    public void Validate(SignUpCommandRequest command)
     {
         if (!EmailAddressValidator.IsValid(command.EmailAddress))
         {

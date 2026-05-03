@@ -8,7 +8,7 @@ public static class ApplicationServiceCollectionExtensions
 {
     public static IServiceCollection AddIdentityServiceApplication(this IServiceCollection services)
     {
-        services.AddScoped<ISignUpService, SignUpService>();
+        services.AddScoped<ISignUpCommand, SignUpCommand>();
         return services;
     }
 }

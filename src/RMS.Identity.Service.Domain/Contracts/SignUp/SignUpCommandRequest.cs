@@ -1,6 +1,6 @@
 namespace RMS.Identity.Service.Domain.Contracts.SignUp;
 
-public sealed record SignUpCommand(
+public sealed record SignUpCommandRequest(
     string EmailAddress,
     string Password,
     string FirstName,

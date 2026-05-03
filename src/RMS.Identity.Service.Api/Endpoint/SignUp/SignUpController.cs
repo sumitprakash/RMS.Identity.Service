@@ -7,11 +7,11 @@ namespace RMS.Identity.Service.Api.Endpoint.SignUp;
 [Route("api/v1/signup")]
 public sealed class SignUpController : ControllerBase
 {
-    private readonly ISignUpService _service;
+    private readonly ISignUpCommand _command;
 
-    public SignUpController(ISignUpService service)
+    public SignUpController(ISignUpCommand command)
     {
-        _service = service;
+        _command = command;
     }
 
     [HttpPost]
@@ -21,7 +21,7 @@ public sealed class SignUpController : ControllerBase
     public async Task<IActionResult> PostAsync(SignUpRequestBody body, CancellationToken cancellationToken)
     {
         var request = SignUpRequest.FromHttpRequest(Request, body);
-        var user = await _service.ExecuteAsync(request.ToCommand(), cancellationToken);
+        var user = await _command.ExecuteAsync(request.ToCommand(), cancellationToken);
         return StatusCode(StatusCodes.Status201Created, user.ToResponse());
     }
 }

@@ -5,7 +5,7 @@ namespace RMS.Identity.Service.Api.Endpoint.SignUp;
 
 public static class SignUpMappings
 {
-    public static SignUpCommand ToCommand(this SignUpRequest request) =>
+    public static SignUpCommandRequest ToCommand(this SignUpRequest request) =>
         new(
             request.Body.EmailAddress,
             request.Body.Password,
@@ -15,7 +15,7 @@ public static class SignUpMappings
             request.Body.PhoneNumber,
             request.IdempotencyKey);
 
-    public static SignUpResponse ToResponse(this SignUpUser user) =>
+    public static SignUpResponse ToResponse(this SignUpCommandResponse user) =>
         new(
             user.UserUuid,
             user.Username,

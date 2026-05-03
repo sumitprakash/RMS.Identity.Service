@@ -1,26 +1,26 @@
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
-using RMS.Identity.Service.Domain.Contracts.Idempotency;
 using RMS.Identity.Service.Domain.Contracts.EmailVerification;
+using RMS.Identity.Service.Domain.Contracts.Idempotency;
 using RMS.Identity.Service.Domain.Contracts.Outbox;
 using RMS.Identity.Service.Domain.Contracts.SignUp;
 using RMS.Identity.Service.Domain.Contracts.UserAccounts;
+using RMS.Identity.Service.Domain.Entities.SignUp;
 using RMS.Identity.Service.Domain.Entities.UserAccounts;
 using RMS.Identity.Service.Domain.Interfaces.AuditLog;
 using RMS.Identity.Service.Domain.Interfaces.EmailVerification;
 using RMS.Identity.Service.Domain.Interfaces.Idempotency;
 using RMS.Identity.Service.Domain.Interfaces.Outbox;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
-using RMS.Identity.Service.Domain.Entities.SignUp;
 using RMS.Identity.Service.Domain.Interfaces.Security;
 using RMS.Identity.Service.Domain.Interfaces.SignUp;
 using RMS.Identity.Service.Domain.Interfaces.UserAccounts;
+using System.Text.Json;
 
 namespace RMS.Identity.Service.Application.Logic.SignUp;
 
-public sealed class SignUpService : ISignUpService
+public sealed class SignUpCommand : ISignUpCommand
 {
     private const string Route = "/api/v1/signup";
     private const string Method = "POST";
@@ -33,10 +33,10 @@ public sealed class SignUpService : ISignUpService
     private readonly IOutboxRepository _outboxRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ITextHasher _textHasher;
-    private readonly ILogger<SignUpService> _logger;
+    private readonly ILogger<SignUpCommand> _logger;
     private readonly SignUpValidator _validator = new();
 
-    public SignUpService(
+    public SignUpCommand(
         IDatabaseTransactionExecutor transactionExecutor,
         IIdempotencyCoordinator idempotencyCoordinator,
         IUserAccountRepository userAccountRepository,
@@ -45,7 +45,7 @@ public sealed class SignUpService : ISignUpService
         IOutboxRepository outboxRepository,
         IPasswordHasher passwordHasher,
         ITextHasher textHasher,
-        ILogger<SignUpService> logger)
+        ILogger<SignUpCommand> logger)
     {
         _transactionExecutor = transactionExecutor;
         _idempotencyCoordinator = idempotencyCoordinator;
@@ -58,7 +58,7 @@ public sealed class SignUpService : ISignUpService
         _logger = logger;
     }
 
-    public async Task<SignUpUser> ExecuteAsync(SignUpCommand command, CancellationToken cancellationToken)
+    public async Task<SignUpCommandResponse> ExecuteAsync(SignUpCommandRequest command, CancellationToken cancellationToken)
     {
         _validator.Validate(command);
 
@@ -128,7 +128,12 @@ public sealed class SignUpService : ISignUpService
             await TryEnqueueVerificationEmailAsync(verificationEmailOutboxMessage, executionResult.User, cancellationToken);
         }
 
-        return executionResult.User;
+        return new SignUpCommandResponse(
+            executionResult.User.UserUuid,
+            executionResult.User.Username,
+            executionResult.User.Status,
+            executionResult.User.CreatedAt
+        );
     }
 
     private IdempotencyRequest CreateIdempotencyRequest(

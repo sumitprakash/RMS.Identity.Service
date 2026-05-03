@@ -3,7 +3,7 @@ using RMS.Identity.Service.Domain.Entities.SignUp;
 
 namespace RMS.Identity.Service.Domain.Interfaces.SignUp;
 
-public interface ISignUpService
+public interface ISignUpCommand
 {
-    Task<SignUpUser> ExecuteAsync(SignUpCommand command, CancellationToken cancellationToken);
+    Task<SignUpCommandResponse> ExecuteAsync(SignUpCommandRequest command, CancellationToken cancellationToken);
 }
