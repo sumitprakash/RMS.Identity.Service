@@ -64,11 +64,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             Assert.True(persisted.IsActive);
             Assert.False(persisted.IsDeleted);
             Assert.Equal(body.CreatedAt, persisted.CreatedAt);
-            Assert.Equal(1, persisted.EmailVerificationCount);
-            Assert.False(persisted.EmailVerificationConsumed);
-            Assert.True(persisted.EmailVerificationExpiresAt > DateTime.UtcNow);
             Assert.Equal(1, persisted.AuditLogCount);
-            Assert.Equal(1, persisted.OutboxCount);
         }
         finally
         {
@@ -247,50 +243,6 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
     }
 
     [Fact]
-    public async Task Post_WhenOutboxInsertFails_ReturnsCreatedAndKeepsSignupData()
-    {
-        var uniqueSuffix = Guid.NewGuid().ToString("N");
-        var normalizedUsername = $"outbox-failure.{uniqueSuffix}@example.com";
-        var constraintName = $"chk_signup_outbox_failure_{uniqueSuffix[..16]}";
-        var idempotencyKey = Guid.NewGuid().ToString();
-        SignUpResponse? body = null;
-
-        await using var connection = await _factory.OpenDatabaseConnectionAsync();
-
-        try
-        {
-            await CreateOutboxFailureCheckConstraintAsync(connection, constraintName, normalizedUsername);
-
-            using var client = _factory.CreateClient();
-            using var request = CreateSignUpRequest(CreateValidBody(normalizedUsername), idempotencyKey);
-            using var response = await client.SendAsync(request);
-
-            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-
-            body = await response.Content.ReadFromJsonAsync<SignUpResponse>(_jsonOptions);
-            Assert.NotNull(body);
-            Assert.Equal(normalizedUsername, body.EmailAddress);
-
-            var persisted = await LoadPersistedSignUpAsync(normalizedUsername, body.UserUuid);
-            Assert.NotNull(persisted);
-            Assert.Equal(body.UserUuid, persisted.UserUuid);
-            Assert.Equal(normalizedUsername, persisted.Username);
-            Assert.Equal(1, persisted.EmailVerificationCount);
-            Assert.Equal(1, persisted.AuditLogCount);
-            Assert.Equal(0, persisted.OutboxCount);
-        }
-        finally
-        {
-            await DropCheckConstraintAsync(connection, constraintName);
-
-            if (body is not null)
-            {
-                await CleanupSignUpDataAsync(normalizedUsername, body.UserUuid, idempotencyKey);
-            }
-        }
-    }
-
-    [Fact]
     public async Task Post_WithInvalidBody_ReturnsBadRequestValidationError()
     {
         using var client = _factory.CreateClient();
@@ -459,15 +411,9 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
                 ua.IsActive,
                 ua.IsDeleted,
                 ua.CreatedAt,
-                COUNT(DISTINCT ev.EmailVerificationID) AS EmailVerificationCount,
-                MAX(ev.Consumed) AS EmailVerificationConsumed,
-                MAX(ev.ExpiresAt) AS EmailVerificationExpiresAt,
-                COUNT(DISTINCT al.AuditID) AS AuditLogCount,
-                COUNT(DISTINCT ob.OutboxID) AS OutboxCount
+                COUNT(DISTINCT al.AuditID) AS AuditLogCount
             FROM UserAccount ua
-            LEFT JOIN EmailVerification ev ON ev.UserID = ua.UserID AND ev.Purpose = 'email_verification'
             LEFT JOIN AuditLog al ON al.RecordId = BIN_TO_UUID(ua.UserUUID) AND al.Action = 'signup_created'
-            LEFT JOIN Outbox ob ON ob.AggregateUUID = ua.UserUUID AND ob.EventType = 'identity.email_verification_requested'
             WHERE ua.Username = @Username
               AND ua.UserUUID = UUID_TO_BIN(@UserUuid)
             GROUP BY
@@ -501,11 +447,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             reader.GetBoolean(reader.GetOrdinal("IsActive")),
             reader.GetBoolean(reader.GetOrdinal("IsDeleted")),
             DateTime.SpecifyKind(reader.GetDateTime(reader.GetOrdinal("CreatedAt")), DateTimeKind.Utc),
-            reader.GetInt32(reader.GetOrdinal("EmailVerificationCount")),
-            reader.GetBoolean(reader.GetOrdinal("EmailVerificationConsumed")),
-            DateTime.SpecifyKind(reader.GetDateTime(reader.GetOrdinal("EmailVerificationExpiresAt")), DateTimeKind.Utc),
-            reader.GetInt32(reader.GetOrdinal("AuditLogCount")),
-            reader.GetInt32(reader.GetOrdinal("OutboxCount")));
+            reader.GetInt32(reader.GetOrdinal("AuditLogCount")));
     }
 
     private async Task<IdempotencyEntry?> LoadIdempotencyEntryAsync(string idempotencyKey)
@@ -541,18 +483,8 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
 
         await ExecuteNonQueryAsync(
             connection,
-            "DELETE FROM Outbox WHERE AggregateUUID = UUID_TO_BIN(@UserUuid);",
-            command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString()));
-
-        await ExecuteNonQueryAsync(
-            connection,
             "DELETE FROM AuditLog WHERE RecordId = @UserUuid;",
             command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString()));
-
-        await ExecuteNonQueryAsync(
-            connection,
-            "DELETE FROM EmailVerification WHERE UserID IN (SELECT UserID FROM UserAccount WHERE Username = @Username);",
-            command => command.Parameters.AddWithValue("@Username", username));
 
         await ExecuteNonQueryAsync(
             connection,
@@ -617,29 +549,6 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
         throw new TimeoutException("Timed out waiting for the idempotent request to block on the duplicate key insert.");
     }
 
-    private static Task CreateOutboxFailureCheckConstraintAsync(
-        MySqlConnection connection,
-        string constraintName,
-        string username)
-    {
-        return ExecuteNonQueryAsync(
-            connection,
-            $"""
-            ALTER TABLE Outbox
-            ADD CONSTRAINT `{constraintName}`
-            CHECK (JSON_UNQUOTE(JSON_EXTRACT(Payload, '$.username')) <> @Username);
-            """,
-            command => command.Parameters.AddWithValue("@Username", username));
-    }
-
-    private static Task DropCheckConstraintAsync(MySqlConnection connection, string constraintName)
-    {
-        return ExecuteNonQueryAsync(
-            connection,
-            $"ALTER TABLE Outbox DROP CHECK `{constraintName}`;",
-            _ => { });
-    }
-
     private static string ComputeSha256Hex(string value)
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
@@ -656,11 +565,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
         bool IsActive,
         bool IsDeleted,
         DateTime CreatedAt,
-        int EmailVerificationCount,
-        bool EmailVerificationConsumed,
-        DateTime EmailVerificationExpiresAt,
-        int AuditLogCount,
-        int OutboxCount);
+        int AuditLogCount);
 
     private sealed record IdempotencyEntry(
         string Method,

@@ -1,17 +1,12 @@
-using Microsoft.Extensions.Logging;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
-using RMS.Identity.Service.Domain.Contracts.EmailVerification;
 using RMS.Identity.Service.Domain.Contracts.Idempotency;
-using RMS.Identity.Service.Domain.Contracts.Outbox;
 using RMS.Identity.Service.Domain.Contracts.SignUp;
 using RMS.Identity.Service.Domain.Contracts.UserAccounts;
 using RMS.Identity.Service.Domain.Entities.SignUp;
 using RMS.Identity.Service.Domain.Entities.UserAccounts;
 using RMS.Identity.Service.Domain.Interfaces.AuditLog;
-using RMS.Identity.Service.Domain.Interfaces.EmailVerification;
 using RMS.Identity.Service.Domain.Interfaces.Idempotency;
-using RMS.Identity.Service.Domain.Interfaces.Outbox;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
 using RMS.Identity.Service.Domain.Interfaces.Security;
 using RMS.Identity.Service.Domain.Interfaces.SignUp;
@@ -28,34 +23,25 @@ public sealed class SignUpCommand : ISignUpCommand
     private readonly IDatabaseTransactionExecutor _transactionExecutor;
     private readonly IIdempotencyCoordinator _idempotencyCoordinator;
     private readonly IUserAccountRepository _userAccountRepository;
-    private readonly IEmailVerificationRepository _emailVerificationRepository;
     private readonly IAuditLogRepository _auditLogRepository;
-    private readonly IOutboxRepository _outboxRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ITextHasher _textHasher;
-    private readonly ILogger<SignUpCommand> _logger;
     private readonly SignUpValidator _validator = new();
 
     public SignUpCommand(
         IDatabaseTransactionExecutor transactionExecutor,
         IIdempotencyCoordinator idempotencyCoordinator,
         IUserAccountRepository userAccountRepository,
-        IEmailVerificationRepository emailVerificationRepository,
         IAuditLogRepository auditLogRepository,
-        IOutboxRepository outboxRepository,
         IPasswordHasher passwordHasher,
-        ITextHasher textHasher,
-        ILogger<SignUpCommand> logger)
+        ITextHasher textHasher)
     {
         _transactionExecutor = transactionExecutor;
         _idempotencyCoordinator = idempotencyCoordinator;
         _userAccountRepository = userAccountRepository;
-        _emailVerificationRepository = emailVerificationRepository;
         _auditLogRepository = auditLogRepository;
-        _outboxRepository = outboxRepository;
         _passwordHasher = passwordHasher;
         _textHasher = textHasher;
-        _logger = logger;
     }
 
     public async Task<SignUpCommandResponse> ExecuteAsync(SignUpCommandRequest command, CancellationToken cancellationToken)
@@ -71,16 +57,6 @@ public sealed class SignUpCommand : ISignUpCommand
             _passwordHasher.Hash(command.Password),
             displayName);
 
-        var verificationToken = Guid.NewGuid().ToString("N");
-        var verificationEmailOutboxMessage = new VerificationEmailOutboxMessage(
-            createUserCommand.UserUuid,
-            normalizedUsername,
-            displayName,
-            verificationToken);
-        var createEmailVerificationCommand = new CreateEmailVerificationCommand(
-            0,
-            _textHasher.Hash(verificationToken),
-            DateTime.UtcNow.AddDays(1));
         var idempotencyRequest = CreateIdempotencyRequest(
             command.IdempotencyKey,
             normalizedUsername,
@@ -95,7 +71,7 @@ public sealed class SignUpCommand : ISignUpCommand
                 var reservation = await _idempotencyCoordinator.ReserveAsync<SignUpUser>(transaction, idempotencyRequest, ct);
                 if (reservation.StoredResponse is not null)
                 {
-                    return new SignUpExecutionResult(reservation.StoredResponse, false);
+                    return new SignUpExecutionResult(reservation.StoredResponse);
                 }
 
                 if (await _userAccountRepository.ExistsByUsernameAsync(transaction, normalizedUsername, ct))
@@ -104,11 +80,6 @@ public sealed class SignUpCommand : ISignUpCommand
                 }
 
                 var userId = await _userAccountRepository.CreateAsync(transaction, createUserCommand, ct);
-                await _emailVerificationRepository.CreateAsync(
-                    transaction,
-                    createEmailVerificationCommand with { UserId = userId },
-                    ct);
-
                 var createdUser = ToSignUpUser(await _userAccountRepository.GetByIdAsync(transaction, userId, ct));
                 await _auditLogRepository.InsertSignUpCreatedAsync(transaction, createdUser, ct);
 
@@ -119,14 +90,9 @@ public sealed class SignUpCommand : ISignUpCommand
                     createdUser,
                     ct);
 
-                return new SignUpExecutionResult(createdUser, true);
+                return new SignUpExecutionResult(createdUser);
             },
             cancellationToken);
-
-        if (executionResult.ShouldEnqueueVerificationEmail)
-        {
-            await TryEnqueueVerificationEmailAsync(verificationEmailOutboxMessage, executionResult.User, cancellationToken);
-        }
 
         return new SignUpCommandResponse(
             executionResult.User.UserUuid,
@@ -163,24 +129,6 @@ public sealed class SignUpCommand : ISignUpCommand
                 .Where(part => !string.IsNullOrWhiteSpace(part))
                 .Select(part => part!.Trim()));
 
-    private async Task TryEnqueueVerificationEmailAsync(
-        VerificationEmailOutboxMessage message,
-        SignUpUser createdUser,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            await _outboxRepository.EnqueueAsync(message, cancellationToken);
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(
-                exception,
-                "Signup committed but failed to enqueue verification email for user {UserUuid}.",
-                createdUser.UserUuid);
-        }
-    }
-
     private static Exception UserAlreadyExists() =>
         new ServiceException(409, "USER_EXISTS", "Email address already exists.");
 
@@ -192,5 +140,5 @@ public sealed class SignUpCommand : ISignUpCommand
             "pending",
             account.CreatedAt);
 
-    private sealed record SignUpExecutionResult(SignUpUser User, bool ShouldEnqueueVerificationEmail);
+    private sealed record SignUpExecutionResult(SignUpUser User);
 }
