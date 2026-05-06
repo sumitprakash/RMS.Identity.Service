@@ -1,6 +1,6 @@
 using RMS.Identity.Service.Application.Shared.Errors;
+using RMS.Identity.Service.Application.Shared.Idempotency;
 using RMS.Identity.Service.Application.Shared.Validation;
-using RMS.Identity.Service.Domain.Contracts.Idempotency;
 using RMS.Identity.Service.Domain.Contracts.SignUp;
 using RMS.Identity.Service.Domain.Contracts.UserAccounts;
 using RMS.Identity.Service.Domain.Entities.SignUp;
@@ -11,7 +11,6 @@ using RMS.Identity.Service.Domain.Interfaces.Persistence;
 using RMS.Identity.Service.Domain.Interfaces.Security;
 using RMS.Identity.Service.Domain.Interfaces.SignUp;
 using RMS.Identity.Service.Domain.Interfaces.UserAccounts;
-using System.Text.Json;
 
 namespace RMS.Identity.Service.Application.Logic.SignUp;
 
@@ -22,48 +21,46 @@ public sealed class SignUpCommand : ISignUpCommand
 
     private readonly IDatabaseTransactionExecutor _transactionExecutor;
     private readonly IIdempotencyCoordinator _idempotencyCoordinator;
+    private readonly IIdempotencyRequestFactory _idempotencyRequestFactory;
     private readonly IUserAccountRepository _userAccountRepository;
     private readonly IAuditLogRepository _auditLogRepository;
     private readonly IPasswordHasher _passwordHasher;
-    private readonly ITextHasher _textHasher;
     private readonly SignUpValidator _validator = new();
 
     public SignUpCommand(
         IDatabaseTransactionExecutor transactionExecutor,
         IIdempotencyCoordinator idempotencyCoordinator,
+        IIdempotencyRequestFactory idempotencyRequestFactory,
         IUserAccountRepository userAccountRepository,
         IAuditLogRepository auditLogRepository,
-        IPasswordHasher passwordHasher,
-        ITextHasher textHasher)
+        IPasswordHasher passwordHasher)
     {
         _transactionExecutor = transactionExecutor;
         _idempotencyCoordinator = idempotencyCoordinator;
+        _idempotencyRequestFactory = idempotencyRequestFactory;
         _userAccountRepository = userAccountRepository;
         _auditLogRepository = auditLogRepository;
         _passwordHasher = passwordHasher;
-        _textHasher = textHasher;
     }
 
-    public async Task<SignUpCommandResponse> ExecuteAsync(SignUpCommandRequest command, CancellationToken cancellationToken)
+    public async Task<SignUpCommandResponse> ExecuteAsync(SignUpCommandRequest request, CancellationToken cancellationToken)
     {
-        _validator.Validate(command);
+        _validator.Validate(request);
 
-        var normalizedUsername = EmailAddressValidator.Normalize(command.EmailAddress);
-        var displayName = BuildDisplayName(command.FirstName, command.MiddleName, command.LastName);
-        var phoneNumber = command.PhoneNumber.Trim();
+        var normalizedUsername = EmailAddressValidator.Normalize(request.EmailAddress);
+        var displayName = BuildDisplayName(request.FirstName, request.MiddleName, request.LastName);
+        var phoneNumber = request.PhoneNumber.Trim();
         var createUserCommand = new CreateUserAccountCommand(
             Guid.NewGuid(),
             normalizedUsername,
-            _passwordHasher.Hash(command.Password),
+            _passwordHasher.Hash(request.Password),
             displayName);
 
-        var idempotencyRequest = CreateIdempotencyRequest(
-            command.IdempotencyKey,
-            normalizedUsername,
-            command.FirstName,
-            command.MiddleName,
-            command.LastName,
-            phoneNumber);
+        var idempotencyRequest = _idempotencyRequestFactory.Create(
+            request.IdempotencyKey,
+            Method,
+            Route,
+            request);
 
         var executionResult = await _transactionExecutor.ExecuteAsync(
             async (transaction, ct) =>
@@ -100,26 +97,6 @@ public sealed class SignUpCommand : ISignUpCommand
             executionResult.User.Status,
             executionResult.User.CreatedAt
         );
-    }
-
-    private IdempotencyRequest CreateIdempotencyRequest(
-        Guid idempotencyKey,
-        string normalizedUsername,
-        string firstName,
-        string? middleName,
-        string lastName,
-        string phoneNumber)
-    {
-        var requestHash = _textHasher.Hash(JsonSerializer.Serialize(new
-        {
-            emailAddress = normalizedUsername,
-            firstName = firstName.Trim(),
-            middleName = string.IsNullOrWhiteSpace(middleName) ? null : middleName.Trim(),
-            lastName = lastName.Trim(),
-            phoneNumber
-        }));
-
-        return new IdempotencyRequest(idempotencyKey.ToString(), Method, Route, requestHash);
     }
 
     private static string BuildDisplayName(string firstName, string? middleName, string lastName) =>

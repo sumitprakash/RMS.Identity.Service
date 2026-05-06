@@ -115,19 +115,12 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             Assert.Equal(ComputeSha256Hex(JsonSerializer.Serialize(new
             {
                 emailAddress = normalizedUsername,
-                firstName = "Retry",
-                middleName = (string?)null,
-                lastName = "Example",
-                phoneNumber = "+919876543210"
-            })), idempotencyEntry.RequestHash);
-            Assert.NotEqual(ComputeSha256Hex(JsonSerializer.Serialize(new
-            {
-                emailAddress = normalizedUsername,
                 password,
                 firstName = "Retry",
                 middleName = (string?)null,
                 lastName = "Example",
-                phoneNumber = "+919876543210"
+                phoneNumber = "+919876543210",
+                idempotencyKey = Guid.Parse(idempotencyKey)
             })), idempotencyEntry.RequestHash);
             Assert.Equal(201, idempotencyEntry.ResponseCode);
             Assert.Contains(body.UserUuid.ToString(), idempotencyEntry.ResponseBody);
@@ -137,6 +130,43 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             if (body is not null)
             {
                 await CleanupSignUpDataAsync(normalizedUsername, body.UserUuid, idempotencyKey);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Post_WithSameIdempotencyKeyAndDifferentPayload_ReturnsKeyReusedConflict()
+    {
+        var uniqueSuffix = Guid.NewGuid().ToString("N");
+        var firstUsername = $"same-key-first.{uniqueSuffix}@example.com";
+        var secondUsername = $"same-key-second.{uniqueSuffix}@example.com";
+        var idempotencyKey = Guid.NewGuid().ToString();
+        SignUpResponse? body = null;
+
+        try
+        {
+            using var client = _factory.CreateClient();
+            using var firstRequest = CreateSignUpRequest(CreateValidBody(firstUsername), idempotencyKey);
+            using var firstResponse = await client.SendAsync(firstRequest);
+            Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
+            body = await firstResponse.Content.ReadFromJsonAsync<SignUpResponse>(_jsonOptions);
+            Assert.NotNull(body);
+
+            using var secondRequest = CreateSignUpRequest(CreateValidBody(secondUsername), idempotencyKey);
+            using var response = await client.SendAsync(secondRequest);
+
+            Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+
+            var error = await response.Content.ReadFromJsonAsync<ApiErrorContract>(_jsonOptions);
+            Assert.NotNull(error);
+            Assert.Equal("IDEMPOTENCY_KEY_REUSED", error.Code);
+            Assert.Equal("Idempotency key payload does not match the original request.", error.Message);
+        }
+        finally
+        {
+            if (body is not null)
+            {
+                await CleanupSignUpDataAsync(firstUsername, body.UserUuid, idempotencyKey);
             }
         }
     }
@@ -157,10 +187,12 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
         var requestHash = ComputeSha256Hex(JsonSerializer.Serialize(new
         {
             emailAddress = normalizedUsername,
+            password,
             firstName = "Race",
             middleName = (string?)null,
             lastName = "Example",
-            phoneNumber = "+919876543210"
+            phoneNumber = "+919876543210",
+            idempotencyKey = Guid.Parse(idempotencyKey)
         }));
         var committed = false;
 

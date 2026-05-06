@@ -79,7 +79,7 @@ public sealed class IdempotencyCoordinator : IIdempotencyCoordinator
     }
 
     private static ServiceException Conflict(string message) =>
-        new((int)HttpStatusCode.Conflict, "IDEMPOTENCY_CONFLICT", message);
+        new((int)HttpStatusCode.Conflict, "IDEMPOTENCY_KEY_REUSED", message);
 
     private static ServiceException InProgress() =>
         new((int)HttpStatusCode.Conflict, "IDEMPOTENCY_IN_PROGRESS", "Idempotent request is already in progress.");
