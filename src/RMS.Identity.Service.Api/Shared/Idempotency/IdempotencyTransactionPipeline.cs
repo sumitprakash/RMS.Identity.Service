@@ -4,15 +4,6 @@ using RMS.Identity.Service.Domain.Interfaces.Persistence;
 
 namespace RMS.Identity.Service.Api.Shared.Idempotency;
 
-public interface IIdempotencyTransactionPipeline
-{
-    Task<IdempotencyMiddlewareResponse> ExecuteAsync(
-        HttpContext context,
-        IdempotencyRequest idempotencyRequest,
-        RequestDelegate next,
-        CancellationToken cancellationToken);
-}
-
 internal sealed class IdempotencyTransactionPipeline : IIdempotencyTransactionPipeline
 {
     private readonly IDatabaseTransactionExecutor _transactionExecutor;

@@ -6,11 +6,6 @@ using RMS.Identity.Service.Domain.Interfaces.Security;
 
 namespace RMS.Identity.Service.Api.Shared.Idempotency;
 
-public interface IIdempotencyRequestFactory
-{
-    Task<IdempotencyRequest> CreateAsync(HttpRequest request, CancellationToken cancellationToken);
-}
-
 internal sealed class IdempotencyRequestFactory : IIdempotencyRequestFactory
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);

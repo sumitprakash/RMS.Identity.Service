@@ -1,10 +1,5 @@
 namespace RMS.Identity.Service.Api.Shared.Idempotency;
 
-public interface IIdempotencyHttpMethodPolicy
-{
-    bool RequiresIdempotency(string method);
-}
-
 internal sealed class IdempotencyHttpMethodPolicy : IIdempotencyHttpMethodPolicy
 {
     private static readonly HashSet<string> MethodsRequiringIdempotency = new(StringComparer.OrdinalIgnoreCase)
