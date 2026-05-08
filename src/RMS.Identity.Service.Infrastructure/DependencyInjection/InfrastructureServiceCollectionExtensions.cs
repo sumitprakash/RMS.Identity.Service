@@ -20,10 +20,11 @@ public static class InfrastructureServiceCollectionExtensions
     {
         services.AddIdentityServiceApplication();
         services.AddSingleton<IMySqlConnectionFactory, MySqlConnectionFactory>();
+        services.AddScoped<IDatabaseTransactionAccessor, DatabaseTransactionAccessor>();
         services.AddScoped<IDatabaseTransactionExecutor, MySqlDatabaseTransactionExecutor>();
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<ITextHasher, Sha256TextHasher>();
-        services.AddScoped<IIdempotencyCoordinator, IdempotencyCoordinator>();
+        services.AddScoped<IIdempotencyService, IdempotencyService>();
         services.AddScoped<IIdempotencyRepository, IdempotencyMySqlRepository>();
         services.AddScoped<IUserAccountRepository, UserAccountMySqlRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogMySqlRepository>();

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using RMS.Identity.Service.Api.Shared.ErrorHandling;
+using RMS.Identity.Service.Api.Shared.Idempotency;
 using RMS.Identity.Service.Infrastructure.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -39,6 +40,7 @@ builder.Services.AddIdentityServiceInfrastructure(builder.Configuration);
 var app = builder.Build();
 
 app.UseMiddleware<ApiExceptionHandlingMiddleware>();
+app.UseMiddleware<IdempotencyMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {

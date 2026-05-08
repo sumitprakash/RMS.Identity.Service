@@ -3,17 +3,17 @@ using RMS.Identity.Service.Domain.Interfaces.Persistence;
 
 namespace RMS.Identity.Service.Domain.Interfaces.Idempotency;
 
-public interface IIdempotencyCoordinator
+public interface IIdempotencyService
 {
-    Task<IdempotencyReservationResult<TResponse>> ReserveAsync<TResponse>(
+    Task<IdempotencyStoredResponse?> ReserveAsync(
         IDatabaseTransaction transaction,
         IdempotencyRequest request,
         CancellationToken cancellationToken);
 
-    Task StoreResponseAsync<TResponse>(
+    Task StoreResponseAsync(
         IDatabaseTransaction transaction,
         string key,
         int responseCode,
-        TResponse response,
+        string responseBody,
         CancellationToken cancellationToken);
 }

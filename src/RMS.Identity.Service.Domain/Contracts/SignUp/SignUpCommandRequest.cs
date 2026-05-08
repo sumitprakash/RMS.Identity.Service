@@ -6,5 +6,4 @@ public sealed record SignUpCommandRequest(
     string FirstName,
     string? MiddleName,
     string LastName,
-    string PhoneNumber,
-    Guid IdempotencyKey);
+    string PhoneNumber);

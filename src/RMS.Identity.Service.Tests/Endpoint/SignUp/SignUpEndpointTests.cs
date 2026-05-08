@@ -5,7 +5,6 @@ using System.Text;
 using System.Text.Json;
 using MySqlConnector;
 using RMS.Identity.Service.Api.Endpoint.SignUp;
-using RMS.Identity.Service.Domain.Entities.SignUp;
 
 namespace RMS.Identity.Service.Tests.Endpoint.SignUp;
 
@@ -87,17 +86,18 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
         try
         {
             using var client = _factory.CreateClient();
+            var requestBody = JsonSerializer.Serialize(new
+            {
+                emailAddress = normalizedUsername,
+                password,
+                firstName = "Retry",
+                middleName = (string?)null,
+                lastName = "Example",
+                phoneNumber = "+919876543210"
+            }, _jsonOptions);
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/signup")
             {
-                Content = JsonContent.Create(new
-                {
-                    emailAddress = normalizedUsername,
-                    password,
-                    firstName = "Retry",
-                    middleName = (string?)null,
-                    lastName = "Example",
-                    phoneNumber = "+919876543210"
-                })
+                Content = new StringContent(requestBody, Encoding.UTF8, "application/json")
             };
             request.Headers.Add("Idempotency-Key", idempotencyKey);
 
@@ -112,16 +112,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             Assert.Equal("POST", idempotencyEntry.Method);
             Assert.Equal("/api/v1/signup", idempotencyEntry.Route);
             Assert.False(string.IsNullOrWhiteSpace(idempotencyEntry.RequestHash));
-            Assert.Equal(ComputeSha256Hex(JsonSerializer.Serialize(new
-            {
-                emailAddress = normalizedUsername,
-                password,
-                firstName = "Retry",
-                middleName = (string?)null,
-                lastName = "Example",
-                phoneNumber = "+919876543210",
-                idempotencyKey = Guid.Parse(idempotencyKey)
-            })), idempotencyEntry.RequestHash);
+            Assert.Equal(ComputeIdempotencyRequestHash(requestBody), idempotencyEntry.RequestHash);
             Assert.Equal(201, idempotencyEntry.ResponseCode);
             Assert.Contains(body.UserUuid.ToString(), idempotencyEntry.ResponseBody);
         }
@@ -178,22 +169,21 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
         var normalizedUsername = $"race.{uniqueSuffix}@example.com";
         var password = "StrongPass@123";
         var idempotencyKey = Guid.NewGuid().ToString();
-        var storedUser = new SignUpUser(
+        var storedResponse = new SignUpResponse(
             Guid.NewGuid(),
             normalizedUsername,
-            null,
             "pending",
             DateTime.SpecifyKind(DateTime.UtcNow.AddSeconds(-1), DateTimeKind.Utc));
-        var requestHash = ComputeSha256Hex(JsonSerializer.Serialize(new
+        var requestBody = JsonSerializer.Serialize(new
         {
             emailAddress = normalizedUsername,
             password,
             firstName = "Race",
             middleName = (string?)null,
             lastName = "Example",
-            phoneNumber = "+919876543210",
-            idempotencyKey = Guid.Parse(idempotencyKey)
-        }));
+            phoneNumber = "+919876543210"
+        }, _jsonOptions);
+        var requestHash = ComputeIdempotencyRequestHash(requestBody);
         var committed = false;
 
         await using var connection = await _factory.OpenDatabaseConnectionAsync();
@@ -217,15 +207,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             using var client = _factory.CreateClient();
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/signup")
             {
-                Content = JsonContent.Create(new
-                {
-                    emailAddress = normalizedUsername,
-                    password,
-                    firstName = "Race",
-                    middleName = (string?)null,
-                    lastName = "Example",
-                    phoneNumber = "+919876543210"
-                })
+                Content = new StringContent(requestBody, Encoding.UTF8, "application/json")
             };
             request.Headers.Add("Idempotency-Key", idempotencyKey);
 
@@ -243,7 +225,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
                 command =>
                 {
                     command.Parameters.AddWithValue("@KeyValue", idempotencyKey);
-                    command.Parameters.AddWithValue("@ResponseBody", JsonSerializer.Serialize(storedUser));
+                    command.Parameters.AddWithValue("@ResponseBody", JsonSerializer.Serialize(storedResponse, _jsonOptions));
                 },
                 transaction);
 
@@ -256,9 +238,9 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
 
             var body = await response.Content.ReadFromJsonAsync<SignUpResponse>(_jsonOptions);
             Assert.NotNull(body);
-            Assert.Equal(storedUser.UserUuid, body.UserUuid);
-            Assert.Equal(storedUser.Username, body.EmailAddress);
-            Assert.Equal(storedUser.Status, body.Status);
+            Assert.Equal(storedResponse.UserUuid, body.UserUuid);
+            Assert.Equal(storedResponse.EmailAddress, body.EmailAddress);
+            Assert.Equal(storedResponse.Status, body.Status);
         }
         finally
         {
@@ -585,6 +567,16 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
         return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
+    private static string ComputeIdempotencyRequestHash(string requestBody)
+    {
+        return ComputeSha256Hex(JsonSerializer.Serialize(new
+        {
+            path = "/api/v1/signup",
+            queryString = "",
+            body = requestBody
+        }, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
     }
 
     private sealed record PersistedSignUpUser(

@@ -34,9 +34,5 @@ public sealed class SignUpValidator
             throw new ServiceException((int)HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Phone number is required.");
         }
 
-        if (command.IdempotencyKey == Guid.Empty)
-        {
-            throw new ServiceException((int)HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Idempotency-Key is required.");
-        }
     }
 }

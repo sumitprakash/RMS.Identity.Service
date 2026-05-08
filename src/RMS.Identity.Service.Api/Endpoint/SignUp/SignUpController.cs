@@ -20,8 +20,7 @@ public sealed class SignUpController : ControllerBase
     [ProducesResponseType(typeof(object), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> PostAsync(SignUpRequestBody body, CancellationToken cancellationToken)
     {
-        var request = SignUpRequest.FromHttpRequest(Request, body);
-        var user = await _command.ExecuteAsync(request.ToCommand(), cancellationToken);
+        var user = await _command.ExecuteAsync(body.ToCommand(), cancellationToken);
         return StatusCode(StatusCodes.Status201Created, user.ToResponse());
     }
 }
