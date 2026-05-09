@@ -20,21 +20,13 @@ public sealed class IdempotencyService : IIdempotencyService
         IdempotencyRequest request,
         CancellationToken cancellationToken)
     {
-        var existingRecord = await _repository.GetAsync(transaction, request.Key, lockForUpdate: false, cancellationToken);
+        var existingRecord = await GetExistingRecordAsync(transaction, request.Key, cancellationToken);
         if (existingRecord is not null)
         {
-            return ReadStoredResponse(existingRecord, request);
+            return ReadExistingRecord(existingRecord, request);
         }
 
-        if (await _repository.TryCreateAsync(transaction, request, cancellationToken))
-        {
-            return null;
-        }
-
-        var collidedRecord = await _repository.GetAsync(transaction, request.Key, lockForUpdate: true, cancellationToken)
-            ?? throw InProgress();
-
-        return ReadStoredResponse(collidedRecord, request);
+        return await CreateRecordOrReadCollisionAsync(transaction, request, cancellationToken);
     }
 
     public Task StoreResponseAsync(
@@ -52,7 +44,29 @@ public sealed class IdempotencyService : IIdempotencyService
             cancellationToken);
     }
 
-    private static IdempotencyStoredResponse ReadStoredResponse(IdempotencyRecord record, IdempotencyRequest request)
+    private Task<IdempotencyRecord?> GetExistingRecordAsync(
+        IDatabaseTransaction transaction,
+        string key,
+        CancellationToken cancellationToken) =>
+        _repository.GetAsync(transaction, key, lockForUpdate: false, cancellationToken);
+
+    private async Task<IdempotencyStoredResponse?> CreateRecordOrReadCollisionAsync(
+        IDatabaseTransaction transaction,
+        IdempotencyRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (await _repository.TryCreateAsync(transaction, request, cancellationToken))
+        {
+            return null;
+        }
+
+        var collidedRecord = await _repository.GetAsync(transaction, request.Key, lockForUpdate: true, cancellationToken)
+            ?? throw InProgress();
+
+        return ReadExistingRecord(collidedRecord, request);
+    }
+
+    private static IdempotencyStoredResponse ReadExistingRecord(IdempotencyRecord record, IdempotencyRequest request)
     {
         if (!string.Equals(record.Method, request.Method, StringComparison.OrdinalIgnoreCase)
             || !string.Equals(record.Route, request.Route, StringComparison.Ordinal))

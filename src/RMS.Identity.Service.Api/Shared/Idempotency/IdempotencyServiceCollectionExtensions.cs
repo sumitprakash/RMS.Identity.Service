@@ -6,7 +6,6 @@ public static class IdempotencyServiceCollectionExtensions
 {
     public static IServiceCollection AddIdempotencyMiddlewareSupport(this IServiceCollection services)
     {
-        services.AddSingleton<IIdempotencyHttpMethodPolicy, IdempotencyHttpMethodPolicy>();
         services.AddScoped<IIdempotencyRequestFactory, IdempotencyRequestFactory>();
         services.AddScoped<IIdempotencyResponseCapture, IdempotencyResponseCapture>();
         services.AddScoped<IIdempotencyTransactionPipeline, IdempotencyTransactionPipeline>();

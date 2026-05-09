@@ -30,7 +30,7 @@ internal sealed class IdempotencyRequestFactory : IIdempotencyRequestFactory
             requestHash);
     }
 
-    private static Guid ParseIdempotencyKey(HttpRequest request)
+    private Guid ParseIdempotencyKey(HttpRequest request)
     {
         var idempotencyKey = request.Headers[IdempotencyHttpHeaders.HeaderName].FirstOrDefault();
         if (string.IsNullOrWhiteSpace(idempotencyKey))
@@ -54,7 +54,7 @@ internal sealed class IdempotencyRequestFactory : IIdempotencyRequestFactory
             body
         }, JsonOptions));
 
-    private static async Task<string> ReadRequestBodyAsync(HttpRequest request, CancellationToken cancellationToken)
+    private async Task<string> ReadRequestBodyAsync(HttpRequest request, CancellationToken cancellationToken)
     {
         request.EnableBuffering();
 
@@ -64,7 +64,7 @@ internal sealed class IdempotencyRequestFactory : IIdempotencyRequestFactory
             detectEncodingFromByteOrderMarks: false,
             bufferSize: 1024,
             leaveOpen: true);
-
+        
         var body = await reader.ReadToEndAsync(cancellationToken);
         request.Body.Position = 0;
         return body;
