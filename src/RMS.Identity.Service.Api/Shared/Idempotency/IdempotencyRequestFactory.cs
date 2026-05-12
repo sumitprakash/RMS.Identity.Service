@@ -6,22 +6,18 @@ using RMS.Identity.Service.Domain.Interfaces.Security;
 
 namespace RMS.Identity.Service.Api.Shared.Idempotency;
 
-internal sealed class IdempotencyRequestFactory : IIdempotencyRequestFactory
+internal static class IdempotencyRequestFactory
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    private readonly ITextHasher _textHasher;
-
-    public IdempotencyRequestFactory(ITextHasher textHasher)
-    {
-        _textHasher = textHasher;
-    }
-
-    public async Task<IdempotencyRequest> CreateAsync(HttpRequest request, CancellationToken cancellationToken)
+    public static async Task<IdempotencyRequest> CreateAsync(
+        HttpRequest request,
+        ITextHasher textHasher,
+        CancellationToken cancellationToken)
     {
         var idempotencyKey = ParseIdempotencyKey(request);
         var requestBody = await ReadRequestBodyAsync(request, cancellationToken);
-        var requestHash = CreateRequestHash(request, requestBody);
+        var requestHash = CreateRequestHash(request, requestBody, textHasher);
 
         return new IdempotencyRequest(
             idempotencyKey.ToString(),
@@ -30,7 +26,7 @@ internal sealed class IdempotencyRequestFactory : IIdempotencyRequestFactory
             requestHash);
     }
 
-    private Guid ParseIdempotencyKey(HttpRequest request)
+    private static Guid ParseIdempotencyKey(HttpRequest request)
     {
         var idempotencyKey = request.Headers[IdempotencyHttpHeaders.HeaderName].FirstOrDefault();
         if (string.IsNullOrWhiteSpace(idempotencyKey))
@@ -46,15 +42,15 @@ internal sealed class IdempotencyRequestFactory : IIdempotencyRequestFactory
         return parsedIdempotencyKey;
     }
 
-    private string CreateRequestHash(HttpRequest request, string body) =>
-        _textHasher.Hash(JsonSerializer.Serialize(new
+    private static string CreateRequestHash(HttpRequest request, string body, ITextHasher textHasher) =>
+        textHasher.Hash(JsonSerializer.Serialize(new
         {
             path = request.Path.Value ?? string.Empty,
             queryString = request.QueryString.Value ?? string.Empty,
             body
         }, JsonOptions));
 
-    private async Task<string> ReadRequestBodyAsync(HttpRequest request, CancellationToken cancellationToken)
+    private static async Task<string> ReadRequestBodyAsync(HttpRequest request, CancellationToken cancellationToken)
     {
         request.EnableBuffering();
 
@@ -64,7 +60,7 @@ internal sealed class IdempotencyRequestFactory : IIdempotencyRequestFactory
             detectEncodingFromByteOrderMarks: false,
             bufferSize: 1024,
             leaveOpen: true);
-        
+
         var body = await reader.ReadToEndAsync(cancellationToken);
         request.Body.Position = 0;
         return body;

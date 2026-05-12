@@ -1,0 +1,189 @@
+using System.Net;
+using System.Text;
+using RMS.Identity.Service.Application.Shared.Errors;
+using RMS.Identity.Service.Domain.Contracts.Idempotency;
+using RMS.Identity.Service.Domain.Interfaces.Persistence;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.Idempotency;
+using RMS.Identity.Service.Domain.Interfaces.Security;
+
+namespace RMS.Identity.Service.Api.Shared.Idempotency;
+
+public sealed class IdempotencyService
+{
+    private readonly ITextHasher _textHasher;
+    private readonly IDatabaseTransactionExecutor _transactionExecutor;
+    private readonly IDatabaseTransactionAccessor _transactionAccessor;
+    private readonly IIdempotencyRepository _idempotencyRepository;
+
+    public IdempotencyService(
+        ITextHasher textHasher,
+        IDatabaseTransactionExecutor transactionExecutor,
+        IDatabaseTransactionAccessor transactionAccessor,
+        IIdempotencyRepository idempotencyRepository)
+    {
+        _textHasher = textHasher;
+        _transactionExecutor = transactionExecutor;
+        _transactionAccessor = transactionAccessor;
+        _idempotencyRepository = idempotencyRepository;
+    }
+
+    public async Task ExecuteAsync(
+        HttpContext context,
+        RequestDelegate next,
+        CancellationToken cancellationToken)
+    {
+        var idempotencyRequest = await IdempotencyRequestFactory.CreateAsync(
+            context.Request,
+            _textHasher,
+            cancellationToken);
+
+        var response = await ExecuteIdempotentRequestAsync(context, idempotencyRequest, next);
+
+        await WriteResponseAsync(context.Response, response, cancellationToken);
+    }
+
+    private async Task<IdempotencyResponse> ExecuteIdempotentRequestAsync(
+        HttpContext context,
+        IdempotencyRequest idempotencyRequest,
+        RequestDelegate next)
+    {
+        return await _transactionExecutor.ExecuteAsync(
+            async (transaction, cancellationToken) =>
+            {
+                var previousTransaction = _transactionAccessor.Current;
+                _transactionAccessor.Current = transaction;
+
+                try
+                {
+                    var existingResponse = await ReadExistingResponseAsync(
+                        transaction,
+                        idempotencyRequest,
+                        cancellationToken);
+
+                    if (existingResponse is not null)
+                    {
+                        return existingResponse;
+                    }
+
+                    if (!await _idempotencyRepository.TryCreateAsync(transaction, idempotencyRequest, cancellationToken))
+                    {
+                        var collidedRecord = await _idempotencyRepository.GetAsync(
+                            transaction,
+                            idempotencyRequest.Key,
+                            lockForUpdate: true,
+                            cancellationToken)
+                            ?? throw InProgress();
+
+                        return ReadExistingResponse(collidedRecord, idempotencyRequest);
+                    }
+
+                    var response = await CaptureResponseAsync(context, next, cancellationToken);
+
+                    await _idempotencyRepository.StoreResponseAsync(
+                        transaction,
+                        idempotencyRequest.Key,
+                        response.StatusCode,
+                        string.IsNullOrWhiteSpace(response.Body) ? "null" : response.Body,
+                        cancellationToken);
+
+                    return response;
+                }
+                finally
+                {
+                    _transactionAccessor.Current = previousTransaction;
+                }
+            },
+            context.RequestAborted);
+    }
+
+    private async Task<IdempotencyResponse?> ReadExistingResponseAsync(
+        IDatabaseTransaction transaction,
+        IdempotencyRequest request,
+        CancellationToken cancellationToken)
+    {
+        var record = await _idempotencyRepository.GetAsync(
+            transaction,
+            request.Key,
+            lockForUpdate: false,
+            cancellationToken);
+
+        return record is null ? null : ReadExistingResponse(record, request);
+    }
+
+    private static IdempotencyResponse ReadExistingResponse(
+        IdempotencyRecord record,
+        IdempotencyRequest request)
+    {
+        if (!string.Equals(record.Method, request.Method, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(record.Route, request.Route, StringComparison.Ordinal))
+        {
+            throw Conflict("Idempotency key was already used for a different request.");
+        }
+
+        if (!string.Equals(record.RequestHash, request.RequestHash, StringComparison.Ordinal))
+        {
+            throw Conflict("Idempotency key payload does not match the original request.");
+        }
+
+        if (record.ResponseCode is null || string.IsNullOrWhiteSpace(record.ResponseBody))
+        {
+            throw InProgress();
+        }
+
+        return new IdempotencyResponse(record.ResponseCode.Value, "application/json", record.ResponseBody);
+    }
+
+    private static async Task<IdempotencyResponse> CaptureResponseAsync(
+        HttpContext context,
+        RequestDelegate next,
+        CancellationToken cancellationToken)
+    {
+        var originalBody = context.Response.Body;
+        await using var capturedBody = new MemoryStream();
+        context.Response.Body = capturedBody;
+
+        try
+        {
+            await next(context);
+        }
+        finally
+        {
+            context.Response.Body = originalBody;
+        }
+
+        capturedBody.Position = 0;
+        using var reader = new StreamReader(capturedBody, Encoding.UTF8);
+        var responseBody = await reader.ReadToEndAsync(cancellationToken);
+
+        return new IdempotencyResponse(
+            context.Response.StatusCode,
+            context.Response.ContentType,
+            responseBody);
+    }
+
+    private static async Task WriteResponseAsync(
+        HttpResponse response,
+        IdempotencyResponse idempotencyResponse,
+        CancellationToken cancellationToken)
+    {
+        response.StatusCode = idempotencyResponse.StatusCode;
+
+        if (!string.IsNullOrWhiteSpace(idempotencyResponse.ContentType))
+        {
+            response.ContentType = idempotencyResponse.ContentType;
+        }
+
+        await response.WriteAsync(idempotencyResponse.Body, cancellationToken);
+    }
+
+    private static ServiceException Conflict(string message) =>
+        new((int)HttpStatusCode.Conflict, "IDEMPOTENCY_KEY_REUSED", message);
+
+    private static ServiceException InProgress() =>
+        new((int)HttpStatusCode.Conflict, "IDEMPOTENCY_IN_PROGRESS", "Idempotent request is already in progress.");
+
+    private sealed record IdempotencyResponse(
+        int StatusCode,
+        string? ContentType,
+        string Body);
+}
