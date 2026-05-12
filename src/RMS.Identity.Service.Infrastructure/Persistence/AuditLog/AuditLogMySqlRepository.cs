@@ -3,6 +3,7 @@ using RMS.Identity.Service.Domain.Entities.SignUp;
 using RMS.Identity.Service.Domain.Interfaces.AuditLog;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
 using RMS.Identity.Service.Infrastructure.Data;
+using RMS.Identity.Service.Infrastructure.Persistence.Schema;
 
 namespace RMS.Identity.Service.Infrastructure.Persistence.AuditLog;
 
@@ -17,11 +18,18 @@ public sealed class AuditLogMySqlRepository : IAuditLogRepository
         var command = databaseTransaction.Connection.CreateCommand();
         command.Transaction = databaseTransaction.Transaction;
         command.CommandText =
-            """
-            INSERT INTO AuditLog (TableName, RecordId, Action, Payload, CreatedAt)
-            VALUES ('UserAccount', @RecordId, 'signup_created', CAST(@Payload AS JSON), UTC_TIMESTAMP());
+            $"""
+            INSERT INTO {AuditLogTable.Name} (
+                {AuditLogTable.Columns.TableName},
+                {AuditLogTable.Columns.RecordId},
+                {AuditLogTable.Columns.Action},
+                {AuditLogTable.Columns.Payload},
+                {AuditLogTable.Columns.CreatedAt})
+            VALUES (@TableName, @RecordId, @Action, CAST(@Payload AS JSON), UTC_TIMESTAMP());
             """;
+        command.Parameters.AddWithValue("@TableName", UserAccountTable.Name);
         command.Parameters.AddWithValue("@RecordId", createdUser.UserUuid.ToString());
+        command.Parameters.AddWithValue("@Action", "signup_created");
         command.Parameters.AddWithValue("@Payload", JsonSerializer.Serialize(createdUser));
         await command.ExecuteNonQueryAsync(cancellationToken);
     }

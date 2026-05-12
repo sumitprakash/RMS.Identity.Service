@@ -5,6 +5,7 @@ using RMS.Identity.Service.Domain.Entities.UserAccounts;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
 using RMS.Identity.Service.Domain.Interfaces.UserAccounts;
 using RMS.Identity.Service.Infrastructure.Data;
+using RMS.Identity.Service.Infrastructure.Persistence.Schema;
 using System.Net;
 
 namespace RMS.Identity.Service.Infrastructure.Persistence.UserAccounts;
@@ -20,11 +21,11 @@ public sealed class UserAccountMySqlRepository : IUserAccountRepository
         var command = databaseTransaction.Connection.CreateCommand();
         command.Transaction = databaseTransaction.Transaction;
         command.CommandText =
-            """
+            $"""
             SELECT 1
-            FROM UserAccount
-            WHERE Username = @Username
-              AND IsDeleted = 0
+            FROM {UserAccountTable.Name}
+            WHERE {UserAccountTable.Columns.Username} = @Username
+              AND {UserAccountTable.Columns.IsDeleted} = 0
             LIMIT 1;
             """;
         command.Parameters.AddWithValue("@Username", username);
@@ -41,17 +42,17 @@ public sealed class UserAccountMySqlRepository : IUserAccountRepository
         var insertCommand = databaseTransaction.Connection.CreateCommand();
         insertCommand.Transaction = databaseTransaction.Transaction;
         insertCommand.CommandText =
-            """
-            INSERT INTO UserAccount (
-                UserUUID,
-                CompanyID,
-                Username,
-                PasswordHash,
-                DisplayName,
-                EmailVerified,
-                IsActive,
-                IsDeleted,
-                CreatedAt)
+            $"""
+            INSERT INTO {UserAccountTable.Name} (
+                {UserAccountTable.Columns.UserUuid},
+                {UserAccountTable.Columns.CompanyId},
+                {UserAccountTable.Columns.Username},
+                {UserAccountTable.Columns.PasswordHash},
+                {UserAccountTable.Columns.DisplayName},
+                {UserAccountTable.Columns.EmailVerified},
+                {UserAccountTable.Columns.IsActive},
+                {UserAccountTable.Columns.IsDeleted},
+                {UserAccountTable.Columns.CreatedAt})
             VALUES (
                 UUID_TO_BIN(@UserUuid),
                 NULL,
@@ -88,17 +89,17 @@ public sealed class UserAccountMySqlRepository : IUserAccountRepository
         var command = databaseTransaction.Connection.CreateCommand();
         command.Transaction = databaseTransaction.Transaction;
         command.CommandText =
-            """
+            $"""
             SELECT
-                BIN_TO_UUID(UserUUID) AS UserUuid,
-                Username,
-                DisplayName,
-                EmailVerified,
-                IsActive,
-                IsDeleted,
-                CreatedAt
-            FROM UserAccount
-            WHERE UserID = @UserId
+                BIN_TO_UUID({UserAccountTable.Columns.UserUuid}) AS UserUuid,
+                {UserAccountTable.Columns.Username},
+                {UserAccountTable.Columns.DisplayName},
+                {UserAccountTable.Columns.EmailVerified},
+                {UserAccountTable.Columns.IsActive},
+                {UserAccountTable.Columns.IsDeleted},
+                {UserAccountTable.Columns.CreatedAt}
+            FROM {UserAccountTable.Name}
+            WHERE {UserAccountTable.Columns.UserId} = @UserId
             LIMIT 1;
             """;
         command.Parameters.AddWithValue("@UserId", userId);
@@ -115,11 +116,11 @@ public sealed class UserAccountMySqlRepository : IUserAccountRepository
         return new UserAccount(
             userId,
             Guid.Parse(reader.GetString("UserUuid")),
-            reader.GetString("Username"),
-            reader.GetNullableString("DisplayName"),
-            reader.GetBoolean(reader.GetOrdinal("EmailVerified")),
-            reader.GetBoolean(reader.GetOrdinal("IsActive")),
-            reader.GetBoolean(reader.GetOrdinal("IsDeleted")),
-            reader.GetUtcDateTime("CreatedAt"));
+            reader.GetString(UserAccountTable.Columns.Username),
+            reader.GetNullableString(UserAccountTable.Columns.DisplayName),
+            reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.EmailVerified)),
+            reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.IsActive)),
+            reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.IsDeleted)),
+            reader.GetUtcDateTime(UserAccountTable.Columns.CreatedAt));
     }
 }

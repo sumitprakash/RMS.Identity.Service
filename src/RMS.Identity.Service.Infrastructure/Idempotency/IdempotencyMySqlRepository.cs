@@ -4,6 +4,7 @@ using RMS.Identity.Service.Domain.Interfaces.Idempotency;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
 using RMS.Identity.Service.Infrastructure.Data;
 using RMS.Identity.Service.Infrastructure.Persistence;
+using RMS.Identity.Service.Infrastructure.Persistence.Schema;
 
 namespace RMS.Identity.Service.Infrastructure.Idempotency;
 
@@ -20,9 +21,14 @@ public sealed class IdempotencyMySqlRepository : IIdempotencyRepository
         command.Transaction = databaseTransaction.Transaction;
         command.CommandText =
             $"""
-            SELECT Method, Route, RequestHash, ResponseCode, CAST(ResponseBody AS CHAR) AS ResponseBody
-            FROM IdempotencyKey
-            WHERE KeyValue = @KeyValue
+            SELECT
+                {IdempotencyKeyTable.Columns.Method},
+                {IdempotencyKeyTable.Columns.Route},
+                {IdempotencyKeyTable.Columns.RequestHash},
+                {IdempotencyKeyTable.Columns.ResponseCode},
+                CAST({IdempotencyKeyTable.Columns.ResponseBody} AS CHAR) AS {IdempotencyKeyTable.Columns.ResponseBody}
+            FROM {IdempotencyKeyTable.Name}
+            WHERE {IdempotencyKeyTable.Columns.KeyValue} = @KeyValue
             LIMIT 1
             {GetLockClause(lockForUpdate)};
             """;
@@ -35,11 +41,13 @@ public sealed class IdempotencyMySqlRepository : IIdempotencyRepository
         }
 
         return new IdempotencyRecord(
-            reader.GetString("Method"),
-            reader.GetString("Route"),
-            reader.GetNullableString("RequestHash"),
-            reader.IsDBNull(reader.GetOrdinal("ResponseCode")) ? null : reader.GetInt32("ResponseCode"),
-            reader.GetNullableString("ResponseBody"));
+            reader.GetString(IdempotencyKeyTable.Columns.Method),
+            reader.GetString(IdempotencyKeyTable.Columns.Route),
+            reader.GetNullableString(IdempotencyKeyTable.Columns.RequestHash),
+            reader.IsDBNull(reader.GetOrdinal(IdempotencyKeyTable.Columns.ResponseCode))
+                ? null
+                : reader.GetInt32(IdempotencyKeyTable.Columns.ResponseCode),
+            reader.GetNullableString(IdempotencyKeyTable.Columns.ResponseBody));
     }
 
     public async Task<bool> TryCreateAsync(
@@ -51,8 +59,12 @@ public sealed class IdempotencyMySqlRepository : IIdempotencyRepository
         var command = databaseTransaction.Connection.CreateCommand();
         command.Transaction = databaseTransaction.Transaction;
         command.CommandText =
-            """
-            INSERT INTO IdempotencyKey (KeyValue, Method, Route, RequestHash)
+            $"""
+            INSERT INTO {IdempotencyKeyTable.Name} (
+                {IdempotencyKeyTable.Columns.KeyValue},
+                {IdempotencyKeyTable.Columns.Method},
+                {IdempotencyKeyTable.Columns.Route},
+                {IdempotencyKeyTable.Columns.RequestHash})
             VALUES (@KeyValue, @Method, @Route, @RequestHash);
             """;
         command.Parameters.AddWithValue("@KeyValue", request.Key);
@@ -82,11 +94,11 @@ public sealed class IdempotencyMySqlRepository : IIdempotencyRepository
         var command = databaseTransaction.Connection.CreateCommand();
         command.Transaction = databaseTransaction.Transaction;
         command.CommandText =
-            """
-            UPDATE IdempotencyKey
-            SET ResponseCode = @ResponseCode,
-                ResponseBody = CAST(@ResponseBody AS JSON)
-            WHERE KeyValue = @KeyValue;
+            $"""
+            UPDATE {IdempotencyKeyTable.Name}
+            SET {IdempotencyKeyTable.Columns.ResponseCode} = @ResponseCode,
+                {IdempotencyKeyTable.Columns.ResponseBody} = CAST(@ResponseBody AS JSON)
+            WHERE {IdempotencyKeyTable.Columns.KeyValue} = @KeyValue;
             """;
         command.Parameters.AddWithValue("@KeyValue", key);
         command.Parameters.AddWithValue("@ResponseCode", responseCode);
