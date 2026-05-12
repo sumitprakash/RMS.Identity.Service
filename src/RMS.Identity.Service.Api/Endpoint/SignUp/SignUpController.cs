@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using RMS.Identity.Service.Domain.Interfaces.SignUp;
+using RMS.Identity.Service.Domain.Contracts.SignUp;
+using RMS.Identity.Service.Infrastructure.Cqrs;
 
 namespace RMS.Identity.Service.Api.Endpoint.SignUp;
 
@@ -7,11 +8,11 @@ namespace RMS.Identity.Service.Api.Endpoint.SignUp;
 [Route("api/v1/signup")]
 public sealed class SignUpController : ControllerBase
 {
-    private readonly ISignUpCommand _command;
+    private readonly ICommandHandler<SignUpCommandRequest, SignUpCommandResponse> _commandHandler;
 
-    public SignUpController(ISignUpCommand command)
+    public SignUpController(ICommandHandler<SignUpCommandRequest, SignUpCommandResponse> commandHandler)
     {
-        _command = command;
+        _commandHandler = commandHandler;
     }
 
     [HttpPost]
@@ -20,7 +21,7 @@ public sealed class SignUpController : ControllerBase
     [ProducesResponseType(typeof(object), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> PostAsync(SignUpRequestBody body, CancellationToken cancellationToken)
     {
-        var user = await _command.ExecuteAsync(body.ToCommand(), cancellationToken);
+        var user = await _commandHandler.HandleAsync(body.ToCommand(), cancellationToken);
         return StatusCode(StatusCodes.Status201Created, user.ToResponse());
     }
 }

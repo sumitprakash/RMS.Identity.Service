@@ -3,7 +3,7 @@ using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.UserAccounts;
 using RMS.Identity.Service.Domain.Entities.UserAccounts;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
-using RMS.Identity.Service.Domain.Interfaces.UserAccounts;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
 using RMS.Identity.Service.Infrastructure.Data;
 using RMS.Identity.Service.Infrastructure.Persistence.Schema;
 using System.Net;

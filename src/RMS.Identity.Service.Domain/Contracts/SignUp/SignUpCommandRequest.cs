@@ -1,3 +1,5 @@
+using RMS.Identity.Service.Infrastructure.Cqrs;
+
 namespace RMS.Identity.Service.Domain.Contracts.SignUp;
 
 public sealed record SignUpCommandRequest(
@@ -6,4 +8,4 @@ public sealed record SignUpCommandRequest(
     string FirstName,
     string? MiddleName,
     string LastName,
-    string PhoneNumber);
+    string PhoneNumber) : ICommand<SignUpCommandResponse>;

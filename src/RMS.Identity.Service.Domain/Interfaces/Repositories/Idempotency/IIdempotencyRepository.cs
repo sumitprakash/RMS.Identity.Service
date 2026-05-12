@@ -1,7 +1,7 @@
 using RMS.Identity.Service.Domain.Contracts.Idempotency;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
 
-namespace RMS.Identity.Service.Domain.Interfaces.Idempotency;
+namespace RMS.Identity.Service.Domain.Interfaces.Repositories.Idempotency;
 
 public interface IIdempotencyRepository
 {

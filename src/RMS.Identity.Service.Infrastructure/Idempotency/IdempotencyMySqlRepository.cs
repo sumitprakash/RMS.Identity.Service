@@ -1,7 +1,7 @@
 using MySqlConnector;
 using RMS.Identity.Service.Domain.Contracts.Idempotency;
-using RMS.Identity.Service.Domain.Interfaces.Idempotency;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.Idempotency;
 using RMS.Identity.Service.Infrastructure.Data;
 using RMS.Identity.Service.Infrastructure.Persistence;
 using RMS.Identity.Service.Infrastructure.Persistence.Schema;

@@ -3,7 +3,7 @@ using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
 using RMS.Identity.Service.Domain.Contracts.SignUp;
 
-namespace RMS.Identity.Service.Application.Logic.SignUp;
+namespace RMS.Identity.Service.Application.Commands.SignUp;
 
 public sealed class SignUpValidator
 {

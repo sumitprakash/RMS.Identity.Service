@@ -4,15 +4,15 @@ using RMS.Identity.Service.Domain.Contracts.SignUp;
 using RMS.Identity.Service.Domain.Contracts.UserAccounts;
 using RMS.Identity.Service.Domain.Entities.SignUp;
 using RMS.Identity.Service.Domain.Entities.UserAccounts;
-using RMS.Identity.Service.Domain.Interfaces.AuditLog;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.AuditLog;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
 using RMS.Identity.Service.Domain.Interfaces.Security;
-using RMS.Identity.Service.Domain.Interfaces.SignUp;
-using RMS.Identity.Service.Domain.Interfaces.UserAccounts;
+using RMS.Identity.Service.Infrastructure.Cqrs;
 
-namespace RMS.Identity.Service.Application.Logic.SignUp;
+namespace RMS.Identity.Service.Application.Commands.SignUp;
 
-public sealed class SignUpCommand : ISignUpCommand
+public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest, SignUpCommandResponse>
 {
     private readonly IDatabaseTransactionAccessor _transactionAccessor;
     private readonly IUserAccountRepository _userAccountRepository;
@@ -20,7 +20,7 @@ public sealed class SignUpCommand : ISignUpCommand
     private readonly IPasswordHasher _passwordHasher;
     private readonly SignUpValidator _validator = new();
 
-    public SignUpCommand(
+    public SignUpCommandHandler(
         IDatabaseTransactionAccessor transactionAccessor,
         IUserAccountRepository userAccountRepository,
         IAuditLogRepository auditLogRepository,
@@ -32,12 +32,12 @@ public sealed class SignUpCommand : ISignUpCommand
         _passwordHasher = passwordHasher;
     }
 
-    public async Task<SignUpCommandResponse> ExecuteAsync(SignUpCommandRequest request, CancellationToken cancellationToken)
+    public async Task<SignUpCommandResponse> HandleAsync(SignUpCommandRequest command, CancellationToken cancellationToken)
     {
-        _validator.Validate(request);
+        _validator.Validate(command);
 
-        var normalizedUsername = EmailAddressValidator.Normalize(request.EmailAddress);
-        var displayName = BuildDisplayName(request.FirstName, request.MiddleName, request.LastName);
+        var normalizedUsername = EmailAddressValidator.Normalize(command.EmailAddress);
+        var displayName = BuildDisplayName(command.FirstName, command.MiddleName, command.LastName);
         var transaction = _transactionAccessor.GetCurrent();
 
         if (await _userAccountRepository.ExistsByUsernameAsync(transaction, normalizedUsername, cancellationToken))
@@ -48,7 +48,7 @@ public sealed class SignUpCommand : ISignUpCommand
         var createUserCommand = new CreateUserAccountCommand(
             Guid.NewGuid(),
             normalizedUsername,
-            _passwordHasher.Hash(request.Password),
+            _passwordHasher.Hash(command.Password),
             displayName);
         var userId = await _userAccountRepository.CreateAsync(transaction, createUserCommand, cancellationToken);
         var user = ToSignUpUser(await _userAccountRepository.GetByIdAsync(transaction, userId, cancellationToken));

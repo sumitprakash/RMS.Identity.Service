@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RMS.Identity.Service.Domain
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RMS.Identity.Service.Tests", "RMS.Identity.Service.Tests\RMS.Identity.Service.Tests.csproj", "{2CC03E41-C126-4830-98EF-496F90A67829}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RMS.Identity.Service.Infrastructure.Abstractions", "RMS.Identity.Service.Infrastructure.Abstractions\RMS.Identity.Service.Infrastructure.Abstractions.csproj", "{317D8B55-AE8D-44AE-A5EC-4E23DFA2A380}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -83,6 +85,18 @@ Global
 		{2CC03E41-C126-4830-98EF-496F90A67829}.Release|x64.Build.0 = Release|Any CPU
 		{2CC03E41-C126-4830-98EF-496F90A67829}.Release|x86.ActiveCfg = Release|Any CPU
 		{2CC03E41-C126-4830-98EF-496F90A67829}.Release|x86.Build.0 = Release|Any CPU
+		{317D8B55-AE8D-44AE-A5EC-4E23DFA2A380}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{317D8B55-AE8D-44AE-A5EC-4E23DFA2A380}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{317D8B55-AE8D-44AE-A5EC-4E23DFA2A380}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{317D8B55-AE8D-44AE-A5EC-4E23DFA2A380}.Debug|x64.Build.0 = Debug|Any CPU
+		{317D8B55-AE8D-44AE-A5EC-4E23DFA2A380}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{317D8B55-AE8D-44AE-A5EC-4E23DFA2A380}.Debug|x86.Build.0 = Debug|Any CPU
+		{317D8B55-AE8D-44AE-A5EC-4E23DFA2A380}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{317D8B55-AE8D-44AE-A5EC-4E23DFA2A380}.Release|Any CPU.Build.0 = Release|Any CPU
+		{317D8B55-AE8D-44AE-A5EC-4E23DFA2A380}.Release|x64.ActiveCfg = Release|Any CPU
+		{317D8B55-AE8D-44AE-A5EC-4E23DFA2A380}.Release|x64.Build.0 = Release|Any CPU
+		{317D8B55-AE8D-44AE-A5EC-4E23DFA2A380}.Release|x86.ActiveCfg = Release|Any CPU
+		{317D8B55-AE8D-44AE-A5EC-4E23DFA2A380}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

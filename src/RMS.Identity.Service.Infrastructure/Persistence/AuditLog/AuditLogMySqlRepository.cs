@@ -1,7 +1,7 @@
 using System.Text.Json;
 using RMS.Identity.Service.Domain.Entities.SignUp;
-using RMS.Identity.Service.Domain.Interfaces.AuditLog;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.AuditLog;
 using RMS.Identity.Service.Infrastructure.Data;
 using RMS.Identity.Service.Infrastructure.Persistence.Schema;
 

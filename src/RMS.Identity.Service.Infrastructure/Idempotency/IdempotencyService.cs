@@ -3,6 +3,7 @@ using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.Idempotency;
 using RMS.Identity.Service.Domain.Interfaces.Idempotency;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.Idempotency;
 
 namespace RMS.Identity.Service.Infrastructure.Idempotency;
 

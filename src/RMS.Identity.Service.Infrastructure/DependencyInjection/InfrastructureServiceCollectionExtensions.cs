@@ -1,16 +1,17 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RMS.Identity.Service.Application.DependencyInjection;
-using RMS.Identity.Service.Domain.Interfaces.AuditLog;
-using RMS.Identity.Service.Domain.Interfaces.Idempotency;
-using RMS.Identity.Service.Domain.Interfaces.Persistence;
 using RMS.Identity.Service.Infrastructure.Data;
 using RMS.Identity.Service.Infrastructure.Idempotency;
 using RMS.Identity.Service.Infrastructure.Persistence.AuditLog;
 using RMS.Identity.Service.Infrastructure.Persistence.UserAccounts;
 using RMS.Identity.Service.Infrastructure.Security;
+using RMS.Identity.Service.Domain.Interfaces.Idempotency;
+using RMS.Identity.Service.Domain.Interfaces.Persistence;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.AuditLog;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.Idempotency;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
 using RMS.Identity.Service.Domain.Interfaces.Security;
-using RMS.Identity.Service.Domain.Interfaces.UserAccounts;
 
 namespace RMS.Identity.Service.Infrastructure.DependencyInjection;
 

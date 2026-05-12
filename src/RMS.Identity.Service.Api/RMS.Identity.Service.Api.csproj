@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\RMS.Identity.Service.Application\RMS.Identity.Service.Application.csproj" />
     <ProjectReference Include="..\RMS.Identity.Service.Infrastructure\RMS.Identity.Service.Infrastructure.csproj" />
+    <ProjectReference Include="..\RMS.Identity.Service.Infrastructure.Abstractions\RMS.Identity.Service.Infrastructure.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>
