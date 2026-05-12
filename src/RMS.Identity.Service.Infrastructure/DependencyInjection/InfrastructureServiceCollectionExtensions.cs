@@ -6,7 +6,6 @@ using RMS.Identity.Service.Infrastructure.Idempotency;
 using RMS.Identity.Service.Infrastructure.Persistence.AuditLog;
 using RMS.Identity.Service.Infrastructure.Persistence.UserAccounts;
 using RMS.Identity.Service.Infrastructure.Security;
-using RMS.Identity.Service.Domain.Interfaces.Idempotency;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.AuditLog;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Idempotency;
@@ -25,7 +24,6 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IDatabaseTransactionExecutor, MySqlDatabaseTransactionExecutor>();
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<ITextHasher, Sha256TextHasher>();
-        services.AddScoped<IIdempotencyService, IdempotencyService>();
         services.AddScoped<IIdempotencyRepository, IdempotencyMySqlRepository>();
         services.AddScoped<IUserAccountRepository, UserAccountMySqlRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogMySqlRepository>();
