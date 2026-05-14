@@ -8,7 +8,9 @@ using RMS.Identity.Service.Infrastructure.Persistence.Schema;
 
 namespace RMS.Identity.Service.Infrastructure.Idempotency;
 
-public sealed class IdempotencyMySqlRepository : IIdempotencyRepository
+public sealed class IdempotencyMySqlRepository :
+    IIdempotencyReadRepository,
+    IIdempotencyWriteRepository
 {
     private readonly IDatabaseTransactionAccessor _transactionAccessor;
 

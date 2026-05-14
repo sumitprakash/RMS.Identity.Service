@@ -24,7 +24,11 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IDatabaseTransactionExecutor, MySqlDatabaseTransactionExecutor>();
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<ITextHasher, Sha256TextHasher>();
-        services.AddScoped<IIdempotencyRepository, IdempotencyMySqlRepository>();
+        services.AddScoped<IdempotencyMySqlRepository>();
+        services.AddScoped<IIdempotencyReadRepository>(
+            provider => provider.GetRequiredService<IdempotencyMySqlRepository>());
+        services.AddScoped<IIdempotencyWriteRepository>(
+            provider => provider.GetRequiredService<IdempotencyMySqlRepository>());
         services.AddScoped<IUserAccountRepository, UserAccountMySqlRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogMySqlRepository>();
 

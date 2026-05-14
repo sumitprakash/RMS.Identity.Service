@@ -19,7 +19,7 @@ public sealed class IdempotencyMiddleware
 
     public async Task InvokeAsync(
         HttpContext context,
-        IdempotencyService idempotencyService)
+        IIdempotencyService idempotencyService)
     {
         if (!RequiresIdempotency(context.Request.Method))
         {

@@ -36,7 +36,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddIdentityServiceInfrastructure(builder.Configuration);
-builder.Services.AddScoped<IdempotencyService>();
+builder.Services.AddScoped<IIdempotencyService, IdempotencyService>();
 
 var app = builder.Build();
 

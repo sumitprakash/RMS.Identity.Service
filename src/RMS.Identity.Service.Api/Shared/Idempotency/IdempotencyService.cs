@@ -8,20 +8,23 @@ using RMS.Identity.Service.Domain.Interfaces.Security;
 
 namespace RMS.Identity.Service.Api.Shared.Idempotency;
 
-public sealed class IdempotencyService
+public sealed class IdempotencyService : IIdempotencyService
 {
     private readonly ITextHasher _textHasher;
     private readonly IDatabaseTransactionExecutor _transactionExecutor;
-    private readonly IIdempotencyRepository _idempotencyRepository;
+    private readonly IIdempotencyReadRepository _idempotencyReadRepository;
+    private readonly IIdempotencyWriteRepository _idempotencyWriteRepository;
 
     public IdempotencyService(
         ITextHasher textHasher,
         IDatabaseTransactionExecutor transactionExecutor,
-        IIdempotencyRepository idempotencyRepository)
+        IIdempotencyReadRepository idempotencyReadRepository,
+        IIdempotencyWriteRepository idempotencyWriteRepository)
     {
         _textHasher = textHasher;
         _transactionExecutor = transactionExecutor;
-        _idempotencyRepository = idempotencyRepository;
+        _idempotencyReadRepository = idempotencyReadRepository;
+        _idempotencyWriteRepository = idempotencyWriteRepository;
     }
 
     public async Task ExecuteAsync(
@@ -56,9 +59,9 @@ public sealed class IdempotencyService
                     return existingResponse;
                 }
 
-                if (!await _idempotencyRepository.TryCreateAsync(idempotencyRequest, cancellationToken))
+                if (!await _idempotencyWriteRepository.TryCreateAsync(idempotencyRequest, cancellationToken))
                 {
-                    var collidedRecord = await _idempotencyRepository.GetAsync(
+                    var collidedRecord = await _idempotencyReadRepository.GetAsync(
                         idempotencyRequest.Key,
                         lockForUpdate: true,
                         cancellationToken)
@@ -69,7 +72,7 @@ public sealed class IdempotencyService
 
                 var response = await CaptureResponseAsync(context, next, cancellationToken);
 
-                await _idempotencyRepository.StoreResponseAsync(
+                await _idempotencyWriteRepository.StoreResponseAsync(
                     idempotencyRequest.Key,
                     response.StatusCode,
                     string.IsNullOrWhiteSpace(response.Body) ? "null" : response.Body,
@@ -84,7 +87,7 @@ public sealed class IdempotencyService
         IdempotencyRequest request,
         CancellationToken cancellationToken)
     {
-        var record = await _idempotencyRepository.GetAsync(
+        var record = await _idempotencyReadRepository.GetAsync(
             request.Key,
             lockForUpdate: false,
             cancellationToken);

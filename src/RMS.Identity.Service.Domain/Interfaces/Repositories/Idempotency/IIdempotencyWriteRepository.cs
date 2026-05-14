@@ -2,13 +2,8 @@ using RMS.Identity.Service.Domain.Contracts.Idempotency;
 
 namespace RMS.Identity.Service.Domain.Interfaces.Repositories.Idempotency;
 
-public interface IIdempotencyRepository
+public interface IIdempotencyWriteRepository
 {
-    Task<IdempotencyRecord?> GetAsync(
-        string key,
-        bool lockForUpdate,
-        CancellationToken cancellationToken);
-
     Task<bool> TryCreateAsync(
         IdempotencyRequest request,
         CancellationToken cancellationToken);
