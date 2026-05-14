@@ -12,18 +12,15 @@ public sealed class IdempotencyService
 {
     private readonly ITextHasher _textHasher;
     private readonly IDatabaseTransactionExecutor _transactionExecutor;
-    private readonly IDatabaseTransactionAccessor _transactionAccessor;
     private readonly IIdempotencyRepository _idempotencyRepository;
 
     public IdempotencyService(
         ITextHasher textHasher,
         IDatabaseTransactionExecutor transactionExecutor,
-        IDatabaseTransactionAccessor transactionAccessor,
         IIdempotencyRepository idempotencyRepository)
     {
         _textHasher = textHasher;
         _transactionExecutor = transactionExecutor;
-        _transactionAccessor = transactionAccessor;
         _idempotencyRepository = idempotencyRepository;
     }
 
@@ -48,61 +45,46 @@ public sealed class IdempotencyService
         RequestDelegate next)
     {
         return await _transactionExecutor.ExecuteAsync(
-            async (transaction, cancellationToken) =>
+            async cancellationToken =>
             {
-                var previousTransaction = _transactionAccessor.Current;
-                _transactionAccessor.Current = transaction;
+                var existingResponse = await ReadExistingResponseAsync(
+                    idempotencyRequest,
+                    cancellationToken);
 
-                try
+                if (existingResponse is not null)
                 {
-                    var existingResponse = await ReadExistingResponseAsync(
-                        transaction,
-                        idempotencyRequest,
-                        cancellationToken);
+                    return existingResponse;
+                }
 
-                    if (existingResponse is not null)
-                    {
-                        return existingResponse;
-                    }
-
-                    if (!await _idempotencyRepository.TryCreateAsync(transaction, idempotencyRequest, cancellationToken))
-                    {
-                        var collidedRecord = await _idempotencyRepository.GetAsync(
-                            transaction,
-                            idempotencyRequest.Key,
-                            lockForUpdate: true,
-                            cancellationToken)
-                            ?? throw InProgress();
-
-                        return ReadExistingResponse(collidedRecord, idempotencyRequest);
-                    }
-
-                    var response = await CaptureResponseAsync(context, next, cancellationToken);
-
-                    await _idempotencyRepository.StoreResponseAsync(
-                        transaction,
+                if (!await _idempotencyRepository.TryCreateAsync(idempotencyRequest, cancellationToken))
+                {
+                    var collidedRecord = await _idempotencyRepository.GetAsync(
                         idempotencyRequest.Key,
-                        response.StatusCode,
-                        string.IsNullOrWhiteSpace(response.Body) ? "null" : response.Body,
-                        cancellationToken);
+                        lockForUpdate: true,
+                        cancellationToken)
+                        ?? throw InProgress();
 
-                    return response;
+                    return ReadExistingResponse(collidedRecord, idempotencyRequest);
                 }
-                finally
-                {
-                    _transactionAccessor.Current = previousTransaction;
-                }
+
+                var response = await CaptureResponseAsync(context, next, cancellationToken);
+
+                await _idempotencyRepository.StoreResponseAsync(
+                    idempotencyRequest.Key,
+                    response.StatusCode,
+                    string.IsNullOrWhiteSpace(response.Body) ? "null" : response.Body,
+                    cancellationToken);
+
+                return response;
             },
             context.RequestAborted);
     }
 
     private async Task<IdempotencyResponse?> ReadExistingResponseAsync(
-        IDatabaseTransaction transaction,
         IdempotencyRequest request,
         CancellationToken cancellationToken)
     {
         var record = await _idempotencyRepository.GetAsync(
-            transaction,
             request.Key,
             lockForUpdate: false,
             cancellationToken);

@@ -12,12 +12,18 @@ namespace RMS.Identity.Service.Infrastructure.Persistence.UserAccounts;
 
 public sealed class UserAccountMySqlRepository : IUserAccountRepository
 {
+    private readonly IDatabaseTransactionAccessor _transactionAccessor;
+
+    public UserAccountMySqlRepository(IDatabaseTransactionAccessor transactionAccessor)
+    {
+        _transactionAccessor = transactionAccessor;
+    }
+
     public async Task<bool> ExistsByUsernameAsync(
-        IDatabaseTransaction transaction,
         string username,
         CancellationToken cancellationToken)
     {
-        var databaseTransaction = transaction.AsMySql();
+        var databaseTransaction = CurrentTransaction();
         var command = databaseTransaction.Connection.CreateCommand();
         command.Transaction = databaseTransaction.Transaction;
         command.CommandText =
@@ -34,11 +40,10 @@ public sealed class UserAccountMySqlRepository : IUserAccountRepository
     }
 
     public async Task<long> CreateAsync(
-        IDatabaseTransaction transaction,
         CreateUserAccountCommand command,
         CancellationToken cancellationToken)
     {
-        var databaseTransaction = transaction.AsMySql();
+        var databaseTransaction = CurrentTransaction();
         var insertCommand = databaseTransaction.Connection.CreateCommand();
         insertCommand.Transaction = databaseTransaction.Transaction;
         insertCommand.CommandText =
@@ -81,11 +86,10 @@ public sealed class UserAccountMySqlRepository : IUserAccountRepository
     }
 
     public async Task<UserAccount> GetByIdAsync(
-        IDatabaseTransaction transaction,
         long userId,
         CancellationToken cancellationToken)
     {
-        var databaseTransaction = transaction.AsMySql();
+        var databaseTransaction = CurrentTransaction();
         var command = databaseTransaction.Connection.CreateCommand();
         command.Transaction = databaseTransaction.Transaction;
         command.CommandText =
@@ -123,4 +127,7 @@ public sealed class UserAccountMySqlRepository : IUserAccountRepository
             reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.IsDeleted)),
             reader.GetUtcDateTime(UserAccountTable.Columns.CreatedAt));
     }
+
+    private MySqlDatabaseTransaction CurrentTransaction() =>
+        _transactionAccessor.GetCurrent().AsMySql();
 }

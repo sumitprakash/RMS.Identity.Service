@@ -10,13 +10,19 @@ namespace RMS.Identity.Service.Infrastructure.Idempotency;
 
 public sealed class IdempotencyMySqlRepository : IIdempotencyRepository
 {
+    private readonly IDatabaseTransactionAccessor _transactionAccessor;
+
+    public IdempotencyMySqlRepository(IDatabaseTransactionAccessor transactionAccessor)
+    {
+        _transactionAccessor = transactionAccessor;
+    }
+
     public async Task<IdempotencyRecord?> GetAsync(
-        IDatabaseTransaction transaction,
         string key,
         bool lockForUpdate,
         CancellationToken cancellationToken)
     {
-        var databaseTransaction = transaction.AsMySql();
+        var databaseTransaction = CurrentTransaction();
         var command = databaseTransaction.Connection.CreateCommand();
         command.Transaction = databaseTransaction.Transaction;
         command.CommandText =
@@ -51,11 +57,10 @@ public sealed class IdempotencyMySqlRepository : IIdempotencyRepository
     }
 
     public async Task<bool> TryCreateAsync(
-        IDatabaseTransaction transaction,
         IdempotencyRequest request,
         CancellationToken cancellationToken)
     {
-        var databaseTransaction = transaction.AsMySql();
+        var databaseTransaction = CurrentTransaction();
         var command = databaseTransaction.Connection.CreateCommand();
         command.Transaction = databaseTransaction.Transaction;
         command.CommandText =
@@ -84,13 +89,12 @@ public sealed class IdempotencyMySqlRepository : IIdempotencyRepository
     }
 
     public async Task StoreResponseAsync(
-        IDatabaseTransaction transaction,
         string key,
         int responseCode,
         string responseBody,
         CancellationToken cancellationToken)
     {
-        var databaseTransaction = transaction.AsMySql();
+        var databaseTransaction = CurrentTransaction();
         var command = databaseTransaction.Connection.CreateCommand();
         command.Transaction = databaseTransaction.Transaction;
         command.CommandText =
@@ -107,4 +111,7 @@ public sealed class IdempotencyMySqlRepository : IIdempotencyRepository
     }
 
     private static string GetLockClause(bool lockForUpdate) => lockForUpdate ? "FOR UPDATE" : string.Empty;
+
+    private MySqlDatabaseTransaction CurrentTransaction() =>
+        _transactionAccessor.GetCurrent().AsMySql();
 }

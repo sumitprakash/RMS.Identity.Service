@@ -9,12 +9,18 @@ namespace RMS.Identity.Service.Infrastructure.Persistence.AuditLog;
 
 public sealed class AuditLogMySqlRepository : IAuditLogRepository
 {
+    private readonly IDatabaseTransactionAccessor _transactionAccessor;
+
+    public AuditLogMySqlRepository(IDatabaseTransactionAccessor transactionAccessor)
+    {
+        _transactionAccessor = transactionAccessor;
+    }
+
     public async Task InsertSignUpCreatedAsync(
-        IDatabaseTransaction transaction,
         SignUpUser createdUser,
         CancellationToken cancellationToken)
     {
-        var databaseTransaction = transaction.AsMySql();
+        var databaseTransaction = _transactionAccessor.GetCurrent().AsMySql();
         var command = databaseTransaction.Connection.CreateCommand();
         command.Transaction = databaseTransaction.Transaction;
         command.CommandText =

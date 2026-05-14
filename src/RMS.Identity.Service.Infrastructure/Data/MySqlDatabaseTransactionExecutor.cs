@@ -5,23 +5,29 @@ namespace RMS.Identity.Service.Infrastructure.Data;
 public sealed class MySqlDatabaseTransactionExecutor : IDatabaseTransactionExecutor
 {
     private readonly IMySqlConnectionFactory _connectionFactory;
+    private readonly IDatabaseTransactionAccessor _transactionAccessor;
 
-    public MySqlDatabaseTransactionExecutor(IMySqlConnectionFactory connectionFactory)
+    public MySqlDatabaseTransactionExecutor(
+        IMySqlConnectionFactory connectionFactory,
+        IDatabaseTransactionAccessor transactionAccessor)
     {
         _connectionFactory = connectionFactory;
+        _transactionAccessor = transactionAccessor;
     }
 
     public async Task<TResult> ExecuteAsync<TResult>(
-        Func<IDatabaseTransaction, CancellationToken, Task<TResult>> operation,
+        Func<CancellationToken, Task<TResult>> operation,
         CancellationToken cancellationToken)
     {
         await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
         var databaseTransaction = new MySqlDatabaseTransaction(connection, transaction);
+        var previousTransaction = _transactionAccessor.Current;
+        _transactionAccessor.Current = databaseTransaction;
 
         try
         {
-            var result = await operation(databaseTransaction, cancellationToken);
+            var result = await operation(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             return result;
         }
@@ -29,6 +35,10 @@ public sealed class MySqlDatabaseTransactionExecutor : IDatabaseTransactionExecu
         {
             await transaction.RollbackAsync(cancellationToken);
             throw;
+        }
+        finally
+        {
+            _transactionAccessor.Current = previousTransaction;
         }
     }
 }
