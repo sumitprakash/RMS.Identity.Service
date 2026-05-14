@@ -3,8 +3,9 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using RMS.Identity.Service.Application.Shared.Errors;
+using RMS.Identity.Service.Api.Shared.ErrorHandling;
 
-namespace RMS.Identity.Service.Api.Shared.ErrorHandling;
+namespace RMS.Identity.Service.Api.Middleware;
 
 public sealed class ApiExceptionHandlingMiddleware
 {

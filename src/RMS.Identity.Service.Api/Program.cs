@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using RMS.Identity.Service.Api.Middleware;
 using RMS.Identity.Service.Api.Shared.ErrorHandling;
 using RMS.Identity.Service.Api.Shared.Idempotency;
 using RMS.Identity.Service.Infrastructure.DependencyInjection;

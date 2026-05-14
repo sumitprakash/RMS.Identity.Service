@@ -1,4 +1,6 @@
-namespace RMS.Identity.Service.Api.Shared.Idempotency;
+using RMS.Identity.Service.Api.Shared.Idempotency;
+
+namespace RMS.Identity.Service.Api.Middleware;
 
 public sealed class IdempotencyMiddleware
 {

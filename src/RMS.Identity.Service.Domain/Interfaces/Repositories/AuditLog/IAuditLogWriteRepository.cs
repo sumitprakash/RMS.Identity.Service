@@ -2,7 +2,7 @@ using RMS.Identity.Service.Domain.Entities.SignUp;
 
 namespace RMS.Identity.Service.Domain.Interfaces.Repositories.AuditLog;
 
-public interface IAuditLogRepository
+public interface IAuditLogWriteRepository
 {
     Task InsertSignUpCreatedAsync(
         SignUpUser createdUser,

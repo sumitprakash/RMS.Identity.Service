@@ -7,7 +7,7 @@ using RMS.Identity.Service.Infrastructure.Persistence.Schema;
 
 namespace RMS.Identity.Service.Infrastructure.Persistence.AuditLog;
 
-public sealed class AuditLogMySqlRepository : IAuditLogRepository
+public sealed class AuditLogMySqlRepository : IAuditLogWriteRepository
 {
     private readonly IDatabaseTransactionAccessor _transactionAccessor;
 

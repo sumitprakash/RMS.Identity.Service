@@ -13,18 +13,21 @@ namespace RMS.Identity.Service.Application.Commands.SignUp;
 
 public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest, SignUpCommandResponse>
 {
-    private readonly IUserAccountRepository _userAccountRepository;
-    private readonly IAuditLogRepository _auditLogRepository;
+    private readonly IUserAccountReadRepository _userAccountReadRepository;
+    private readonly IUserAccountWriteRepository _userAccountWriteRepository;
+    private readonly IAuditLogWriteRepository _auditLogWriteRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly SignUpValidator _validator = new();
 
     public SignUpCommandHandler(
-        IUserAccountRepository userAccountRepository,
-        IAuditLogRepository auditLogRepository,
+        IUserAccountReadRepository userAccountReadRepository,
+        IUserAccountWriteRepository userAccountWriteRepository,
+        IAuditLogWriteRepository auditLogWriteRepository,
         IPasswordHasher passwordHasher)
     {
-        _userAccountRepository = userAccountRepository;
-        _auditLogRepository = auditLogRepository;
+        _userAccountReadRepository = userAccountReadRepository;
+        _userAccountWriteRepository = userAccountWriteRepository;
+        _auditLogWriteRepository = auditLogWriteRepository;
         _passwordHasher = passwordHasher;
     }
 
@@ -35,7 +38,7 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
         var normalizedUsername = EmailAddressValidator.Normalize(command.EmailAddress);
         var displayName = BuildDisplayName(command.FirstName, command.MiddleName, command.LastName);
 
-        if (await _userAccountRepository.ExistsByUsernameAsync(normalizedUsername, cancellationToken))
+        if (await _userAccountReadRepository.ExistsByUsernameAsync(normalizedUsername, cancellationToken))
         {
             throw UserAlreadyExists();
         }
@@ -45,9 +48,9 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
             normalizedUsername,
             _passwordHasher.Hash(command.Password),
             displayName);
-        var userId = await _userAccountRepository.CreateAsync(createUserCommand, cancellationToken);
-        var user = ToSignUpUser(await _userAccountRepository.GetByIdAsync(userId, cancellationToken));
-        await _auditLogRepository.InsertSignUpCreatedAsync(user, cancellationToken);
+        var userId = await _userAccountWriteRepository.CreateAsync(createUserCommand, cancellationToken);
+        var user = ToSignUpUser(await _userAccountReadRepository.GetByIdAsync(userId, cancellationToken));
+        await _auditLogWriteRepository.InsertSignUpCreatedAsync(user, cancellationToken);
 
         return new SignUpCommandResponse(
             user.UserUuid,

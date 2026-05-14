@@ -29,8 +29,14 @@ public static class InfrastructureServiceCollectionExtensions
             provider => provider.GetRequiredService<IdempotencyMySqlRepository>());
         services.AddScoped<IIdempotencyWriteRepository>(
             provider => provider.GetRequiredService<IdempotencyMySqlRepository>());
-        services.AddScoped<IUserAccountRepository, UserAccountMySqlRepository>();
-        services.AddScoped<IAuditLogRepository, AuditLogMySqlRepository>();
+        services.AddScoped<UserAccountMySqlRepository>();
+        services.AddScoped<IUserAccountReadRepository>(
+            provider => provider.GetRequiredService<UserAccountMySqlRepository>());
+        services.AddScoped<IUserAccountWriteRepository>(
+            provider => provider.GetRequiredService<UserAccountMySqlRepository>());
+        services.AddScoped<AuditLogMySqlRepository>();
+        services.AddScoped<IAuditLogWriteRepository>(
+            provider => provider.GetRequiredService<AuditLogMySqlRepository>());
 
         return services;
     }

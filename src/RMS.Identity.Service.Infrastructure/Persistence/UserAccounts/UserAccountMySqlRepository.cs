@@ -10,7 +10,9 @@ using System.Net;
 
 namespace RMS.Identity.Service.Infrastructure.Persistence.UserAccounts;
 
-public sealed class UserAccountMySqlRepository : IUserAccountRepository
+public sealed class UserAccountMySqlRepository :
+    IUserAccountReadRepository,
+    IUserAccountWriteRepository
 {
     private readonly IDatabaseTransactionAccessor _transactionAccessor;
 

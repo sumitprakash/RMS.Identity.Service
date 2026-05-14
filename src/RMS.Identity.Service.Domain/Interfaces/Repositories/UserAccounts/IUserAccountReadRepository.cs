@@ -1,16 +1,11 @@
-using RMS.Identity.Service.Domain.Contracts.UserAccounts;
 using RMS.Identity.Service.Domain.Entities.UserAccounts;
 
 namespace RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
 
-public interface IUserAccountRepository
+public interface IUserAccountReadRepository
 {
     Task<bool> ExistsByUsernameAsync(
         string username,
-        CancellationToken cancellationToken);
-
-    Task<long> CreateAsync(
-        CreateUserAccountCommand command,
         CancellationToken cancellationToken);
 
     Task<UserAccount> GetByIdAsync(
