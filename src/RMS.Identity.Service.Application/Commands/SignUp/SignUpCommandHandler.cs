@@ -2,8 +2,6 @@ using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
 using RMS.Identity.Service.Domain.Contracts.SignUp;
 using RMS.Identity.Service.Domain.Contracts.UserAccounts;
-using RMS.Identity.Service.Domain.Entities.SignUp;
-using RMS.Identity.Service.Domain.Entities.UserAccounts;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.AuditLog;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
 using RMS.Identity.Service.Domain.Interfaces.Security;
@@ -49,14 +47,14 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
             _passwordHasher.Hash(command.Password),
             displayName);
         var userId = await _userAccountWriteRepository.CreateAsync(createUserCommand, cancellationToken);
-        var user = ToSignUpUser(await _userAccountReadRepository.GetByIdAsync(userId, cancellationToken));
-        await _auditLogWriteRepository.InsertSignUpCreatedAsync(user, cancellationToken);
+        var account = await _userAccountReadRepository.GetByIdAsync(userId, cancellationToken);
+        await _auditLogWriteRepository.InsertSignUpCreatedAsync(account, cancellationToken);
 
         return new SignUpCommandResponse(
-            user.UserUuid,
-            user.Username,
-            user.Status,
-            user.CreatedAt
+            account.UserUuid,
+            account.Username,
+            "pending",
+            account.CreatedAt
         );
     }
 
@@ -69,12 +67,4 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
 
     private static Exception UserAlreadyExists() =>
         new ServiceException(409, "USER_EXISTS", "Email address already exists.");
-
-    private static SignUpUser ToSignUpUser(UserAccount account) =>
-        new(
-            account.UserUuid,
-            account.Username,
-            account.DisplayName,
-            "pending",
-            account.CreatedAt);
 }

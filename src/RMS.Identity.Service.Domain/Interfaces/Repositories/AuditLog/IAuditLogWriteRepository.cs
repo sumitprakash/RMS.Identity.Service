@@ -1,10 +1,10 @@
-using RMS.Identity.Service.Domain.Entities.SignUp;
+using RMS.Identity.Service.Domain.Entities.UserAccounts;
 
 namespace RMS.Identity.Service.Domain.Interfaces.Repositories.AuditLog;
 
 public interface IAuditLogWriteRepository
 {
     Task InsertSignUpCreatedAsync(
-        SignUpUser createdUser,
+        UserAccount account,
         CancellationToken cancellationToken);
 }

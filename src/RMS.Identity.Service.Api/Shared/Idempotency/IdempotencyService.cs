@@ -83,9 +83,7 @@ public sealed class IdempotencyService : IIdempotencyService
             context.RequestAborted);
     }
 
-    private async Task<IdempotencyResponse?> ReadExistingResponseAsync(
-        IdempotencyRequest request,
-        CancellationToken cancellationToken)
+    private async Task<IdempotencyResponse?> ReadExistingResponseAsync(IdempotencyRequest request, CancellationToken cancellationToken)
     {
         var record = await _idempotencyReadRepository.GetAsync(
             request.Key,
@@ -95,9 +93,7 @@ public sealed class IdempotencyService : IIdempotencyService
         return record is null ? null : ReadExistingResponse(record, request);
     }
 
-    private static IdempotencyResponse ReadExistingResponse(
-        IdempotencyRecord record,
-        IdempotencyRequest request)
+    private static IdempotencyResponse ReadExistingResponse(IdempotencyRecord record, IdempotencyRequest request)
     {
         if (!string.Equals(record.Method, request.Method, StringComparison.OrdinalIgnoreCase)
             || !string.Equals(record.Route, request.Route, StringComparison.Ordinal))
@@ -118,10 +114,7 @@ public sealed class IdempotencyService : IIdempotencyService
         return new IdempotencyResponse(record.ResponseCode.Value, "application/json", record.ResponseBody);
     }
 
-    private static async Task<IdempotencyResponse> CaptureResponseAsync(
-        HttpContext context,
-        RequestDelegate next,
-        CancellationToken cancellationToken)
+    private static async Task<IdempotencyResponse> CaptureResponseAsync(HttpContext context, RequestDelegate next, CancellationToken cancellationToken)
     {
         var originalBody = context.Response.Body;
         await using var capturedBody = new MemoryStream();

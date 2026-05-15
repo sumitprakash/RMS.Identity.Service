@@ -1,5 +1,5 @@
 using System.Text.Json;
-using RMS.Identity.Service.Domain.Entities.SignUp;
+using RMS.Identity.Service.Domain.Entities.UserAccounts;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.AuditLog;
 using RMS.Identity.Service.Infrastructure.Data;
@@ -17,7 +17,7 @@ public sealed class AuditLogMySqlRepository : IAuditLogWriteRepository
     }
 
     public async Task InsertSignUpCreatedAsync(
-        SignUpUser createdUser,
+        UserAccount account,
         CancellationToken cancellationToken)
     {
         var databaseTransaction = _transactionAccessor.GetCurrent().AsMySql();
@@ -34,9 +34,18 @@ public sealed class AuditLogMySqlRepository : IAuditLogWriteRepository
             VALUES (@TableName, @RecordId, @Action, CAST(@Payload AS JSON), UTC_TIMESTAMP());
             """;
         command.Parameters.AddWithValue("@TableName", UserAccountTable.Name);
-        command.Parameters.AddWithValue("@RecordId", createdUser.UserUuid.ToString());
+        command.Parameters.AddWithValue("@RecordId", account.UserUuid.ToString());
         command.Parameters.AddWithValue("@Action", "signup_created");
-        command.Parameters.AddWithValue("@Payload", JsonSerializer.Serialize(createdUser));
+        command.Parameters.AddWithValue(
+            "@Payload",
+            JsonSerializer.Serialize(new
+            {
+                account.UserUuid,
+                account.Username,
+                account.DisplayName,
+                Status = "pending",
+                account.CreatedAt
+            }));
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 }
