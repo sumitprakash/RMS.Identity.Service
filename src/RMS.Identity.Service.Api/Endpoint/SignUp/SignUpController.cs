@@ -16,6 +16,7 @@ public sealed class SignUpController : ControllerBase
     }
 
     [HttpPost]
+    [ServiceFilter(typeof(SignUpRequestValidationFilter))]
     [ProducesResponseType(typeof(SignUpResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(object), StatusCodes.Status409Conflict)]

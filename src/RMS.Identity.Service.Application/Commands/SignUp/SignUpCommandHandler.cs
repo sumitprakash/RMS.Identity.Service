@@ -15,7 +15,6 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
     private readonly IUserAccountWriteRepository _userAccountWriteRepository;
     private readonly IAuditLogWriteRepository _auditLogWriteRepository;
     private readonly IPasswordHasher _passwordHasher;
-    private readonly SignUpValidator _validator = new();
 
     public SignUpCommandHandler(
         IUserAccountReadRepository userAccountReadRepository,
@@ -31,8 +30,6 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
 
     public async Task<SignUpCommandResponse> HandleAsync(SignUpCommandRequest command, CancellationToken cancellationToken)
     {
-        _validator.Validate(command);
-
         var normalizedUsername = EmailAddressValidator.Normalize(command.EmailAddress);
         var displayName = BuildDisplayName(command.FirstName, command.MiddleName, command.LastName);
 
