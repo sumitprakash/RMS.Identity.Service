@@ -42,15 +42,18 @@ User becomes COMPANY_ADMIN
 
 | Header | Required | Description |
 |------|----------|-------------|
-| `Idempotency-Key` | Optional | UUID used to safely retry the request |
+| `Idempotency-Key` | Required | UUID used to safely retry the request |
 
 ### Request Body
 
 ```json
 {
-  "username": "alice@example.com",
+  "emailAddress": "user@example.com",
   "password": "P@ssw0rd!",
-  "displayName": "Alice Example"
+  "firstName": "First",
+  "middleName": "Middle",
+  "lastName": "Last",
+  "phoneNumber": "+15551234567"
 }
 ```
 
@@ -58,9 +61,12 @@ User becomes COMPANY_ADMIN
 
 | Field | Rules |
 |------|------|
-| `username` | Required, email format, globally unique |
+| `emailAddress` | Required, email format, globally unique |
 | `password` | Required, minimum 8 characters |
-| `displayName` | Optional |
+| `firstName` | Required |
+| `middleName` | Optional |
+| `lastName` | Required |
+| `phoneNumber` | Required, phone number format |
 
 ---
 
@@ -71,8 +77,7 @@ User becomes COMPANY_ADMIN
 ```json
 {
   "userUuid": "d6f0d5c2-7c1a-4f2b-b8ef-1d9d1a7e9b33",
-  "username": "alice@example.com",
-  "displayName": "Alice Example",
+  "emailAddress": "user@example.com",
   "status": "pending",
   "createdAt": "2026-02-08T08:00:00Z"
 }
@@ -93,7 +98,7 @@ User becomes COMPANY_ADMIN
 ```json
 {
   "code": "invalid_input",
-  "message": "username and password are required"
+  "message": "emailAddress, password, firstName, lastName, phoneNumber, and Idempotency-Key are required"
 }
 ```
 
@@ -102,7 +107,7 @@ User becomes COMPANY_ADMIN
 ```json
 {
   "code": "user_exists",
-  "message": "username already exists"
+  "message": "email address already exists"
 }
 ```
 
@@ -130,7 +135,7 @@ On successful signup, the system MUST:
 
 ## 7. Idempotency Rules
 
-If `Idempotency-Key` is provided:
+For every request, `Idempotency-Key` is required:
 
 - First request processes normally
 - Response is stored
@@ -186,7 +191,7 @@ If `Idempotency-Key` is provided:
 Mapped to:
 - `paths./api/v1/signup.post`
 - `components.schemas.SignupRequest`
-- `components.schemas.UserResponse`
+- `components.schemas.SignupResponse`
 - `components.schemas.ErrorResponse`
 - `components.parameters.IdempotencyKey`
 

@@ -29,11 +29,11 @@ components:
     IdempotencyKey:
       name: Idempotency-Key
       in: header
-      required: false
+      required: true
       schema:
         type: string
         format: uuid
-      description: Prevents duplicate POST requests
+      description: Required UUID used to prevent duplicate POST requests
 
     UserUuidPath:
       name: userUuid
@@ -141,10 +141,13 @@ components:
     SignupRequest:
       type: object
       required:
-        - username
+        - emailAddress
         - password
+        - firstName
+        - lastName
+        - phoneNumber
       properties:
-        username:
+        emailAddress:
           type: string
           format: email
           example: user@example.com
@@ -153,12 +156,41 @@ components:
           format: password
           minLength: 8
           example: StrongPass@123
-        displayName:
+        firstName:
           type: string
-          example: Sumit Prakash
-        phone:
+          example: First
+        middleName:
           type: string
-          example: "+919876543210"
+          nullable: true
+          example: Middle
+        lastName:
+          type: string
+          example: Last
+        phoneNumber:
+          type: string
+          example: "+15551234567"
+      additionalProperties: false
+
+    SignupResponse:
+      type: object
+      required:
+        - userUuid
+        - emailAddress
+        - status
+        - createdAt
+      properties:
+        userUuid:
+          allOf:
+            - $ref: '#/components/schemas/UUID'
+        emailAddress:
+          type: string
+          format: email
+          example: user@example.com
+        status:
+          type: string
+          enum: [pending]
+        createdAt:
+          $ref: '#/components/schemas/DateTime'
       additionalProperties: false
 
     CreateTenantUserRequest:
@@ -172,7 +204,7 @@ components:
           example: cashier@example.com
         displayName:
           type: string
-          example: Store Cashier
+          example: Store User
         roles:
           type: array
           items:
@@ -249,7 +281,7 @@ components:
           example: RET001
         companyName:
           type: string
-          example: Retail One Pvt Ltd
+          example: Example Retail Pvt Ltd
         companyGstin:
           type: string
           nullable: true
@@ -331,7 +363,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserResponse'
+                $ref: '#/components/schemas/SignupResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '409':

@@ -7,11 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MediatR" Version="14.0.0" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\RMS.Identity.Service.Domain\RMS.Identity.Service.Domain.csproj" />
+    <ProjectReference Include="..\RMS.Identity.Service.Infrastructure.Abstractions\RMS.Identity.Service.Infrastructure.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

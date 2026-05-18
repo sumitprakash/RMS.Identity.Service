@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\RMS.Identity.Service.Infrastructure.Abstractions\RMS.Identity.Service.Infrastructure.Abstractions.csproj" />
+  </ItemGroup>
+
 </Project>
