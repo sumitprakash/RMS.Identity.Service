@@ -4,6 +4,9 @@ namespace RMS.Identity.Service.Api.Endpoint.SignUp;
 
 public static class SignUpMappings
 {
+    public static SignUpCommandRequest ToCommand(this SignUpRequest request) =>
+        request.Body.ToCommand();
+
     public static SignUpCommandRequest ToCommand(this SignUpRequestBody request) =>
         new(
             request.EmailAddress,

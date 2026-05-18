@@ -15,14 +15,14 @@ public sealed class SignUpRequestValidationFilterTests
     public void OnActionExecuting_WithInvalidRequest_ReturnsBadRequest()
     {
         var filter = new SignUpRequestValidationFilter(new SignUpRequestValidator());
-        var context = CreateContext(new SignUpRequestBody
+        var context = CreateContext(new SignUpRequest(new SignUpRequestBody
         {
             EmailAddress = "alice@example.com",
             Password = "StrongPass@123",
             FirstName = " ",
             LastName = "Example",
             PhoneNumber = "+919876543210"
-        });
+        }));
 
         filter.OnActionExecuting(context);
 
@@ -37,21 +37,21 @@ public sealed class SignUpRequestValidationFilterTests
     public void OnActionExecuting_WithValidRequest_AllowsActionToContinue()
     {
         var filter = new SignUpRequestValidationFilter(new SignUpRequestValidator());
-        var context = CreateContext(new SignUpRequestBody
+        var context = CreateContext(new SignUpRequest(new SignUpRequestBody
         {
             EmailAddress = "alice@example.com",
             Password = "StrongPass@123",
             FirstName = "Alice",
             LastName = "Example",
             PhoneNumber = "+919876543210"
-        });
+        }));
 
         filter.OnActionExecuting(context);
 
         Assert.Null(context.Result);
     }
 
-    private static ActionExecutingContext CreateContext(SignUpRequestBody body)
+    private static ActionExecutingContext CreateContext(SignUpRequest request)
     {
         var actionContext = new ActionContext(
             new DefaultHttpContext(),
@@ -62,7 +62,7 @@ public sealed class SignUpRequestValidationFilterTests
         return new ActionExecutingContext(
             actionContext,
             new List<IFilterMetadata>(),
-            new Dictionary<string, object?> { ["body"] = body },
+            new Dictionary<string, object?> { ["request"] = request },
             new object());
     }
 }

@@ -16,15 +16,15 @@ public sealed class SignUpRequestValidationFilter : IActionFilter
 
     public void OnActionExecuting(ActionExecutingContext context)
     {
-        if (!context.ActionArguments.TryGetValue("body", out var requestBody)
-            || requestBody is not SignUpRequestBody body)
+        if (!context.ActionArguments.TryGetValue("request", out var requestValue)
+            || requestValue is not SignUpRequest request)
         {
             return;
         }
 
         try
         {
-            _validator.Validate(body);
+            _validator.Validate(request);
         }
         catch (ServiceException exception) when (exception.StatusCode == StatusCodes.Status400BadRequest)
         {
