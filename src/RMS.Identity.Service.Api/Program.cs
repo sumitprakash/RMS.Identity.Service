@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using RMS.Identity.Service.Api.Endpoint.Auth.Login;
 using RMS.Identity.Service.Api.Endpoint.SignUp;
 using RMS.Identity.Service.Api.Middleware;
 using RMS.Identity.Service.Api.Shared.ErrorHandling;
@@ -39,6 +40,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddIdentityServiceInfrastructure(builder.Configuration);
 builder.Services.AddScoped<IIdempotencyService, IdempotencyService>();
+builder.Services.AddScoped<LoginRequestValidator>();
+builder.Services.AddScoped<LoginRequestValidationFilter>();
 builder.Services.AddScoped<SignUpRequestValidator>();
 builder.Services.AddScoped<SignUpRequestValidationFilter>();
 

@@ -13,6 +13,7 @@ public sealed class IdempotencyMiddleware
     };
 
     private readonly RequestDelegate _next;
+    private static readonly PathString LoginPath = new("/api/v1/auth/login");
 
     public IdempotencyMiddleware(RequestDelegate next)
     {
@@ -23,7 +24,7 @@ public sealed class IdempotencyMiddleware
         HttpContext context,
         IIdempotencyService idempotencyService)
     {
-        if (!RequiresIdempotency(context.Request.Method))
+        if (!RequiresIdempotency(context.Request.Method, context.Request.Path))
         {
             await _next(context);
             return;
@@ -32,6 +33,7 @@ public sealed class IdempotencyMiddleware
         await idempotencyService.ExecuteAsync(context, _next, context.RequestAborted);
     }
 
-    private static bool RequiresIdempotency(string method) =>
-        MethodsRequiringIdempotency.Contains(method);
+    private static bool RequiresIdempotency(string method, PathString path) =>
+        MethodsRequiringIdempotency.Contains(method)
+        && !path.Equals(LoginPath, StringComparison.OrdinalIgnoreCase);
 }
