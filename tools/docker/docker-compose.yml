@@ -33,7 +33,7 @@ services:
       - Jwt__Issuer=rms.identity
       - Jwt__Audience=rms.api
       - Jwt__SigningKeyEnvVar=JWT_SIGNING_KEY
-      - JWT_SIGNING_KEY=local-dev-super-secret-change-me
+      - JWT_SIGNING_KEY=local-dev-super-secret-change-me-32b
       - ASPNETCORE_ENVIRONMENT=Development
     ports:
       - "8080:8080"
