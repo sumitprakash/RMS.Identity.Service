@@ -71,6 +71,78 @@ public sealed class AuthenticationMySqlRepository : IAuthenticationRepository
         return user with { Roles = await GetRolesAsync(connection, userId, cancellationToken) };
     }
 
+    public async Task<RefreshTokenSession?> GetRefreshTokenSessionAsync(
+        string refreshTokenHash,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            $"""
+            SELECT
+                rt.{RefreshTokenTable.Columns.RefreshTokenId},
+                rt.{RefreshTokenTable.Columns.TokenHash},
+                rt.{RefreshTokenTable.Columns.ExpiresAt},
+                rt.{RefreshTokenTable.Columns.RevokedAt},
+                ua.{UserAccountTable.Columns.UserId},
+                BIN_TO_UUID(ua.{UserAccountTable.Columns.UserUuid}) AS UserUuid,
+                BIN_TO_UUID(c.{CompanyTable.Columns.CompanyUuid}) AS CompanyUuid,
+                ua.{UserAccountTable.Columns.Username},
+                ua.{UserAccountTable.Columns.PasswordHash},
+                ua.{UserAccountTable.Columns.DisplayName},
+                ua.{UserAccountTable.Columns.EmailVerified},
+                ua.{UserAccountTable.Columns.IsActive},
+                ua.{UserAccountTable.Columns.IsDeleted},
+                ua.{UserAccountTable.Columns.LockedUntil},
+                ua.{UserAccountTable.Columns.CreatedAt}
+            FROM {RefreshTokenTable.Name} rt
+            INNER JOIN {UserAccountTable.Name} ua
+                ON ua.{UserAccountTable.Columns.UserId} = rt.{RefreshTokenTable.Columns.UserId}
+            LEFT JOIN {CompanyTable.Name} c
+                ON c.{CompanyTable.Columns.CompanyId} = ua.{UserAccountTable.Columns.CompanyId}
+                AND c.{CompanyTable.Columns.IsDeleted} = 0
+            WHERE rt.{RefreshTokenTable.Columns.TokenHash} = @TokenHash
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("@TokenHash", refreshTokenHash);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return null;
+        }
+
+        var userId = reader.GetInt64(reader.GetOrdinal(UserAccountTable.Columns.UserId));
+        var user = new AuthenticatedUser(
+            userId,
+            Guid.Parse(reader.GetString("UserUuid")),
+            reader.IsDBNull(reader.GetOrdinal("CompanyUuid"))
+                ? null
+                : Guid.Parse(reader.GetString("CompanyUuid")),
+            reader.GetString(UserAccountTable.Columns.Username),
+            reader.GetString(UserAccountTable.Columns.PasswordHash),
+            reader.GetNullableString(UserAccountTable.Columns.DisplayName),
+            reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.EmailVerified)),
+            reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.IsActive)),
+            reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.IsDeleted)),
+            reader.IsDBNull(reader.GetOrdinal(UserAccountTable.Columns.LockedUntil))
+                ? null
+                : DateTime.SpecifyKind(reader.GetDateTime(reader.GetOrdinal(UserAccountTable.Columns.LockedUntil)), DateTimeKind.Utc),
+            reader.GetUtcDateTime(UserAccountTable.Columns.CreatedAt),
+            Array.Empty<string>());
+        var session = new RefreshTokenSession(
+            reader.GetInt64(reader.GetOrdinal(RefreshTokenTable.Columns.RefreshTokenId)),
+            reader.GetString(RefreshTokenTable.Columns.TokenHash),
+            reader.GetUtcDateTime(RefreshTokenTable.Columns.ExpiresAt),
+            reader.IsDBNull(reader.GetOrdinal(RefreshTokenTable.Columns.RevokedAt))
+                ? null
+                : DateTime.SpecifyKind(reader.GetDateTime(reader.GetOrdinal(RefreshTokenTable.Columns.RevokedAt)), DateTimeKind.Utc),
+            user);
+
+        await reader.CloseAsync();
+        return session with { User = user with { Roles = await GetRolesAsync(connection, userId, cancellationToken) } };
+    }
+
     public async Task RecordFailedLoginAsync(long userId, CancellationToken cancellationToken)
     {
         await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
@@ -120,8 +192,6 @@ public sealed class AuthenticationMySqlRepository : IAuthenticationRepository
             await using (var insertTokenCommand = connection.CreateCommand())
             {
                 insertTokenCommand.Transaction = transaction;
-                // TODO: Revisit session policy for repeated valid logins: keep multiple refresh tokens,
-                // revoke previous active tokens, or cap active sessions per user.
                 insertTokenCommand.CommandText =
                     $"""
                     INSERT INTO {RefreshTokenTable.Name} (
@@ -140,6 +210,72 @@ public sealed class AuthenticationMySqlRepository : IAuthenticationRepository
             }
 
             await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
+    public async Task<bool> RotateRefreshTokenAsync(
+        long refreshTokenId,
+        long userId,
+        string newRefreshTokenHash,
+        DateTime newRefreshTokenExpiresAt,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            await using (var revokeCommand = connection.CreateCommand())
+            {
+                revokeCommand.Transaction = transaction;
+                revokeCommand.CommandText =
+                    $"""
+                    UPDATE {RefreshTokenTable.Name}
+                    SET {RefreshTokenTable.Columns.RevokedAt} = UTC_TIMESTAMP(),
+                        {RefreshTokenTable.Columns.ReplacedByTokenHash} = @NewTokenHash
+                    WHERE {RefreshTokenTable.Columns.RefreshTokenId} = @RefreshTokenId
+                      AND {RefreshTokenTable.Columns.UserId} = @UserId
+                      AND {RefreshTokenTable.Columns.RevokedAt} IS NULL;
+                    """;
+                revokeCommand.Parameters.AddWithValue("@RefreshTokenId", refreshTokenId);
+                revokeCommand.Parameters.AddWithValue("@UserId", userId);
+                revokeCommand.Parameters.AddWithValue("@NewTokenHash", newRefreshTokenHash);
+
+                var revokedRows = await revokeCommand.ExecuteNonQueryAsync(cancellationToken);
+                if (revokedRows != 1)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return false;
+                }
+            }
+
+            await using (var insertTokenCommand = connection.CreateCommand())
+            {
+                insertTokenCommand.Transaction = transaction;
+                insertTokenCommand.CommandText =
+                    $"""
+                    INSERT INTO {RefreshTokenTable.Name} (
+                        {RefreshTokenTable.Columns.UserId},
+                        {RefreshTokenTable.Columns.TokenHash},
+                        {RefreshTokenTable.Columns.ExpiresAt})
+                    VALUES (
+                        @UserId,
+                        @TokenHash,
+                        @ExpiresAt);
+                    """;
+                insertTokenCommand.Parameters.AddWithValue("@UserId", userId);
+                insertTokenCommand.Parameters.AddWithValue("@TokenHash", newRefreshTokenHash);
+                insertTokenCommand.Parameters.AddWithValue("@ExpiresAt", newRefreshTokenExpiresAt);
+                await insertTokenCommand.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+            return true;
         }
         catch
         {
