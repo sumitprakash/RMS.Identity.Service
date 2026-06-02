@@ -14,6 +14,7 @@ public sealed class IdempotencyMiddleware
 
     private readonly RequestDelegate _next;
     private static readonly PathString LoginPath = new("/api/v1/auth/login");
+    private static readonly PathString RefreshPath = new("/api/v1/auth/refresh");
 
     public IdempotencyMiddleware(RequestDelegate next)
     {
@@ -35,5 +36,6 @@ public sealed class IdempotencyMiddleware
 
     private static bool RequiresIdempotency(string method, PathString path) =>
         MethodsRequiringIdempotency.Contains(method)
-        && !path.Equals(LoginPath, StringComparison.OrdinalIgnoreCase);
+        && !path.Equals(LoginPath, StringComparison.OrdinalIgnoreCase)
+        && !path.Equals(RefreshPath, StringComparison.OrdinalIgnoreCase);
 }

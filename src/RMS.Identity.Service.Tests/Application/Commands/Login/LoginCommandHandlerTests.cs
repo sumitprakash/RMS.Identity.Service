@@ -113,6 +113,11 @@ public sealed class LoginCommandHandlerTests
             return Task.FromResult(_user);
         }
 
+        public Task<RefreshTokenSession?> GetRefreshTokenSessionAsync(
+            string refreshTokenHash,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<RefreshTokenSession?>(null);
+
         public Task RecordFailedLoginAsync(long userId, CancellationToken cancellationToken)
         {
             FailedLoginUserId = userId;
@@ -129,6 +134,14 @@ public sealed class LoginCommandHandlerTests
             StoredRefreshTokenExpiresAt = refreshTokenExpiresAt;
             return Task.CompletedTask;
         }
+
+        public Task<bool> RotateRefreshTokenAsync(
+            long refreshTokenId,
+            long userId,
+            string newRefreshTokenHash,
+            DateTime newRefreshTokenExpiresAt,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(false);
     }
 
     private sealed class FakePasswordHasher : IPasswordHasher
