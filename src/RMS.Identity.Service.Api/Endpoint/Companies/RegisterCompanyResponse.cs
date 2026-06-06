@@ -8,10 +8,10 @@ public sealed record RegisterCompanyResponse(
     string Status,
     DateTime CreatedAt);
 
-public sealed record MyCompaniesResponse(
-    IReadOnlyCollection<MyCompanyResponse> Companies);
+public sealed record CurrentUserCompaniesResponse(
+    IReadOnlyCollection<CurrentUserCompanyResponse> Companies);
 
-public sealed record MyCompanyResponse(
+public sealed record CurrentUserCompanyResponse(
     Guid CompanyUuid,
     string LegalName,
     string? TradeName,

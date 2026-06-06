@@ -61,4 +61,45 @@ public sealed class CompanyMembershipMySqlRepository : ICompanyMembershipReadRep
 
         return companies;
     }
+
+    public async Task<CompanyMembership?> GetMembershipAsync(
+        Guid userUuid,
+        Guid companyUuid,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            $"""
+            SELECT
+                BIN_TO_UUID(ua.{UserAccountTable.Columns.UserUuid}) AS UserUuid,
+                BIN_TO_UUID(c.{CompanyTable.Columns.CompanyUuid}) AS CompanyUuid,
+                cu.{CompanyUserTable.Columns.CompanyRole},
+                cu.{CompanyUserTable.Columns.MembershipStatus}
+            FROM {UserAccountTable.Name} ua
+            INNER JOIN {CompanyUserTable.Name} cu
+                ON cu.{CompanyUserTable.Columns.UserId} = ua.{UserAccountTable.Columns.UserId}
+            INNER JOIN {CompanyTable.Name} c
+                ON c.{CompanyTable.Columns.CompanyId} = cu.{CompanyUserTable.Columns.CompanyId}
+            WHERE ua.{UserAccountTable.Columns.UserUuid} = UUID_TO_BIN(@UserUuid)
+              AND c.{CompanyTable.Columns.CompanyUuid} = UUID_TO_BIN(@CompanyUuid)
+              AND ua.{UserAccountTable.Columns.IsDeleted} = 0
+              AND c.{CompanyTable.Columns.IsDeleted} = 0
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("@UserUuid", userUuid.ToString());
+        command.Parameters.AddWithValue("@CompanyUuid", companyUuid.ToString());
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return null;
+        }
+
+        return new CompanyMembership(
+            Guid.Parse(reader.GetString("UserUuid")),
+            Guid.Parse(reader.GetString("CompanyUuid")),
+            reader.GetString(CompanyUserTable.Columns.CompanyRole),
+            reader.GetString(CompanyUserTable.Columns.MembershipStatus));
+    }
 }

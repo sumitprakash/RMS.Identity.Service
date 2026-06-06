@@ -1,5 +1,5 @@
 -- =========================================================
--- RMS.Identity.Service — schema_v1_identity.sql
+-- RMS.Identity.Service - schema_v1_identity.sql
 -- Canonical schema for Identity & Company Service
 -- UUIDs stored as BINARY(16)
 -- Internal PKs are BIGINT AUTO_INCREMENT

@@ -4,21 +4,21 @@ using RMS.Identity.Service.Infrastructure.Cqrs;
 
 namespace RMS.Identity.Service.Application.Commands.Companies;
 
-public sealed class GetMyCompaniesCommandHandler : ICommandHandler<GetMyCompaniesCommandRequest, GetMyCompaniesCommandResponse>
+public sealed class GetCurrentUserCompaniesCommandHandler : ICommandHandler<GetCurrentUserCompaniesCommandRequest, GetCurrentUserCompaniesCommandResponse>
 {
     private readonly ICompanyMembershipReadRepository _companyMembershipReadRepository;
 
-    public GetMyCompaniesCommandHandler(ICompanyMembershipReadRepository companyMembershipReadRepository)
+    public GetCurrentUserCompaniesCommandHandler(ICompanyMembershipReadRepository companyMembershipReadRepository)
     {
         _companyMembershipReadRepository = companyMembershipReadRepository;
     }
 
-    public async Task<GetMyCompaniesCommandResponse> HandleAsync(
-        GetMyCompaniesCommandRequest command,
+    public async Task<GetCurrentUserCompaniesCommandResponse> HandleAsync(
+        GetCurrentUserCompaniesCommandRequest command,
         CancellationToken cancellationToken)
     {
         var companies = await _companyMembershipReadRepository.ListByUserUuidAsync(command.UserUuid, cancellationToken);
-        return new GetMyCompaniesCommandResponse(
+        return new GetCurrentUserCompaniesCommandResponse(
             companies
                 .Select(company => new UserCompanyCommandResponse(
                     company.CompanyUuid,

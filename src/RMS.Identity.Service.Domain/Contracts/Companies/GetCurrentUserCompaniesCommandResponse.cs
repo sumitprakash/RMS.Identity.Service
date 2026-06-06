@@ -1,6 +1,6 @@
 namespace RMS.Identity.Service.Domain.Contracts.Companies;
 
-public sealed record GetMyCompaniesCommandResponse(
+public sealed record GetCurrentUserCompaniesCommandResponse(
     IReadOnlyCollection<UserCompanyCommandResponse> Companies);
 
 public sealed record UserCompanyCommandResponse(

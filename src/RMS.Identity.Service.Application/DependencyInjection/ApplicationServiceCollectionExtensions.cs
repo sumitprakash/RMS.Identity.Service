@@ -16,7 +16,7 @@ public static class ApplicationServiceCollectionExtensions
     public static IServiceCollection AddIdentityServiceApplication(this IServiceCollection services)
     {
         services.AddScoped<ICommandHandler<LoginCommandRequest, LoginCommandResponse>, LoginCommandHandler>();
-        services.AddScoped<ICommandHandler<GetMyCompaniesCommandRequest, GetMyCompaniesCommandResponse>, GetMyCompaniesCommandHandler>();
+        services.AddScoped<ICommandHandler<GetCurrentUserCompaniesCommandRequest, GetCurrentUserCompaniesCommandResponse>, GetCurrentUserCompaniesCommandHandler>();
         services.AddScoped<ICommandHandler<RegisterCompanyCommandRequest, RegisterCompanyCommandResponse>, RegisterCompanyCommandHandler>();
         services.AddScoped<ICommandHandler<RefreshCommandRequest, RefreshCommandResponse>, RefreshCommandHandler>();
         services.AddScoped<ICommandHandler<SignUpCommandRequest, SignUpCommandResponse>, SignUpCommandHandler>();

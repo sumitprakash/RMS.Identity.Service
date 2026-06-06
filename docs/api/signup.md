@@ -9,10 +9,11 @@ Signup creates only a global `UserAccount`.
 Company registration is a separate authenticated flow:
 
 1. User signs up.
-2. User verifies email.
-3. User logs in and receives a user-level access token.
-4. Client calls `GET /api/v1/me/companies`.
-5. User registers a company with `POST /api/v1/companies`.
+2. User logs in and receives a user-level access token after the account is allowed to authenticate.
+3. Client calls `GET /api/v1/current-user/companies`.
+4. User registers a company with `POST /api/v1/companies`.
+
+Email verification or other account activation flows are outside the scope of this company registration change.
 
 ## 2. Endpoint Summary
 
@@ -74,7 +75,7 @@ Company registration is a separate authenticated flow:
 - User is created as a global identity.
 - `UserAccount.CompanyID` remains `NULL`; it is not the source of company membership.
 - No company or `CompanyUser` membership is created during signup.
-- User remains `pending` until email verification.
+- User remains `pending` until a future account activation flow updates it.
 
 ## 5. Error Responses
 

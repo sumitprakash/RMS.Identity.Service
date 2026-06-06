@@ -28,10 +28,10 @@ public static class RegisterCompanyMappings
             response.Status,
             response.CreatedAt);
 
-    public static MyCompaniesResponse ToResponse(this GetMyCompaniesCommandResponse response) =>
+    public static CurrentUserCompaniesResponse ToResponse(this GetCurrentUserCompaniesCommandResponse response) =>
         new(
             response.Companies
-                .Select(company => new MyCompanyResponse(
+                .Select(company => new CurrentUserCompanyResponse(
                     company.CompanyUuid,
                     company.LegalName,
                     company.TradeName,
