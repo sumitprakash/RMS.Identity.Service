@@ -2,8 +2,10 @@ using System.Text.Json;
 using RMS.Identity.Service.Api.Endpoint.Auth.Refresh;
 using Microsoft.AspNetCore.Mvc;
 using RMS.Identity.Service.Api.Endpoint.Auth.Login;
+using RMS.Identity.Service.Api.Endpoint.Companies;
 using RMS.Identity.Service.Api.Endpoint.SignUp;
 using RMS.Identity.Service.Api.Middleware;
+using RMS.Identity.Service.Api.Shared.Auth;
 using RMS.Identity.Service.Api.Shared.ErrorHandling;
 using RMS.Identity.Service.Api.Shared.Idempotency;
 using RMS.Identity.Service.Infrastructure.DependencyInjection;
@@ -47,6 +49,9 @@ builder.Services.AddScoped<RefreshRequestValidator>();
 builder.Services.AddScoped<RefreshRequestValidationFilter>();
 builder.Services.AddScoped<SignUpRequestValidator>();
 builder.Services.AddScoped<SignUpRequestValidationFilter>();
+builder.Services.AddScoped<RegisterCompanyRequestValidator>();
+builder.Services.AddScoped<RegisterCompanyRequestValidationFilter>();
+builder.Services.AddScoped<IAccessTokenUserResolver, JwtAccessTokenUserResolver>();
 
 var app = builder.Build();
 

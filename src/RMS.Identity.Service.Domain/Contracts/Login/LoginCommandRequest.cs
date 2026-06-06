@@ -4,5 +4,4 @@ namespace RMS.Identity.Service.Domain.Contracts.Login;
 
 public sealed record LoginCommandRequest(
     string Username,
-    string Password,
-    Guid? CompanyUuid) : ICommand<LoginCommandResponse>;
+    string Password) : ICommand<LoginCommandResponse>;

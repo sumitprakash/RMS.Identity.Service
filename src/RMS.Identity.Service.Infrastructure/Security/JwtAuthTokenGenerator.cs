@@ -48,16 +48,10 @@ public sealed class JwtAuthTokenGenerator : IAuthTokenGenerator
             ["sub"] = user.UserUuid.ToString(),
             ["jti"] = Guid.NewGuid().ToString(),
             ["username"] = user.Username,
-            ["roles"] = user.Roles,
             ["iat"] = issuedAt.ToUnixTimeSeconds(),
             ["nbf"] = issuedAt.ToUnixTimeSeconds(),
             ["exp"] = expiresAt.ToUnixTimeSeconds()
         };
-
-        if (user.CompanyUuid is not null)
-        {
-            payload["companyUuid"] = user.CompanyUuid.Value.ToString();
-        }
 
         var encodedHeader = Base64UrlEncode(JsonSerializer.SerializeToUtf8Bytes(header));
         var encodedPayload = Base64UrlEncode(JsonSerializer.SerializeToUtf8Bytes(payload));

@@ -7,8 +7,7 @@ public static class LoginMappings
     public static LoginCommandRequest ToCommand(this LoginRequest request) =>
         new(
             request.Body.Username,
-            request.Body.Password,
-            request.Body.CompanyUuid);
+            request.Body.Password);
 
     public static LoginResponse ToResponse(this LoginCommandResponse response) =>
         new(

@@ -11,4 +11,8 @@ public interface IUserAccountReadRepository
     Task<UserAccount> GetByIdAsync(
         long userId,
         CancellationToken cancellationToken);
+
+    Task<UserAccount> GetByUuidAsync(
+        Guid userUuid,
+        CancellationToken cancellationToken);
 }
