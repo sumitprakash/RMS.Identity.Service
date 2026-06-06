@@ -21,8 +21,7 @@ public sealed class LoginRequestModelBinderTests
             """
             {
               "username": "alice@example.com",
-              "password": "StrongPass@123",
-              "companyUuid": "11111111-1111-1111-1111-111111111111"
+              "password": "StrongPass@123"
             }
             """);
         var binder = CreateBinder();
@@ -34,7 +33,6 @@ public sealed class LoginRequestModelBinderTests
         var request = Assert.IsType<LoginRequest>(bindingContext.Result.Model);
         Assert.Equal("alice@example.com", request.Body.Username);
         Assert.Equal("StrongPass@123", request.Body.Password);
-        Assert.Equal(Guid.Parse("11111111-1111-1111-1111-111111111111"), request.Body.CompanyUuid);
     }
 
     [Fact]

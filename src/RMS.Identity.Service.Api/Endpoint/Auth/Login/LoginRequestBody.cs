@@ -12,6 +12,4 @@ public sealed class LoginRequestBody
 
     [Required]
     public string Password { get; init; } = string.Empty;
-
-    public Guid? CompanyUuid { get; init; }
 }

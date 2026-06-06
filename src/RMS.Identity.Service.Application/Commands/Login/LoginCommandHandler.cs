@@ -44,7 +44,7 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommandRequest, L
             throw InvalidCredentials();
         }
 
-        EnsureUserCanLogin(user, command.CompanyUuid);
+        EnsureUserCanLogin(user);
 
         var tokens = _authTokenGenerator.Generate(user);
         await _authenticationRepository.RecordSuccessfulLoginAsync(
@@ -67,7 +67,7 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommandRequest, L
                 user.CreatedAt));
     }
 
-    private static void EnsureUserCanLogin(AuthenticatedUser user, Guid? requestedCompanyUuid)
+    private static void EnsureUserCanLogin(AuthenticatedUser user)
     {
         if (user.IsDeleted || !user.IsActive)
         {
@@ -84,10 +84,6 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommandRequest, L
             throw Forbidden("EMAIL_NOT_VERIFIED", "Email address is not verified.");
         }
 
-        if (requestedCompanyUuid is not null && user.CompanyUuid != requestedCompanyUuid)
-        {
-            throw Forbidden("COMPANY_ACCESS_DENIED", "User does not belong to the requested company.");
-        }
     }
 
     private static ServiceException InvalidCredentials() =>

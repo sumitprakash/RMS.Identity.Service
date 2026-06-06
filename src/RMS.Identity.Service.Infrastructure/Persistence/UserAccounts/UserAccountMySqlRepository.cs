@@ -130,6 +130,50 @@ public sealed class UserAccountMySqlRepository :
             reader.GetUtcDateTime(UserAccountTable.Columns.CreatedAt));
     }
 
+    public async Task<UserAccount> GetByUuidAsync(
+        Guid userUuid,
+        CancellationToken cancellationToken)
+    {
+        var databaseTransaction = CurrentTransaction();
+        var command = databaseTransaction.Connection.CreateCommand();
+        command.Transaction = databaseTransaction.Transaction;
+        command.CommandText =
+            $"""
+            SELECT
+                {UserAccountTable.Columns.UserId},
+                BIN_TO_UUID({UserAccountTable.Columns.UserUuid}) AS UserUuid,
+                {UserAccountTable.Columns.Username},
+                {UserAccountTable.Columns.DisplayName},
+                {UserAccountTable.Columns.EmailVerified},
+                {UserAccountTable.Columns.IsActive},
+                {UserAccountTable.Columns.IsDeleted},
+                {UserAccountTable.Columns.CreatedAt}
+            FROM {UserAccountTable.Name}
+            WHERE {UserAccountTable.Columns.UserUuid} = UUID_TO_BIN(@UserUuid)
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("@UserUuid", userUuid.ToString());
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            throw new ServiceException(
+                (int)HttpStatusCode.NotFound,
+                "USER_NOT_FOUND",
+                "User could not be found.");
+        }
+
+        return new UserAccount(
+            reader.GetInt64(reader.GetOrdinal(UserAccountTable.Columns.UserId)),
+            Guid.Parse(reader.GetString("UserUuid")),
+            reader.GetString(UserAccountTable.Columns.Username),
+            reader.GetNullableString(UserAccountTable.Columns.DisplayName),
+            reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.EmailVerified)),
+            reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.IsActive)),
+            reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.IsDeleted)),
+            reader.GetUtcDateTime(UserAccountTable.Columns.CreatedAt));
+    }
+
     private MySqlDatabaseTransaction CurrentTransaction() =>
         _transactionAccessor.GetCurrent().AsMySql();
 }

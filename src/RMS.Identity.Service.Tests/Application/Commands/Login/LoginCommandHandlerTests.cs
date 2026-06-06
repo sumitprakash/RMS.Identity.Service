@@ -22,7 +22,7 @@ public sealed class LoginCommandHandlerTests
             new FakeTextHasher());
 
         var response = await handler.HandleAsync(
-            new LoginCommandRequest(" Alice@Example.com ", "StrongPass@123", null),
+            new LoginCommandRequest(" Alice@Example.com ", "StrongPass@123"),
             CancellationToken.None);
 
         Assert.Equal("access-token", response.AccessToken);
@@ -48,7 +48,7 @@ public sealed class LoginCommandHandlerTests
 
         var exception = await Assert.ThrowsAsync<ServiceException>(() =>
             handler.HandleAsync(
-                new LoginCommandRequest("alice@example.com", "wrong-password", null),
+                new LoginCommandRequest("alice@example.com", "wrong-password"),
                 CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Unauthorized, exception.StatusCode);
@@ -68,7 +68,7 @@ public sealed class LoginCommandHandlerTests
 
         var exception = await Assert.ThrowsAsync<ServiceException>(() =>
             handler.HandleAsync(
-                new LoginCommandRequest("alice@example.com", "StrongPass@123", null),
+                new LoginCommandRequest("alice@example.com", "StrongPass@123"),
                 CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Forbidden, exception.StatusCode);

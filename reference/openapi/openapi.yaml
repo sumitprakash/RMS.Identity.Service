@@ -4,12 +4,15 @@ info:
   title: Retail Identity Service API
   version: "1.0.0"
   description: |
-    Identity & Tenant service for Retail Management System.
+    Identity & Company service for Retail Management System.
 
     Key concepts:
-    - Users exist before companies (platform-level identity)
-    - Company context is optional during login
-    - JWTs may contain userUuid, companyUuid (optional), and roles
+    - Public signup creates only a global user identity
+    - Authenticated users register companies with POST /api/v1/companies
+    - Users are global identities and may belong to multiple companies
+    - JWTs are user-level and contain sub=userUuid and username; company access is checked against membership in the database
+    - Company-scoped APIs use /api/v1/companies/{companyUuid}/...
+    - Company membership roles are OWNER, ADMIN, and MEMBER
 
 servers:
   - url: http://localhost:8080
@@ -78,11 +81,6 @@ components:
           type: string
           format: password
           example: StrongPass@123
-        companyUuid:
-          allOf:
-            - $ref: '#/components/schemas/UUID'
-          nullable: true
-          description: Optional tenant hint if user belongs to a company
       additionalProperties: false
 
     LoginResponse:
@@ -96,7 +94,7 @@ components:
       properties:
         accessToken:
           type: string
-          description: 'JWT with claims: sub=userUuid, companyUuid (optional), roles, exp'
+          description: 'User-level JWT with claims: sub=userUuid, username, exp'
         refreshToken:
           type: string
         expiresIn:
@@ -193,10 +191,11 @@ components:
           $ref: '#/components/schemas/DateTime'
       additionalProperties: false
 
-    CreateTenantUserRequest:
+    CreateCompanyUserRequest:
       type: object
       required:
         - username
+        - companyRole
       properties:
         username:
           type: string
@@ -205,12 +204,8 @@ components:
         displayName:
           type: string
           example: Store User
-        roles:
-          type: array
-          items:
-            type: string
-            enum: [COMPANY_ADMIN, STORE_MANAGER, CASHIER, INVENTORY_STAFF]
-          example: [CASHIER]
+        companyRole:
+          $ref: '#/components/schemas/CompanyRole'
       additionalProperties: false
 
     UserResponse:
@@ -232,8 +227,14 @@ components:
           nullable: true
         roles:
           type: array
+          description: Operational roles only; not used for company membership.
           items:
             type: string
+        companyRole:
+          allOf:
+            - $ref: '#/components/schemas/CompanyRole'
+          nullable: true
+          description: Present only for company-scoped user responses.
         status:
           type: string
           enum: [pending, active, suspended]
@@ -266,26 +267,205 @@ components:
       additionalProperties: false
 
     # ---------- COMPANY ----------
+    RegisterCompanyRequest:
+      type: object
+      required:
+        - legalName
+        - gstin
+        - contactEmailAddress
+        - contactPhoneNumber
+        - addressLine1
+        - city
+        - state
+        - postalCode
+        - country
+      properties:
+        legalName:
+          type: string
+          example: Example Retail Pvt Ltd
+        tradeName:
+          type: string
+          nullable: true
+          example: Example Retail
+        gstin:
+          type: string
+          description: Mandatory unique Indian GSTIN
+          example: 29ABCDE1234F1Z5
+        contactEmailAddress:
+          type: string
+          format: email
+          example: accounts@example.com
+        contactPhoneNumber:
+          type: string
+          example: "+919876543211"
+        addressLine1:
+          type: string
+          example: 1 Main Road
+        addressLine2:
+          type: string
+          nullable: true
+          example: Near Market
+        city:
+          type: string
+          example: Bengaluru
+        state:
+          type: string
+          example: Karnataka
+        postalCode:
+          type: string
+          example: "560001"
+        country:
+          type: string
+          example: IN
+      additionalProperties: false
+
+    RegisterCompanyResponse:
+      type: object
+      required:
+        - companyUuid
+        - legalName
+        - gstin
+        - status
+        - createdAt
+      properties:
+        companyUuid:
+          allOf:
+            - $ref: '#/components/schemas/UUID'
+        legalName:
+          type: string
+          example: Example Retail Pvt Ltd
+        tradeName:
+          type: string
+          nullable: true
+          example: Example Retail
+        gstin:
+          type: string
+          example: 29ABCDE1234F1Z5
+        status:
+          $ref: '#/components/schemas/CompanyStatus'
+        createdAt:
+          $ref: '#/components/schemas/DateTime'
+      additionalProperties: false
+
+    MyCompanyResponse:
+      type: object
+      required:
+        - companyUuid
+        - legalName
+        - gstin
+        - status
+        - companyRole
+        - membershipStatus
+        - createdAt
+      properties:
+        companyUuid:
+          allOf:
+            - $ref: '#/components/schemas/UUID'
+        legalName:
+          type: string
+          example: Example Retail Pvt Ltd
+        tradeName:
+          type: string
+          nullable: true
+          example: Example Retail
+        gstin:
+          type: string
+          example: 29ABCDE1234F1Z5
+        status:
+          $ref: '#/components/schemas/CompanyStatus'
+        companyRole:
+          $ref: '#/components/schemas/CompanyRole'
+        membershipStatus:
+          type: string
+          enum: [active, invited]
+        createdAt:
+          $ref: '#/components/schemas/DateTime'
+      additionalProperties: false
+
+    MyCompaniesResponse:
+      type: object
+      required:
+        - companies
+      properties:
+        companies:
+          type: array
+          items:
+            $ref: '#/components/schemas/MyCompanyResponse'
+      additionalProperties: false
+
+    CompanyStatus:
+      type: string
+      enum: [pending_verification, verified, rejected, suspended]
+      description: Company registration creates companies with pending_verification status.
+
+    CompanyRole:
+      type: string
+      enum: [OWNER, ADMIN, MEMBER]
+      description: Company membership role. Operational job permissions are deferred.
+
+    RegisteredAddress:
+      type: object
+      required:
+        - addressLine1
+        - city
+        - state
+        - postalCode
+        - country
+      properties:
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+          nullable: true
+        city:
+          type: string
+        state:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+      additionalProperties: false
+
     CompanyResponse:
       type: object
       required:
         - companyUuid
-        - companyCode
-        - companyName
+        - legalName
+        - gstin
+        - contactEmailAddress
+        - contactPhoneNumber
+        - registeredAddress
+        - status
       properties:
         companyUuid:
           allOf:
             - $ref: '#/components/schemas/UUID'
         companyCode:
           type: string
+          nullable: true
           example: RET001
-        companyName:
+        legalName:
           type: string
           example: Example Retail Pvt Ltd
-        companyGstin:
+        tradeName:
           type: string
           nullable: true
+          example: Example Retail
+        gstin:
+          type: string
           example: 29ABCDE1234F1Z5
+        contactEmailAddress:
+          type: string
+          format: email
+          example: accounts@example.com
+        contactPhoneNumber:
+          type: string
+          example: "+919876543211"
+        registeredAddress:
+          $ref: '#/components/schemas/RegisteredAddress'
+        status:
+          $ref: '#/components/schemas/CompanyStatus'
       additionalProperties: false
 
     # ---------- ERROR ----------
@@ -348,7 +528,7 @@ paths:
   /api/v1/signup:
     post:
       summary: Public user signup
-      description: Creates a platform-level user (no company yet)
+      description: Creates only a global user identity. Company registration happens later through authenticated POST /api/v1/companies.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -432,21 +612,70 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  # ---------- TENANT / ADMIN ----------
-  /api/v1/users:
-    post:
-      summary: Create a user inside a company (admin only)
+  # ---------- COMPANY / ADMIN ----------
+  /api/v1/me/companies:
+    get:
+      summary: List my companies
+      description: Returns companies where the authenticated user has active or invited membership. Empty list means the frontend should show the company registration screen.
       security:
         - bearerAuth: []
+      responses:
+        '200':
+          description: User company memberships
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyCompaniesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/companies:
+    post:
+      summary: Register a company
+      description: Authenticated company registration. The requesting user becomes OWNER through CompanyUser membership. The company starts as pending_verification.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateTenantUserRequest'
+              $ref: '#/components/schemas/RegisterCompanyRequest'
       responses:
         '201':
-          description: User created in tenant
+          description: Company registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterCompanyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/companies/{companyUuid}/users:
+    post:
+      summary: Create a user inside a company (admin only)
+      description: Future endpoint. OWNER or ADMIN may create a company user; invitation/reset flow is out of scope for the current registration implementation.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CompanyUuidPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCompanyUserRequest'
+      responses:
+        '201':
+          description: User created in company
           content:
             application/json:
               schema:
@@ -458,12 +687,14 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
-  /api/v1/users/{userUuid}:
+  /api/v1/companies/{companyUuid}/users/{userUuid}:
     get:
-      summary: Get user by UUID (tenant-scoped)
+      summary: Get company-scoped user by UUID
+      description: Authorization rule: the requested user may view self; same-company OWNER or ADMIN may view other company users; others are forbidden.
       security:
         - bearerAuth: []
       parameters:
+        - $ref: '#/components/parameters/CompanyUuidPath'
         - $ref: '#/components/parameters/UserUuidPath'
       responses:
         '200':
@@ -479,9 +710,9 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
-  /api/v1/tenants/{companyUuid}:
+  /api/v1/companies/{companyUuid}:
     get:
-      summary: Get tenant (company) metadata
+      summary: Get company metadata
       security:
         - bearerAuth: []
       parameters:

@@ -25,11 +25,6 @@ public sealed class LoginRequestValidator
         {
             throw ValidationError("Password is required.");
         }
-
-        if (body.CompanyUuid == Guid.Empty)
-        {
-            throw ValidationError("Company UUID must be a valid UUID.");
-        }
     }
 
     private static ServiceException ValidationError(string message) =>

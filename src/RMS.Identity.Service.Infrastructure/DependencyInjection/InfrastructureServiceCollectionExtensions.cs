@@ -3,6 +3,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RMS.Identity.Service.Application.DependencyInjection;
 using RMS.Identity.Service.Infrastructure.Data;
+using RMS.Identity.Service.Infrastructure.Persistence.Companies;
+using RMS.Identity.Service.Infrastructure.Persistence.CompanyUsers;
 using RMS.Identity.Service.Infrastructure.Idempotency;
 using RMS.Identity.Service.Infrastructure.Persistence.Auth;
 using RMS.Identity.Service.Infrastructure.Persistence.AuditLog;
@@ -11,6 +13,8 @@ using RMS.Identity.Service.Infrastructure.Security;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Auth;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.AuditLog;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.Companies;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.CompanyUsers;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Idempotency;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
 using RMS.Identity.Service.Domain.Interfaces.Security;
@@ -57,6 +61,13 @@ public static class InfrastructureServiceCollectionExtensions
             provider => provider.GetRequiredService<UserAccountMySqlRepository>());
         services.AddScoped<IUserAccountWriteRepository>(
             provider => provider.GetRequiredService<UserAccountMySqlRepository>());
+        services.AddScoped<CompanyMySqlRepository>();
+        services.AddScoped<ICompanyReadRepository>(
+            provider => provider.GetRequiredService<CompanyMySqlRepository>());
+        services.AddScoped<ICompanyWriteRepository>(
+            provider => provider.GetRequiredService<CompanyMySqlRepository>());
+        services.AddScoped<ICompanyMembershipReadRepository, CompanyMembershipMySqlRepository>();
+        services.AddScoped<ICompanyUserWriteRepository, CompanyUserMySqlRepository>();
         services.AddScoped<AuditLogMySqlRepository>();
         services.AddScoped<IAuditLogWriteRepository>(
             provider => provider.GetRequiredService<AuditLogMySqlRepository>());
