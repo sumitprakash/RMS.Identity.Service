@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Api.Shared.ErrorHandling;
 
-namespace RMS.Identity.Service.Api.Endpoint.Companies;
+namespace RMS.Identity.Service.Api.Endpoint.Companies.CreateCompanyUser;
 
 public sealed class CreateCompanyUserRequestValidationFilter : IActionFilter
 {

@@ -131,6 +131,7 @@ public sealed class CompanyMySqlRepository :
         return await GetSingleAsync(
             $"""
             WHERE {CompanyTable.Columns.CompanyUuid} = UUID_TO_BIN(@CompanyUuid)
+              AND {CompanyTable.Columns.IsDeleted} = 0
             """,
             command => command.Parameters.AddWithValue("@CompanyUuid", companyUuid.ToString()),
             () => new ServiceException(

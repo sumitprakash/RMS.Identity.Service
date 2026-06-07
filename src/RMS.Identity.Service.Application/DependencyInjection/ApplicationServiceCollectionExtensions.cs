@@ -18,6 +18,7 @@ public static class ApplicationServiceCollectionExtensions
     {
         services.AddScoped<ICommandHandler<LoginCommandRequest, LoginCommandResponse>, LoginCommandHandler>();
         services.AddScoped<ICommandHandler<CreateCompanyUserCommandRequest, CreateCompanyUserCommandResponse>, CreateCompanyUserCommandHandler>();
+        services.AddScoped<ICommandHandler<GetCompanyCommandRequest, GetCompanyCommandResponse>, GetCompanyCommandHandler>();
         services.AddScoped<ICommandHandler<GetCurrentUserCompaniesCommandRequest, GetCurrentUserCompaniesCommandResponse>, GetCurrentUserCompaniesCommandHandler>();
         services.AddScoped<ICommandHandler<RegisterCompanyCommandRequest, RegisterCompanyCommandResponse>, RegisterCompanyCommandHandler>();
         services.AddScoped<ICommandHandler<RefreshCommandRequest, RefreshCommandResponse>, RefreshCommandHandler>();

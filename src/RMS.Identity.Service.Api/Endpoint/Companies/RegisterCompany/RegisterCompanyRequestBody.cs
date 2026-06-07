@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-namespace RMS.Identity.Service.Api.Endpoint.Companies;
+namespace RMS.Identity.Service.Api.Endpoint.Companies.RegisterCompany;
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed class RegisterCompanyRequestBody

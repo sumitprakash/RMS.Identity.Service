@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
 
-namespace RMS.Identity.Service.Api.Endpoint.Companies;
+namespace RMS.Identity.Service.Api.Endpoint.Companies.RegisterCompany;
 
 public sealed class RegisterCompanyRequestValidator
 {

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Options;
 
-namespace RMS.Identity.Service.Api.Endpoint.Companies;
+namespace RMS.Identity.Service.Api.Endpoint.Companies.RegisterCompany;
 
 public sealed class RegisterCompanyRequestModelBinder : IModelBinder
 {
