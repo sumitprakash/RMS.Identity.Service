@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Http;
 using RMS.Identity.Service.Api.Shared.Auth;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Entities.Companies;
+using RMS.Identity.Service.Domain.Entities.UserAccounts;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Companies;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
 
 namespace RMS.Identity.Service.Tests.Shared.Auth;
 
@@ -14,7 +16,9 @@ public sealed class CompanyAccessAuthorizerTests
         var userUuid = Guid.NewGuid();
         var companyUuid = Guid.NewGuid();
         var membership = new CompanyMembership(userUuid, companyUuid, "OWNER", "active");
-        var authorizer = new CompanyAccessAuthorizer(new StubCompanyMembershipReadRepository(membership));
+        var authorizer = new CompanyAccessAuthorizer(
+            new StubCompanyMembershipReadRepository(membership),
+            new StubUserAccountReadRepository(CreateUser(userUuid)));
 
         var result = await authorizer.AuthorizeMembershipAsync(userUuid, companyUuid, CancellationToken.None);
 
@@ -24,13 +28,33 @@ public sealed class CompanyAccessAuthorizerTests
     [Fact]
     public async Task AuthorizeMembershipAsync_WithoutActiveMembership_ThrowsForbidden()
     {
-        var authorizer = new CompanyAccessAuthorizer(new StubCompanyMembershipReadRepository(null));
+        var userUuid = Guid.NewGuid();
+        var authorizer = new CompanyAccessAuthorizer(
+            new StubCompanyMembershipReadRepository(null),
+            new StubUserAccountReadRepository(CreateUser(userUuid)));
 
         var exception = await Assert.ThrowsAsync<ServiceException>(() =>
-            authorizer.AuthorizeMembershipAsync(Guid.NewGuid(), Guid.NewGuid(), CancellationToken.None));
+            authorizer.AuthorizeMembershipAsync(userUuid, Guid.NewGuid(), CancellationToken.None));
 
         Assert.Equal(StatusCodes.Status403Forbidden, exception.StatusCode);
         Assert.Equal("COMPANY_ACCESS_DENIED", exception.Code);
+    }
+
+    [Fact]
+    public async Task AuthorizeMembershipAsync_WithInactiveUser_ThrowsForbidden()
+    {
+        var userUuid = Guid.NewGuid();
+        var companyUuid = Guid.NewGuid();
+        var membership = new CompanyMembership(userUuid, companyUuid, "OWNER", "active");
+        var authorizer = new CompanyAccessAuthorizer(
+            new StubCompanyMembershipReadRepository(membership),
+            new StubUserAccountReadRepository(CreateUser(userUuid, isActive: false)));
+
+        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+            authorizer.AuthorizeMembershipAsync(userUuid, companyUuid, CancellationToken.None));
+
+        Assert.Equal(StatusCodes.Status403Forbidden, exception.StatusCode);
+        Assert.Equal("USER_NOT_ACTIVE", exception.Code);
     }
 
     [Fact]
@@ -39,7 +63,9 @@ public sealed class CompanyAccessAuthorizerTests
         var userUuid = Guid.NewGuid();
         var companyUuid = Guid.NewGuid();
         var membership = new CompanyMembership(userUuid, companyUuid, "MEMBER", "active");
-        var authorizer = new CompanyAccessAuthorizer(new StubCompanyMembershipReadRepository(membership));
+        var authorizer = new CompanyAccessAuthorizer(
+            new StubCompanyMembershipReadRepository(membership),
+            new StubUserAccountReadRepository(CreateUser(userUuid)));
 
         var exception = await Assert.ThrowsAsync<ServiceException>(() =>
             authorizer.AuthorizeRoleAsync(userUuid, companyUuid, ["OWNER", "ADMIN"], CancellationToken.None));
@@ -47,6 +73,17 @@ public sealed class CompanyAccessAuthorizerTests
         Assert.Equal(StatusCodes.Status403Forbidden, exception.StatusCode);
         Assert.Equal("COMPANY_ROLE_REQUIRED", exception.Code);
     }
+
+    private static UserAccount CreateUser(Guid userUuid, bool isActive = true) =>
+        new(
+            10,
+            userUuid,
+            "owner@example.com",
+            "Owner",
+            EmailVerified: true,
+            IsActive: isActive,
+            IsDeleted: false,
+            DateTime.UtcNow);
 
     private sealed class StubCompanyMembershipReadRepository : ICompanyMembershipReadRepository
     {
@@ -67,5 +104,24 @@ public sealed class CompanyAccessAuthorizerTests
             Guid companyUuid,
             CancellationToken cancellationToken) =>
             Task.FromResult(_membership);
+    }
+
+    private sealed class StubUserAccountReadRepository : IUserAccountReadRepository
+    {
+        private readonly UserAccount _user;
+
+        public StubUserAccountReadRepository(UserAccount user)
+        {
+            _user = user;
+        }
+
+        public Task<bool> ExistsByUsernameAsync(string username, CancellationToken cancellationToken) =>
+            Task.FromResult(false);
+
+        public Task<UserAccount> GetByIdAsync(long userId, CancellationToken cancellationToken) =>
+            Task.FromResult(_user);
+
+        public Task<UserAccount> GetByUuidAsync(Guid userUuid, CancellationToken cancellationToken) =>
+            Task.FromResult(_user);
     }
 }

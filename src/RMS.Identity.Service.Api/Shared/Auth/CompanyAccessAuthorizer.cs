@@ -1,16 +1,21 @@
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Entities.Companies;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Companies;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
 
 namespace RMS.Identity.Service.Api.Shared.Auth;
 
 public sealed class CompanyAccessAuthorizer : ICompanyAccessAuthorizer
 {
     private readonly ICompanyMembershipReadRepository _companyMembershipReadRepository;
+    private readonly IUserAccountReadRepository _userAccountReadRepository;
 
-    public CompanyAccessAuthorizer(ICompanyMembershipReadRepository companyMembershipReadRepository)
+    public CompanyAccessAuthorizer(
+        ICompanyMembershipReadRepository companyMembershipReadRepository,
+        IUserAccountReadRepository userAccountReadRepository)
     {
         _companyMembershipReadRepository = companyMembershipReadRepository;
+        _userAccountReadRepository = userAccountReadRepository;
     }
 
     public async Task<CompanyMembership> AuthorizeMembershipAsync(
@@ -18,6 +23,15 @@ public sealed class CompanyAccessAuthorizer : ICompanyAccessAuthorizer
         Guid companyUuid,
         CancellationToken cancellationToken)
     {
+        var user = await _userAccountReadRepository.GetByUuidAsync(userUuid, cancellationToken);
+        if (!user.IsActive || user.IsDeleted)
+        {
+            throw new ServiceException(
+                StatusCodes.Status403Forbidden,
+                "USER_NOT_ACTIVE",
+                "User is not allowed to access this company.");
+        }
+
         var membership = await _companyMembershipReadRepository.GetMembershipAsync(
             userUuid,
             companyUuid,
