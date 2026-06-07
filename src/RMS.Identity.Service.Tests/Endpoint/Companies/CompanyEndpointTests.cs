@@ -238,6 +238,116 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
     }
 
     [Fact]
+    public async Task GetCompanyUser_WithOwnerRole_ReturnsCompanyScopedUser()
+    {
+        await _factory.EnsureCompanySchemaAsync();
+
+        var ownerUserUuid = Guid.NewGuid();
+        var memberUserUuid = Guid.NewGuid();
+        var companyUuid = Guid.NewGuid();
+
+        await using var connection = await _factory.OpenDatabaseConnectionAsync();
+        var ownerUserId = await InsertUserAsync(connection, ownerUserUuid, $"owner.{Guid.NewGuid():N}@example.com", "Owner User");
+        var memberUsername = $"member.{Guid.NewGuid():N}@example.com";
+        var memberUserId = await InsertUserAsync(connection, memberUserUuid, memberUsername, "Store Member");
+        var companyId = await InsertCompanyAsync(connection, companyUuid, CreateUniqueGstin());
+        await InsertMembershipAsync(connection, companyId, ownerUserId, "OWNER");
+        await InsertMembershipAsync(connection, companyId, memberUserId, "MEMBER");
+
+        try
+        {
+            using var client = CreateAuthorizedClient(ownerUserUuid);
+
+            using var response = await client.GetAsync($"/api/v1/companies/{companyUuid}/users/{memberUserUuid}");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var body = await response.Content.ReadFromJsonAsync<RMS.Identity.Service.Api.Endpoint.Companies.GetCompanyUser.UserResponse>(_jsonOptions);
+            Assert.NotNull(body);
+            Assert.Equal(memberUserUuid, body.UserUuid);
+            Assert.Equal(memberUsername, body.Username);
+            Assert.Equal("Store Member", body.DisplayName);
+            Assert.Empty(body.Roles);
+            Assert.Equal("MEMBER", body.CompanyRole);
+            Assert.Equal("active", body.Status);
+        }
+        finally
+        {
+            await CleanupCompanyAsync(connection, companyUuid);
+            await CleanupUserAsync(connection, ownerUserUuid);
+            await CleanupUserAsync(connection, memberUserUuid);
+        }
+    }
+
+    [Fact]
+    public async Task GetCompanyUser_WithSelfMember_ReturnsCompanyScopedUser()
+    {
+        await _factory.EnsureCompanySchemaAsync();
+
+        var memberUserUuid = Guid.NewGuid();
+        var companyUuid = Guid.NewGuid();
+
+        await using var connection = await _factory.OpenDatabaseConnectionAsync();
+        var memberUsername = $"member.{Guid.NewGuid():N}@example.com";
+        var memberUserId = await InsertUserAsync(connection, memberUserUuid, memberUsername, "Store Member");
+        var companyId = await InsertCompanyAsync(connection, companyUuid, CreateUniqueGstin());
+        await InsertMembershipAsync(connection, companyId, memberUserId, "MEMBER");
+
+        try
+        {
+            using var client = CreateAuthorizedClient(memberUserUuid);
+
+            using var response = await client.GetAsync($"/api/v1/companies/{companyUuid}/users/{memberUserUuid}");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var body = await response.Content.ReadFromJsonAsync<RMS.Identity.Service.Api.Endpoint.Companies.GetCompanyUser.UserResponse>(_jsonOptions);
+            Assert.NotNull(body);
+            Assert.Equal(memberUserUuid, body.UserUuid);
+            Assert.Equal(memberUsername, body.Username);
+            Assert.Equal("MEMBER", body.CompanyRole);
+            Assert.Equal("active", body.Status);
+        }
+        finally
+        {
+            await CleanupCompanyAsync(connection, companyUuid);
+            await CleanupUserAsync(connection, memberUserUuid);
+        }
+    }
+
+    [Fact]
+    public async Task GetCompanyUser_WithMemberViewingOtherUser_ReturnsForbidden()
+    {
+        await _factory.EnsureCompanySchemaAsync();
+
+        var actorUserUuid = Guid.NewGuid();
+        var targetUserUuid = Guid.NewGuid();
+        var companyUuid = Guid.NewGuid();
+
+        await using var connection = await _factory.OpenDatabaseConnectionAsync();
+        var actorUserId = await InsertUserAsync(connection, actorUserUuid, $"member.{Guid.NewGuid():N}@example.com", "Actor Member");
+        var targetUserId = await InsertUserAsync(connection, targetUserUuid, $"target.{Guid.NewGuid():N}@example.com", "Target Member");
+        var companyId = await InsertCompanyAsync(connection, companyUuid, CreateUniqueGstin());
+        await InsertMembershipAsync(connection, companyId, actorUserId, "MEMBER");
+        await InsertMembershipAsync(connection, companyId, targetUserId, "MEMBER");
+
+        try
+        {
+            using var client = CreateAuthorizedClient(actorUserUuid);
+
+            using var response = await client.GetAsync($"/api/v1/companies/{companyUuid}/users/{targetUserUuid}");
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+
+            var json = await response.Content.ReadAsStringAsync();
+            Assert.Contains("\"code\":\"COMPANY_ROLE_REQUIRED\"", json);
+        }
+        finally
+        {
+            await CleanupCompanyAsync(connection, companyUuid);
+            await CleanupUserAsync(connection, actorUserUuid);
+            await CleanupUserAsync(connection, targetUserUuid);
+        }
+    }
+
+    [Fact]
     public async Task PostCompanyUser_WithOwnerRole_CreatesGlobalUserAndCompanyMembership()
     {
         await _factory.EnsureCompanySchemaAsync();

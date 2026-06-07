@@ -67,7 +67,11 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<ICompanyWriteRepository>(
             provider => provider.GetRequiredService<CompanyMySqlRepository>());
         services.AddScoped<ICompanyMembershipReadRepository, CompanyMembershipMySqlRepository>();
-        services.AddScoped<ICompanyUserWriteRepository, CompanyUserMySqlRepository>();
+        services.AddScoped<CompanyUserMySqlRepository>();
+        services.AddScoped<ICompanyUserReadRepository>(
+            provider => provider.GetRequiredService<CompanyUserMySqlRepository>());
+        services.AddScoped<ICompanyUserWriteRepository>(
+            provider => provider.GetRequiredService<CompanyUserMySqlRepository>());
         services.AddScoped<AuditLogMySqlRepository>();
         services.AddScoped<IAuditLogWriteRepository>(
             provider => provider.GetRequiredService<AuditLogMySqlRepository>());
