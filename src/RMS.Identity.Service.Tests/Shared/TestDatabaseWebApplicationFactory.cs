@@ -21,30 +21,34 @@ public class TestDatabaseWebApplicationFactory : WebApplicationFactory<Program>
         });
     }
 
-    public async Task<bool> IsDatabaseAvailableAsync(CancellationToken cancellationToken = default)
+    public async Task EnsureDatabaseAvailableAsync(CancellationToken cancellationToken = default)
     {
         try
         {
             await using var connection = await OpenDatabaseConnectionAsync(cancellationToken);
-            return true;
         }
-        catch (MySqlException)
+        catch (MySqlException exception)
         {
-            return false;
+            throw new InvalidOperationException(
+                "MySQL integration database is unavailable. Set RMS_IDENTITY_TEST_CONNECTION_STRING or ConnectionStrings__Default to run DB-backed endpoint tests.",
+                exception);
         }
     }
 
-    public async Task<bool> HasCompanySchemaAsync(CancellationToken cancellationToken = default)
+    public async Task EnsureCompanySchemaAsync(CancellationToken cancellationToken = default)
     {
-        if (!await IsDatabaseAvailableAsync(cancellationToken))
-        {
-            return false;
-        }
+        await EnsureDatabaseAvailableAsync(cancellationToken);
 
         await using var connection = await OpenDatabaseConnectionAsync(cancellationToken);
-        return await HasTableAsync(connection, "CompanyUser", cancellationToken)
+        var hasCompanySchema = await HasTableAsync(connection, "CompanyUser", cancellationToken)
             && await HasColumnAsync(connection, "Company", "LegalName", cancellationToken)
             && await HasColumnAsync(connection, "Company", "CompanyGSTIN", cancellationToken);
+
+        if (!hasCompanySchema)
+        {
+            throw new InvalidOperationException(
+                "MySQL integration database is not on the canonical company schema. Apply reference/db/sql_schema.sql before running company endpoint integration tests.");
+        }
     }
 
     public async Task<MySqlConnection> OpenDatabaseConnectionAsync(CancellationToken cancellationToken = default)

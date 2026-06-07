@@ -117,6 +117,10 @@ public sealed class CompanyMySqlRepository :
             WHERE {CompanyTable.Columns.CompanyId} = @CompanyId
             """,
             command => command.Parameters.AddWithValue("@CompanyId", companyId),
+            () => new ServiceException(
+                (int)HttpStatusCode.InternalServerError,
+                "COMPANY_READ_FAILED",
+                "Company could not be loaded."),
             cancellationToken);
     }
 
@@ -129,12 +133,17 @@ public sealed class CompanyMySqlRepository :
             WHERE {CompanyTable.Columns.CompanyUuid} = UUID_TO_BIN(@CompanyUuid)
             """,
             command => command.Parameters.AddWithValue("@CompanyUuid", companyUuid.ToString()),
+            () => new ServiceException(
+                (int)HttpStatusCode.NotFound,
+                "COMPANY_NOT_FOUND",
+                "Company could not be found."),
             cancellationToken);
     }
 
     private async Task<Company> GetSingleAsync(
         string whereClause,
         Action<MySqlCommand> configure,
+        Func<ServiceException> notFound,
         CancellationToken cancellationToken)
     {
         var databaseTransaction = CurrentTransaction();
@@ -168,10 +177,7 @@ public sealed class CompanyMySqlRepository :
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (!await reader.ReadAsync(cancellationToken))
         {
-            throw new ServiceException(
-                (int)HttpStatusCode.NotFound,
-                "COMPANY_NOT_FOUND",
-                "Company could not be found.");
+            throw notFound();
         }
 
         return new Company(

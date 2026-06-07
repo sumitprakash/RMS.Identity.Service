@@ -27,10 +27,7 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
     [Fact]
     public async Task PostCompany_WithOwnerUser_CreatesCompanyOwnerMembershipAndCurrentUserCompany()
     {
-        if (!await _factory.HasCompanySchemaAsync())
-        {
-            return;
-        }
+        await _factory.EnsureCompanySchemaAsync();
 
         var ownerUserUuid = Guid.NewGuid();
         var idempotencyKey = Guid.NewGuid().ToString();
@@ -93,10 +90,7 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
     [Fact]
     public async Task PostCompany_WithDuplicateGstin_ReturnsConflict()
     {
-        if (!await _factory.HasCompanySchemaAsync())
-        {
-            return;
-        }
+        await _factory.EnsureCompanySchemaAsync();
 
         var ownerUserUuid = Guid.NewGuid();
         var existingCompanyUuid = Guid.NewGuid();
@@ -140,10 +134,7 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
     [Fact]
     public async Task PostCompanyUser_WithOwnerRole_CreatesGlobalUserAndCompanyMembership()
     {
-        if (!await _factory.HasCompanySchemaAsync())
-        {
-            return;
-        }
+        await _factory.EnsureCompanySchemaAsync();
 
         var ownerUserUuid = Guid.NewGuid();
         var companyUuid = Guid.NewGuid();
