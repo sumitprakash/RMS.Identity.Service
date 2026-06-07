@@ -347,7 +347,7 @@ components:
           $ref: '#/components/schemas/DateTime'
       additionalProperties: false
 
-    MyCompanyResponse:
+    CurrentUserCompanyResponse:
       type: object
       required:
         - companyUuid
@@ -382,7 +382,7 @@ components:
           $ref: '#/components/schemas/DateTime'
       additionalProperties: false
 
-    MyCompaniesResponse:
+    CurrentUserCompaniesResponse:
       type: object
       required:
         - companies
@@ -390,7 +390,7 @@ components:
         companies:
           type: array
           items:
-            $ref: '#/components/schemas/MyCompanyResponse'
+            $ref: '#/components/schemas/CurrentUserCompanyResponse'
       additionalProperties: false
 
     CompanyStatus:
@@ -613,9 +613,9 @@ paths:
           $ref: '#/components/responses/Unauthorized'
 
   # ---------- COMPANY / ADMIN ----------
-  /api/v1/me/companies:
+  /api/v1/current-user/companies:
     get:
-      summary: List my companies
+      summary: List current user companies
       description: Returns companies where the authenticated user has active or invited membership. Empty list means the frontend should show the company registration screen.
       security:
         - bearerAuth: []
@@ -625,7 +625,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MyCompaniesResponse'
+                $ref: '#/components/schemas/CurrentUserCompaniesResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
 

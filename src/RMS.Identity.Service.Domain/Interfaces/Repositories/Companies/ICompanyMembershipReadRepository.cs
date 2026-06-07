@@ -7,4 +7,9 @@ public interface ICompanyMembershipReadRepository
     Task<IReadOnlyCollection<UserCompanyMembership>> ListByUserUuidAsync(
         Guid userUuid,
         CancellationToken cancellationToken);
+
+    Task<CompanyMembership?> GetMembershipAsync(
+        Guid userUuid,
+        Guid companyUuid,
+        CancellationToken cancellationToken);
 }

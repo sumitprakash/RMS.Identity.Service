@@ -11,26 +11,26 @@ public sealed class CompaniesController : ControllerBase
 {
     private readonly IAccessTokenUserResolver _accessTokenUserResolver;
     private readonly ICommandHandler<RegisterCompanyCommandRequest, RegisterCompanyCommandResponse> _registerCompanyCommandHandler;
-    private readonly ICommandHandler<GetMyCompaniesCommandRequest, GetMyCompaniesCommandResponse> _getMyCompaniesCommandHandler;
+    private readonly ICommandHandler<GetCurrentUserCompaniesCommandRequest, GetCurrentUserCompaniesCommandResponse> _getCurrentUserCompaniesCommandHandler;
 
     public CompaniesController(
         IAccessTokenUserResolver accessTokenUserResolver,
         ICommandHandler<RegisterCompanyCommandRequest, RegisterCompanyCommandResponse> registerCompanyCommandHandler,
-        ICommandHandler<GetMyCompaniesCommandRequest, GetMyCompaniesCommandResponse> getMyCompaniesCommandHandler)
+        ICommandHandler<GetCurrentUserCompaniesCommandRequest, GetCurrentUserCompaniesCommandResponse> getCurrentUserCompaniesCommandHandler)
     {
         _accessTokenUserResolver = accessTokenUserResolver;
         _registerCompanyCommandHandler = registerCompanyCommandHandler;
-        _getMyCompaniesCommandHandler = getMyCompaniesCommandHandler;
+        _getCurrentUserCompaniesCommandHandler = getCurrentUserCompaniesCommandHandler;
     }
 
-    [HttpGet("/api/v1/me/companies")]
-    [ProducesResponseType(typeof(MyCompaniesResponse), StatusCodes.Status200OK)]
+    [HttpGet("/api/v1/current-user/companies")]
+    [ProducesResponseType(typeof(CurrentUserCompaniesResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetMineAsync(CancellationToken cancellationToken)
     {
         var userUuid = _accessTokenUserResolver.ResolveRequiredUserUuid(HttpContext);
-        var companies = await _getMyCompaniesCommandHandler.HandleAsync(
-            new GetMyCompaniesCommandRequest(userUuid),
+        var companies = await _getCurrentUserCompaniesCommandHandler.HandleAsync(
+            new GetCurrentUserCompaniesCommandRequest(userUuid),
             cancellationToken);
 
         return Ok(companies.ToResponse());

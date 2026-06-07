@@ -13,7 +13,7 @@ On success, the API creates:
 
 The mapping table between users and companies is `CompanyUser`.
 
-The frontend should call `GET /api/v1/me/companies` after login. If the returned `companies` array is empty, show the company registration screen.
+The frontend should call `GET /api/v1/current-user/companies` after login. If the returned `companies` array is empty, show the company registration screen.
 
 ## 2. Endpoint Summary
 
@@ -25,14 +25,14 @@ The frontend should call `GET /api/v1/me/companies` after login. If the returned
 | Idempotent | Yes, via `Idempotency-Key` |
 | OpenAPI Ref | `paths./api/v1/companies.post` |
 
-## 3. List My Companies
+## 3. List Current User Companies
 
 | Attribute | Value |
 | --- | --- |
 | Method | `GET` |
-| Path | `/api/v1/me/companies` |
+| Path | `/api/v1/current-user/companies` |
 | Auth | Bearer access token required |
-| OpenAPI Ref | `paths./api/v1/me/companies.get` |
+| OpenAPI Ref | `paths./api/v1/current-user/companies.get` |
 
 Successful response:
 
@@ -179,6 +179,7 @@ If membership creation fails after company creation, the transaction must roll b
 ## 9. Out of Scope
 
 - GSTIN ownership verification workflow.
+- Email verification or other account activation workflow.
 - Admin-created users and invitations.
 - Operational/job permissions such as cashier, inventory, billing, and reporting.
 - Company approval/rejection implementation beyond initial `pending_verification` status.
@@ -188,11 +189,11 @@ If membership creation fails after company creation, the transaction must roll b
 Mapped to:
 
 - `paths./api/v1/companies.post`
-- `paths./api/v1/me/companies.get`
+- `paths./api/v1/current-user/companies.get`
 - `components.schemas.RegisterCompanyRequest`
 - `components.schemas.RegisterCompanyResponse`
-- `components.schemas.MyCompaniesResponse`
-- `components.schemas.MyCompanyResponse`
+- `components.schemas.CurrentUserCompaniesResponse`
+- `components.schemas.CurrentUserCompanyResponse`
 - `components.schemas.CompanyRole`
 - `components.schemas.CompanyStatus`
 - `components.schemas.ErrorResponse`

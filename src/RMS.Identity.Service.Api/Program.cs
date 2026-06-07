@@ -52,6 +52,7 @@ builder.Services.AddScoped<SignUpRequestValidationFilter>();
 builder.Services.AddScoped<RegisterCompanyRequestValidator>();
 builder.Services.AddScoped<RegisterCompanyRequestValidationFilter>();
 builder.Services.AddScoped<IAccessTokenUserResolver, JwtAccessTokenUserResolver>();
+builder.Services.AddScoped<ICompanyAccessAuthorizer, CompanyAccessAuthorizer>();
 
 var app = builder.Build();
 
