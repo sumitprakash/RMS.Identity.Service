@@ -1,12 +1,4 @@
-namespace RMS.Identity.Service.Api.Endpoint.Companies;
-
-public sealed record RegisterCompanyResponse(
-    Guid CompanyUuid,
-    string LegalName,
-    string? TradeName,
-    string Gstin,
-    string Status,
-    DateTime CreatedAt);
+namespace RMS.Identity.Service.Api.Endpoint.Companies.GetCurrentUserCompanies;
 
 public sealed record CurrentUserCompaniesResponse(
     IReadOnlyCollection<CurrentUserCompanyResponse> Companies);

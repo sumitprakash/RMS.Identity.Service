@@ -1,4 +1,4 @@
-namespace RMS.Identity.Service.Api.Endpoint.Companies;
+namespace RMS.Identity.Service.Api.Endpoint.Companies.CreateCompanyUser;
 
 public sealed record UserResponse(
     Guid UserUuid,

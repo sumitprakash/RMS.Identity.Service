@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 
-namespace RMS.Identity.Service.Api.Endpoint.Companies;
+namespace RMS.Identity.Service.Api.Endpoint.Companies.RegisterCompany;
 
 [ModelBinder(BinderType = typeof(RegisterCompanyRequestModelBinder))]
 public sealed class RegisterCompanyRequest

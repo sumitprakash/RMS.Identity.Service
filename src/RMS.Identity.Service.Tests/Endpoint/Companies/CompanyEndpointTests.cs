@@ -5,7 +5,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using MySqlConnector;
-using RMS.Identity.Service.Api.Endpoint.Companies;
+using RMS.Identity.Service.Api.Endpoint.Companies.CreateCompanyUser;
+using RMS.Identity.Service.Api.Endpoint.Companies.GetCompany;
+using RMS.Identity.Service.Api.Endpoint.Companies.RegisterCompany;
 using RMS.Identity.Service.Tests.Shared;
 
 namespace RMS.Identity.Service.Tests.Endpoint.Companies;
@@ -128,6 +130,110 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
             await CleanupCompanyAsync(connection, existingCompanyUuid);
             await CleanupUserAsync(connection, ownerUserUuid);
             await CleanupIdempotencyAsync(connection, idempotencyKey);
+        }
+    }
+
+    [Fact]
+    public async Task GetCompany_WithActiveMember_ReturnsCompanyMetadata()
+    {
+        await _factory.EnsureCompanySchemaAsync();
+
+        var ownerUserUuid = Guid.NewGuid();
+        var companyUuid = Guid.NewGuid();
+        var gstin = CreateUniqueGstin();
+
+        await using var connection = await _factory.OpenDatabaseConnectionAsync();
+        var ownerUserId = await InsertUserAsync(connection, ownerUserUuid, $"owner.{Guid.NewGuid():N}@example.com", "Owner User");
+        var companyId = await InsertCompanyAsync(connection, companyUuid, gstin);
+        await InsertMembershipAsync(connection, companyId, ownerUserId, "OWNER");
+
+        try
+        {
+            using var client = CreateAuthorizedClient(ownerUserUuid);
+
+            using var response = await client.GetAsync($"/api/v1/companies/{companyUuid}");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var body = await response.Content.ReadFromJsonAsync<CompanyResponse>(_jsonOptions);
+            Assert.NotNull(body);
+            Assert.Equal(companyUuid, body.CompanyUuid);
+            Assert.Null(body.CompanyCode);
+            Assert.Equal("Existing Retail Pvt Ltd", body.LegalName);
+            Assert.Equal("Existing Retail", body.TradeName);
+            Assert.Equal(gstin, body.Gstin);
+            Assert.Equal("accounts@example.com", body.ContactEmailAddress);
+            Assert.Equal("+919876543211", body.ContactPhoneNumber);
+            Assert.Equal("1 Main Road", body.RegisteredAddress.AddressLine1);
+            Assert.Null(body.RegisteredAddress.AddressLine2);
+            Assert.Equal("Bengaluru", body.RegisteredAddress.City);
+            Assert.Equal("Karnataka", body.RegisteredAddress.State);
+            Assert.Equal("560001", body.RegisteredAddress.PostalCode);
+            Assert.Equal("IN", body.RegisteredAddress.Country);
+            Assert.Equal("pending_verification", body.Status);
+        }
+        finally
+        {
+            await CleanupCompanyAsync(connection, companyUuid);
+            await CleanupUserAsync(connection, ownerUserUuid);
+        }
+    }
+
+    [Fact]
+    public async Task GetCompany_WithNonMember_ReturnsForbidden()
+    {
+        await _factory.EnsureCompanySchemaAsync();
+
+        var ownerUserUuid = Guid.NewGuid();
+        var outsiderUserUuid = Guid.NewGuid();
+        var companyUuid = Guid.NewGuid();
+
+        await using var connection = await _factory.OpenDatabaseConnectionAsync();
+        var ownerUserId = await InsertUserAsync(connection, ownerUserUuid, $"owner.{Guid.NewGuid():N}@example.com", "Owner User");
+        await InsertUserAsync(connection, outsiderUserUuid, $"outsider.{Guid.NewGuid():N}@example.com", "Outside User");
+        var companyId = await InsertCompanyAsync(connection, companyUuid, CreateUniqueGstin());
+        await InsertMembershipAsync(connection, companyId, ownerUserId, "OWNER");
+
+        try
+        {
+            using var client = CreateAuthorizedClient(outsiderUserUuid);
+
+            using var response = await client.GetAsync($"/api/v1/companies/{companyUuid}");
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+
+            var json = await response.Content.ReadAsStringAsync();
+            Assert.Contains("\"code\":\"COMPANY_ACCESS_DENIED\"", json);
+        }
+        finally
+        {
+            await CleanupCompanyAsync(connection, companyUuid);
+            await CleanupUserAsync(connection, ownerUserUuid);
+            await CleanupUserAsync(connection, outsiderUserUuid);
+        }
+    }
+
+    [Fact]
+    public async Task GetCompany_WithUnknownCompany_ReturnsNotFound()
+    {
+        await _factory.EnsureCompanySchemaAsync();
+
+        var userUuid = Guid.NewGuid();
+
+        await using var connection = await _factory.OpenDatabaseConnectionAsync();
+        await InsertUserAsync(connection, userUuid, $"owner.{Guid.NewGuid():N}@example.com", "Owner User");
+
+        try
+        {
+            using var client = CreateAuthorizedClient(userUuid);
+
+            using var response = await client.GetAsync($"/api/v1/companies/{Guid.NewGuid()}");
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+            var json = await response.Content.ReadAsStringAsync();
+            Assert.Contains("\"code\":\"COMPANY_NOT_FOUND\"", json);
+        }
+        finally
+        {
+            await CleanupUserAsync(connection, userUuid);
         }
     }
 

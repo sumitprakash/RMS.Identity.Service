@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Routing;
-using RMS.Identity.Service.Api.Endpoint.Companies;
+using RMS.Identity.Service.Api.Endpoint.Companies.RegisterCompany;
 using RMS.Identity.Service.Api.Shared.ErrorHandling;
 
 namespace RMS.Identity.Service.Tests.Endpoint.Companies;
