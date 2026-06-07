@@ -21,6 +21,8 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
     [Fact]
     public async Task Post_WithValidRequest_ReturnsCreatedAndPersistsSignupData()
     {
+        await _factory.EnsureDatabaseAvailableAsync();
+
         var uniqueSuffix = Guid.NewGuid().ToString("N");
         var username = $"Alice.{uniqueSuffix}@Example.com";
         var normalizedUsername = username.ToLowerInvariant();
@@ -77,6 +79,8 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
     [Fact]
     public async Task Post_WithIdempotencyKey_ReturnsCreatedAndStoresIdempotentDatabaseEntry()
     {
+        await _factory.EnsureDatabaseAvailableAsync();
+
         var uniqueSuffix = Guid.NewGuid().ToString("N");
         var normalizedUsername = $"retry.{uniqueSuffix}@example.com";
         var password = "StrongPass@123";
@@ -128,6 +132,8 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
     [Fact]
     public async Task Post_WithSameIdempotencyKeyAndDifferentPayload_ReturnsKeyReusedConflict()
     {
+        await _factory.EnsureDatabaseAvailableAsync();
+
         var uniqueSuffix = Guid.NewGuid().ToString("N");
         var firstUsername = $"same-key-first.{uniqueSuffix}@example.com";
         var secondUsername = $"same-key-second.{uniqueSuffix}@example.com";
@@ -165,6 +171,8 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
     [Fact]
     public async Task Post_WhenIdempotencyReservationCollidesWithCommittedResponse_ReturnsStoredResponse()
     {
+        await _factory.EnsureDatabaseAvailableAsync();
+
         var uniqueSuffix = Guid.NewGuid().ToString("N");
         var normalizedUsername = $"race.{uniqueSuffix}@example.com";
         var password = "StrongPass@123";
@@ -259,6 +267,8 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
     [Fact]
     public async Task Post_WithInvalidBody_ReturnsBadRequestValidationError()
     {
+        await _factory.EnsureDatabaseAvailableAsync();
+
         using var client = _factory.CreateClient();
         using var request = CreateSignUpRequest(new
         {
@@ -281,6 +291,8 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
     [Fact]
     public async Task Post_WithUnexpectedProperty_ReturnsBadRequest()
     {
+        await _factory.EnsureDatabaseAvailableAsync();
+
         using var client = _factory.CreateClient();
         using var content = new StringContent(
             """
@@ -346,6 +358,8 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
     [Fact]
     public async Task Post_WhenUsernameAlreadyExists_ReturnsConflictErrorResponse()
     {
+        await _factory.EnsureDatabaseAvailableAsync();
+
         var uniqueSuffix = Guid.NewGuid().ToString("N");
         var normalizedUsername = $"duplicate.{uniqueSuffix}@example.com";
         var firstIdempotencyKey = Guid.NewGuid().ToString();

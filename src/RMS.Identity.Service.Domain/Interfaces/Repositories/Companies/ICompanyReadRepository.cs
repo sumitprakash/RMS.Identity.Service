@@ -11,4 +11,8 @@ public interface ICompanyReadRepository
     Task<Company> GetByIdAsync(
         long companyId,
         CancellationToken cancellationToken);
+
+    Task<Company> GetByUuidAsync(
+        Guid companyUuid,
+        CancellationToken cancellationToken);
 }

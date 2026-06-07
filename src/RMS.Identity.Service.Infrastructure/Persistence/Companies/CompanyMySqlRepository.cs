@@ -112,12 +112,47 @@ public sealed class CompanyMySqlRepository :
         long companyId,
         CancellationToken cancellationToken)
     {
+        return await GetSingleAsync(
+            $"""
+            WHERE {CompanyTable.Columns.CompanyId} = @CompanyId
+            """,
+            command => command.Parameters.AddWithValue("@CompanyId", companyId),
+            () => new ServiceException(
+                (int)HttpStatusCode.InternalServerError,
+                "COMPANY_READ_FAILED",
+                "Company could not be loaded."),
+            cancellationToken);
+    }
+
+    public async Task<Company> GetByUuidAsync(
+        Guid companyUuid,
+        CancellationToken cancellationToken)
+    {
+        return await GetSingleAsync(
+            $"""
+            WHERE {CompanyTable.Columns.CompanyUuid} = UUID_TO_BIN(@CompanyUuid)
+            """,
+            command => command.Parameters.AddWithValue("@CompanyUuid", companyUuid.ToString()),
+            () => new ServiceException(
+                (int)HttpStatusCode.NotFound,
+                "COMPANY_NOT_FOUND",
+                "Company could not be found."),
+            cancellationToken);
+    }
+
+    private async Task<Company> GetSingleAsync(
+        string whereClause,
+        Action<MySqlCommand> configure,
+        Func<ServiceException> notFound,
+        CancellationToken cancellationToken)
+    {
         var databaseTransaction = CurrentTransaction();
         var command = databaseTransaction.Connection.CreateCommand();
         command.Transaction = databaseTransaction.Transaction;
         command.CommandText =
             $"""
             SELECT
+                {CompanyTable.Columns.CompanyId},
                 BIN_TO_UUID({CompanyTable.Columns.CompanyUuid}) AS CompanyUuid,
                 {CompanyTable.Columns.LegalName},
                 {CompanyTable.Columns.TradeName},
@@ -134,22 +169,19 @@ public sealed class CompanyMySqlRepository :
                 {CompanyTable.Columns.IsDeleted},
                 {CompanyTable.Columns.CreatedAt}
             FROM {CompanyTable.Name}
-            WHERE {CompanyTable.Columns.CompanyId} = @CompanyId
+            {whereClause}
             LIMIT 1;
             """;
-        command.Parameters.AddWithValue("@CompanyId", companyId);
+        configure(command);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (!await reader.ReadAsync(cancellationToken))
         {
-            throw new ServiceException(
-                (int)HttpStatusCode.InternalServerError,
-                "COMPANY_READ_FAILED",
-                "Company could not be loaded.");
+            throw notFound();
         }
 
         return new Company(
-            companyId,
+            reader.GetInt64(reader.GetOrdinal(CompanyTable.Columns.CompanyId)),
             Guid.Parse(reader.GetString("CompanyUuid")),
             reader.GetString(CompanyTable.Columns.LegalName),
             reader.GetNullableString(CompanyTable.Columns.TradeName),
