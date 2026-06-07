@@ -168,6 +168,28 @@ public sealed class RegisterCompanyCommandHandlerTests
                 IsDeleted: false,
                 DateTime.UtcNow));
         }
+
+        public Task<Company> GetByUuidAsync(Guid companyUuid, CancellationToken cancellationToken)
+        {
+            var createdCompany = CreatedCompany ?? throw new InvalidOperationException("Company was not created.");
+            return Task.FromResult(new Company(
+                100,
+                companyUuid,
+                createdCompany.LegalName,
+                createdCompany.TradeName,
+                createdCompany.Gstin,
+                createdCompany.ContactEmailAddress,
+                createdCompany.ContactPhoneNumber,
+                createdCompany.AddressLine1,
+                createdCompany.AddressLine2,
+                createdCompany.City,
+                createdCompany.State,
+                createdCompany.PostalCode,
+                createdCompany.Country,
+                createdCompany.Status,
+                IsDeleted: false,
+                DateTime.UtcNow));
+        }
     }
 
     private sealed class FakeCompanyUserWriteRepository : ICompanyUserWriteRepository
