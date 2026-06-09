@@ -19,17 +19,20 @@ public sealed class EmailVerificationRequestedOutboxProcessor
 
     private readonly IOutboxProcessingRepository _outboxRepository;
     private readonly IEmailSender _emailSender;
+    private readonly IEmailVerificationEndpointClient _emailVerificationEndpointClient;
     private readonly EmailDeliveryOptions _options;
     private readonly ILogger<EmailVerificationRequestedOutboxProcessor> _logger;
 
     public EmailVerificationRequestedOutboxProcessor(
         IOutboxProcessingRepository outboxRepository,
         IEmailSender emailSender,
+        IEmailVerificationEndpointClient emailVerificationEndpointClient,
         IOptions<EmailDeliveryOptions> options,
         ILogger<EmailVerificationRequestedOutboxProcessor> logger)
     {
         _outboxRepository = outboxRepository;
         _emailSender = emailSender;
+        _emailVerificationEndpointClient = emailVerificationEndpointClient;
         _options = options.Value;
         _logger = logger;
     }
@@ -66,7 +69,15 @@ public sealed class EmailVerificationRequestedOutboxProcessor
                 throw new InvalidOperationException("Email verification outbox payload is invalid.");
             }
 
-            await _emailSender.SendAsync(CreateEmailMessage(payload), cancellationToken);
+            if (_options.AutoVerifyByEndpoint)
+            {
+                await _emailVerificationEndpointClient.VerifyAsync(payload.Token, cancellationToken);
+            }
+            else
+            {
+                await _emailSender.SendAsync(CreateEmailMessage(payload), cancellationToken);
+            }
+
             var published = await _outboxRepository.MarkPublishedAsync(
                 message.OutboxId,
                 message.ProcessingLeaseExpiresAt,

@@ -16,12 +16,14 @@ public sealed class EmailVerificationRequestedOutboxProcessorTests
     {
         var outboxRepository = new FakeOutboxProcessingRepository(CreateMessage());
         var emailSender = new FakeEmailSender();
-        var processor = CreateProcessor(outboxRepository, emailSender);
+        var endpointClient = new FakeEmailVerificationEndpointClient();
+        var processor = CreateProcessor(outboxRepository, emailSender, endpointClient);
 
         var processed = await processor.ProcessBatchAsync(CancellationToken.None);
 
         Assert.Equal(1, processed);
         Assert.Single(emailSender.SentMessages);
+        Assert.Empty(endpointClient.VerifiedTokens);
         Assert.Equal("alice@example.com", emailSender.SentMessages[0].To);
         Assert.Contains("https://app.example.com/verify-email?token=token%2Bvalue", emailSender.SentMessages[0].Body);
         Assert.Equal(100, outboxRepository.PublishedOutboxId);
@@ -30,16 +32,40 @@ public sealed class EmailVerificationRequestedOutboxProcessorTests
     }
 
     [Fact]
-    public async Task ProcessBatchAsync_WhenEmailSendFails_MarksMessageFailedForRetry()
+    public async Task ProcessBatchAsync_WhenEndpointAutoVerifyEnabled_CallsVerifyEndpointAndMarksPublished()
     {
         var outboxRepository = new FakeOutboxProcessingRepository(CreateMessage());
-        var emailSender = new FakeEmailSender(sendFails: true);
-        var processor = CreateProcessor(outboxRepository, emailSender);
+        var emailSender = new FakeEmailSender();
+        var endpointClient = new FakeEmailVerificationEndpointClient();
+        var processor = CreateProcessor(
+            outboxRepository,
+            emailSender,
+            endpointClient,
+            autoVerifyByEndpoint: true);
 
         var processed = await processor.ProcessBatchAsync(CancellationToken.None);
 
         Assert.Equal(1, processed);
         Assert.Empty(emailSender.SentMessages);
+        Assert.Single(endpointClient.VerifiedTokens);
+        Assert.Equal("token+value", endpointClient.VerifiedTokens[0]);
+        Assert.Equal(100, outboxRepository.PublishedOutboxId);
+        Assert.Null(outboxRepository.FailedOutboxId);
+    }
+
+    [Fact]
+    public async Task ProcessBatchAsync_WhenEmailSendFails_MarksMessageFailedForRetry()
+    {
+        var outboxRepository = new FakeOutboxProcessingRepository(CreateMessage());
+        var emailSender = new FakeEmailSender(sendFails: true);
+        var endpointClient = new FakeEmailVerificationEndpointClient();
+        var processor = CreateProcessor(outboxRepository, emailSender, endpointClient);
+
+        var processed = await processor.ProcessBatchAsync(CancellationToken.None);
+
+        Assert.Equal(1, processed);
+        Assert.Empty(emailSender.SentMessages);
+        Assert.Empty(endpointClient.VerifiedTokens);
         Assert.Null(outboxRepository.PublishedOutboxId);
         Assert.Equal(100, outboxRepository.FailedOutboxId);
         Assert.Equal(outboxRepository.Messages.Single().ProcessingLeaseExpiresAt, outboxRepository.FailedProcessingLeaseExpiresAt);
@@ -56,25 +82,32 @@ public sealed class EmailVerificationRequestedOutboxProcessorTests
             0,
             DateTime.UtcNow.AddMinutes(5)));
         var emailSender = new FakeEmailSender();
-        var processor = CreateProcessor(outboxRepository, emailSender);
+        var endpointClient = new FakeEmailVerificationEndpointClient();
+        var processor = CreateProcessor(outboxRepository, emailSender, endpointClient);
 
         var processed = await processor.ProcessBatchAsync(CancellationToken.None);
 
         Assert.Equal(1, processed);
         Assert.Empty(emailSender.SentMessages);
+        Assert.Empty(endpointClient.VerifiedTokens);
         Assert.Null(outboxRepository.PublishedOutboxId);
         Assert.Equal(100, outboxRepository.FailedOutboxId);
     }
 
     private static EmailVerificationRequestedOutboxProcessor CreateProcessor(
         FakeOutboxProcessingRepository outboxRepository,
-        FakeEmailSender emailSender) =>
+        FakeEmailSender emailSender,
+        FakeEmailVerificationEndpointClient endpointClient,
+        bool autoVerifyByEndpoint = false) =>
         new(
             outboxRepository,
             emailSender,
+            endpointClient,
             Options.Create(new EmailDeliveryOptions
             {
                 Enabled = true,
+                AutoVerifyByEndpoint = autoVerifyByEndpoint,
+                VerifyEmailEndpointUrl = "http://localhost:5000/api/v1/users/verify-email",
                 BatchSize = 10,
                 MaxRetries = 5,
                 RetryDelaySeconds = 300,
@@ -166,6 +199,17 @@ public sealed class EmailVerificationRequestedOutboxProcessorTests
             }
 
             SentMessages.Add(message);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeEmailVerificationEndpointClient : IEmailVerificationEndpointClient
+    {
+        public List<string> VerifiedTokens { get; } = new();
+
+        public Task VerifyAsync(string token, CancellationToken cancellationToken)
+        {
+            VerifiedTokens.Add(token);
             return Task.CompletedTask;
         }
     }

@@ -24,7 +24,7 @@ public sealed class EmailVerificationOutboxWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!_options.Enabled)
+        if (!_options.Enabled && !_options.AutoVerifyByEndpoint)
         {
             _logger.LogInformation("Email verification outbox worker is disabled.");
             return;
