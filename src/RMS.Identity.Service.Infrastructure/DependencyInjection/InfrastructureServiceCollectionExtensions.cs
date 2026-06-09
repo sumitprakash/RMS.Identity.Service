@@ -2,7 +2,6 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RMS.Identity.Service.Application.DependencyInjection;
-using RMS.Identity.Service.Application.Commands.SignUp;
 using RMS.Identity.Service.Infrastructure.Data;
 using RMS.Identity.Service.Infrastructure.Persistence.Companies;
 using RMS.Identity.Service.Infrastructure.Persistence.CompanyUsers;
@@ -43,13 +42,21 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IAuthTokenGenerator, JwtAuthTokenGenerator>();
         services.AddScoped<IRefreshTokenGenerator, RefreshTokenGenerator>();
         services.AddScoped<ITextHasher, Sha256TextHasher>();
-        services.AddOptions<EmailVerificationOptions>()
-            .Bind(configuration.GetSection(EmailVerificationOptions.SectionName))
-            .ValidateOnStart();
         services.AddOptions<EmailDeliveryOptions>()
             .Bind(configuration.GetSection(EmailDeliveryOptions.SectionName))
             .PostConfigure(options =>
             {
+                if (bool.TryParse(configuration[EmailDeliveryOptions.AutoVerifyByEndpointEnvVar], out var autoVerifyByEndpoint))
+                {
+                    options.AutoVerifyByEndpoint = autoVerifyByEndpoint;
+                }
+
+                var verifyEmailEndpointUrl = configuration[EmailDeliveryOptions.VerifyEmailEndpointUrlEnvVar];
+                if (!string.IsNullOrWhiteSpace(verifyEmailEndpointUrl))
+                {
+                    options.VerifyEmailEndpointUrl = verifyEmailEndpointUrl;
+                }
+
                 if (string.IsNullOrWhiteSpace(options.SmtpPasswordEnvVar))
                 {
                     return;
@@ -57,10 +64,11 @@ public static class InfrastructureServiceCollectionExtensions
 
                 options.SmtpPassword = configuration[options.SmtpPasswordEnvVar] ?? string.Empty;
             })
-            .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.FromAddress), "Email sender address is required when email delivery is enabled.")
-            .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.VerificationUrlTemplate), "Email verification URL template is required when email delivery is enabled.")
-            .Validate(options => !options.Enabled || options.VerificationUrlTemplate.Contains("{token}", StringComparison.Ordinal), "Email verification URL template must contain the {token} placeholder.")
-            .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.SmtpHost), "SMTP host is required when email delivery is enabled.")
+            .Validate(options => !options.Enabled || options.AutoVerifyByEndpoint || !string.IsNullOrWhiteSpace(options.FromAddress), "Email sender address is required when email delivery is enabled.")
+            .Validate(options => !options.Enabled || options.AutoVerifyByEndpoint || !string.IsNullOrWhiteSpace(options.VerificationUrlTemplate), "Email verification URL template is required when email delivery is enabled.")
+            .Validate(options => !options.Enabled || options.AutoVerifyByEndpoint || options.VerificationUrlTemplate.Contains("{token}", StringComparison.Ordinal), "Email verification URL template must contain the {token} placeholder.")
+            .Validate(options => !options.Enabled || options.AutoVerifyByEndpoint || !string.IsNullOrWhiteSpace(options.SmtpHost), "SMTP host is required when email delivery is enabled.")
+            .Validate(options => !options.AutoVerifyByEndpoint || Uri.TryCreate(options.VerifyEmailEndpointUrl, UriKind.Absolute, out _), "Email verification endpoint URL must be absolute when endpoint auto-verification is enabled.")
             .Validate(options => options.PollIntervalSeconds > 0, "Email outbox poll interval must be greater than zero.")
             .Validate(options => options.BatchSize > 0, "Email outbox batch size must be greater than zero.")
             .Validate(options => options.MaxRetries > 0, "Email outbox max retries must be greater than zero.")
@@ -111,6 +119,7 @@ public static class InfrastructureServiceCollectionExtensions
             provider => provider.GetRequiredService<AuditLogMySqlRepository>());
         services.AddScoped<IOperationalRoleReadRepository, OperationalRoleMySqlRepository>();
         services.AddSingleton<IEmailSender, SmtpEmailSender>();
+        services.AddHttpClient<IEmailVerificationEndpointClient, EmailVerificationEndpointClient>();
         services.AddScoped<EmailVerificationRequestedOutboxProcessor>();
         services.AddHostedService<EmailVerificationOutboxWorker>();
         services.AddScoped<OutboxMySqlRepository>();

@@ -3,8 +3,14 @@ namespace RMS.Identity.Service.Infrastructure.Notifications;
 public sealed class EmailDeliveryOptions
 {
     public const string SectionName = "EmailDelivery";
+    public const string AutoVerifyByEndpointEnvVar = "RMS_IDENTITY_AUTO_VERIFY_EMAIL_BY_ENDPOINT";
+    public const string VerifyEmailEndpointUrlEnvVar = "RMS_IDENTITY_VERIFY_EMAIL_ENDPOINT_URL";
 
     public bool Enabled { get; init; }
+
+    public bool AutoVerifyByEndpoint { get; set; }
+
+    public string VerifyEmailEndpointUrl { get; set; } = string.Empty;
 
     public string FromAddress { get; set; } = string.Empty;
 
