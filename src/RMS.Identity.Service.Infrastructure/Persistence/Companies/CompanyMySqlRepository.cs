@@ -108,6 +108,54 @@ public sealed class CompanyMySqlRepository :
         }
     }
 
+    public async Task UpdateAsync(
+        UpdateCompanyCommand command,
+        CancellationToken cancellationToken)
+    {
+        var databaseTransaction = CurrentTransaction();
+        var updateCommand = databaseTransaction.Connection.CreateCommand();
+        updateCommand.Transaction = databaseTransaction.Transaction;
+        updateCommand.CommandText =
+            $"""
+            UPDATE {CompanyTable.Name}
+            SET
+                {CompanyTable.Columns.LegalName} = @LegalName,
+                {CompanyTable.Columns.TradeName} = @TradeName,
+                {CompanyTable.Columns.CompanyGstin} = @CompanyGSTIN,
+                {CompanyTable.Columns.ContactEmailAddress} = @ContactEmailAddress,
+                {CompanyTable.Columns.ContactPhoneNumber} = @ContactPhoneNumber,
+                {CompanyTable.Columns.AddressLine1} = @AddressLine1,
+                {CompanyTable.Columns.AddressLine2} = @AddressLine2,
+                {CompanyTable.Columns.City} = @City,
+                {CompanyTable.Columns.State} = @State,
+                {CompanyTable.Columns.PostalCode} = @PostalCode,
+                {CompanyTable.Columns.Country} = @Country
+            WHERE {CompanyTable.Columns.CompanyUuid} = UUID_TO_BIN(@CompanyUuid)
+              AND {CompanyTable.Columns.IsDeleted} = 0;
+            """;
+        updateCommand.Parameters.AddWithValue("@CompanyUuid", command.CompanyUuid.ToString());
+        updateCommand.Parameters.AddWithValue("@LegalName", command.LegalName);
+        updateCommand.Parameters.AddWithValue("@TradeName", (object?)command.TradeName ?? DBNull.Value);
+        updateCommand.Parameters.AddWithValue("@CompanyGSTIN", command.Gstin);
+        updateCommand.Parameters.AddWithValue("@ContactEmailAddress", command.ContactEmailAddress);
+        updateCommand.Parameters.AddWithValue("@ContactPhoneNumber", command.ContactPhoneNumber);
+        updateCommand.Parameters.AddWithValue("@AddressLine1", command.AddressLine1);
+        updateCommand.Parameters.AddWithValue("@AddressLine2", (object?)command.AddressLine2 ?? DBNull.Value);
+        updateCommand.Parameters.AddWithValue("@City", command.City);
+        updateCommand.Parameters.AddWithValue("@State", command.State);
+        updateCommand.Parameters.AddWithValue("@PostalCode", command.PostalCode);
+        updateCommand.Parameters.AddWithValue("@Country", command.Country);
+
+        try
+        {
+            await updateCommand.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (MySqlException exception) when (exception.Number == 1062)
+        {
+            throw new ServiceException((int)HttpStatusCode.Conflict, "COMPANY_EXISTS", "Company GSTIN already exists.");
+        }
+    }
+
     public async Task<Company> GetByIdAsync(
         long companyId,
         CancellationToken cancellationToken)

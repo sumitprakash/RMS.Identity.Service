@@ -348,6 +348,197 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
     }
 
     [Fact]
+    public async Task GetCompanyUsers_WithOwnerRole_ReturnsCompanyUsers()
+    {
+        await _factory.EnsureCompanySchemaAsync();
+
+        var ownerUserUuid = Guid.NewGuid();
+        var memberUserUuid = Guid.NewGuid();
+        var companyUuid = Guid.NewGuid();
+
+        await using var connection = await _factory.OpenDatabaseConnectionAsync();
+        var ownerUsername = $"owner.{Guid.NewGuid():N}@example.com";
+        var memberUsername = $"member.{Guid.NewGuid():N}@example.com";
+        var ownerUserId = await InsertUserAsync(connection, ownerUserUuid, ownerUsername, "Owner User");
+        var memberUserId = await InsertUserAsync(connection, memberUserUuid, memberUsername, "Store Member");
+        var companyId = await InsertCompanyAsync(connection, companyUuid, CreateUniqueGstin());
+        await InsertMembershipAsync(connection, companyId, ownerUserId, "OWNER");
+        await InsertMembershipAsync(connection, companyId, memberUserId, "MEMBER");
+
+        try
+        {
+            using var client = CreateAuthorizedClient(ownerUserUuid);
+
+            using var response = await client.GetAsync($"/api/v1/companies/{companyUuid}/users");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var body = await response.Content.ReadFromJsonAsync<RMS.Identity.Service.Api.Endpoint.Companies.ListCompanyUsers.ListCompanyUsersResponse>(_jsonOptions);
+            Assert.NotNull(body);
+            Assert.Contains(body.Users, user => user.UserUuid == ownerUserUuid && user.CompanyRole == "OWNER");
+            Assert.Contains(body.Users, user => user.UserUuid == memberUserUuid && user.CompanyRole == "MEMBER");
+        }
+        finally
+        {
+            await CleanupCompanyAsync(connection, companyUuid);
+            await CleanupUserAsync(connection, ownerUserUuid);
+            await CleanupUserAsync(connection, memberUserUuid);
+        }
+    }
+
+    [Fact]
+    public async Task PatchCompanyUser_WithOwnerRole_UpdatesMembership()
+    {
+        await _factory.EnsureCompanySchemaAsync();
+
+        var ownerUserUuid = Guid.NewGuid();
+        var memberUserUuid = Guid.NewGuid();
+        var companyUuid = Guid.NewGuid();
+        var idempotencyKey = Guid.NewGuid().ToString();
+
+        await using var connection = await _factory.OpenDatabaseConnectionAsync();
+        var ownerUserId = await InsertUserAsync(connection, ownerUserUuid, $"owner.{Guid.NewGuid():N}@example.com", "Owner User");
+        var memberUserId = await InsertUserAsync(connection, memberUserUuid, $"member.{Guid.NewGuid():N}@example.com", "Store Member");
+        var companyId = await InsertCompanyAsync(connection, companyUuid, CreateUniqueGstin());
+        await InsertMembershipAsync(connection, companyId, ownerUserId, "OWNER");
+        await InsertMembershipAsync(connection, companyId, memberUserId, "MEMBER");
+
+        try
+        {
+            using var client = CreateAuthorizedClient(ownerUserUuid);
+            using var request = CreateJsonRequest(
+                HttpMethod.Patch,
+                $"/api/v1/companies/{companyUuid}/users/{memberUserUuid}",
+                new RMS.Identity.Service.Api.Endpoint.Companies.UpdateCompanyUser.UpdateCompanyUserRequestBody
+                {
+                    CompanyRole = "ADMIN",
+                    MembershipStatus = "active"
+                },
+                idempotencyKey);
+
+            using var response = await client.SendAsync(request);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var body = await response.Content.ReadFromJsonAsync<RMS.Identity.Service.Api.Endpoint.Companies.UpdateCompanyUser.UserResponse>(_jsonOptions);
+            Assert.NotNull(body);
+            Assert.Equal("ADMIN", body.CompanyRole);
+            Assert.Equal("active", body.Status);
+
+            var membership = await LoadMembershipAsync(connection, memberUserId, companyUuid);
+            Assert.NotNull(membership);
+            Assert.Equal("ADMIN", membership.CompanyRole);
+            Assert.Equal("active", membership.MembershipStatus);
+        }
+        finally
+        {
+            await CleanupCompanyAsync(connection, companyUuid);
+            await CleanupUserAsync(connection, ownerUserUuid);
+            await CleanupUserAsync(connection, memberUserUuid);
+            await CleanupIdempotencyAsync(connection, idempotencyKey);
+        }
+    }
+
+    [Fact]
+    public async Task DeleteCompanyUser_WithOwnerRole_SuspendsMembership()
+    {
+        await _factory.EnsureCompanySchemaAsync();
+
+        var ownerUserUuid = Guid.NewGuid();
+        var memberUserUuid = Guid.NewGuid();
+        var companyUuid = Guid.NewGuid();
+        var idempotencyKey = Guid.NewGuid().ToString();
+
+        await using var connection = await _factory.OpenDatabaseConnectionAsync();
+        var ownerUserId = await InsertUserAsync(connection, ownerUserUuid, $"owner.{Guid.NewGuid():N}@example.com", "Owner User");
+        var memberUserId = await InsertUserAsync(connection, memberUserUuid, $"member.{Guid.NewGuid():N}@example.com", "Store Member");
+        var companyId = await InsertCompanyAsync(connection, companyUuid, CreateUniqueGstin());
+        await InsertMembershipAsync(connection, companyId, ownerUserId, "OWNER");
+        await InsertMembershipAsync(connection, companyId, memberUserId, "MEMBER");
+
+        try
+        {
+            using var client = CreateAuthorizedClient(ownerUserUuid);
+            using var request = CreateJsonRequest(
+                HttpMethod.Delete,
+                $"/api/v1/companies/{companyUuid}/users/{memberUserUuid}",
+                body: null,
+                idempotencyKey);
+
+            using var response = await client.SendAsync(request);
+            Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+            var membership = await LoadMembershipAsync(connection, memberUserId, companyUuid);
+            Assert.NotNull(membership);
+            Assert.Equal("MEMBER", membership.CompanyRole);
+            Assert.Equal("suspended", membership.MembershipStatus);
+        }
+        finally
+        {
+            await CleanupCompanyAsync(connection, companyUuid);
+            await CleanupUserAsync(connection, ownerUserUuid);
+            await CleanupUserAsync(connection, memberUserUuid);
+            await CleanupIdempotencyAsync(connection, idempotencyKey);
+        }
+    }
+
+    [Fact]
+    public async Task PatchCompany_WithOwnerRole_UpdatesCompanyMetadata()
+    {
+        await _factory.EnsureCompanySchemaAsync();
+
+        var ownerUserUuid = Guid.NewGuid();
+        var companyUuid = Guid.NewGuid();
+        var idempotencyKey = Guid.NewGuid().ToString();
+        var updatedGstin = CreateUniqueGstin();
+
+        await using var connection = await _factory.OpenDatabaseConnectionAsync();
+        var ownerUserId = await InsertUserAsync(connection, ownerUserUuid, $"owner.{Guid.NewGuid():N}@example.com", "Owner User");
+        var companyId = await InsertCompanyAsync(connection, companyUuid, CreateUniqueGstin());
+        await InsertMembershipAsync(connection, companyId, ownerUserId, "OWNER");
+
+        try
+        {
+            using var client = CreateAuthorizedClient(ownerUserUuid);
+            using var request = CreateJsonRequest(
+                HttpMethod.Patch,
+                $"/api/v1/companies/{companyUuid}",
+                new RMS.Identity.Service.Api.Endpoint.Companies.UpdateCompany.UpdateCompanyRequestBody
+                {
+                    LegalName = "Updated Retail Pvt Ltd",
+                    TradeName = "Updated Retail",
+                    Gstin = updatedGstin,
+                    ContactEmailAddress = "billing@example.com",
+                    ContactPhoneNumber = "+919876543211",
+                    AddressLine1 = "2 Main Road",
+                    AddressLine2 = "Near Market",
+                    City = "Bengaluru",
+                    State = "Karnataka",
+                    PostalCode = "560002",
+                    Country = "IN"
+                },
+                idempotencyKey);
+
+            using var response = await client.SendAsync(request);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var body = await response.Content.ReadFromJsonAsync<RMS.Identity.Service.Api.Endpoint.Companies.UpdateCompany.CompanyResponse>(_jsonOptions);
+            Assert.NotNull(body);
+            Assert.Equal("Updated Retail Pvt Ltd", body.LegalName);
+            Assert.Equal("Updated Retail", body.TradeName);
+            Assert.Equal(updatedGstin, body.Gstin);
+            Assert.Equal("billing@example.com", body.ContactEmailAddress);
+            Assert.Equal("2 Main Road", body.RegisteredAddress.AddressLine1);
+            Assert.Equal("Near Market", body.RegisteredAddress.AddressLine2);
+            Assert.Equal("pending_verification", body.Status);
+        }
+        finally
+        {
+            await CleanupCompanyAsync(connection, companyUuid);
+            await CleanupUserAsync(connection, ownerUserUuid);
+            await CleanupIdempotencyAsync(connection, idempotencyKey);
+        }
+    }
+
+    [Fact]
     public async Task PostCompanyUser_WithOwnerRole_CreatesGlobalUserAndCompanyMembership()
     {
         await _factory.EnsureCompanySchemaAsync();
@@ -412,10 +603,21 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
 
     private static HttpRequestMessage CreatePostRequest(string path, object body, string idempotencyKey)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, path)
+        return CreateJsonRequest(HttpMethod.Post, path, body, idempotencyKey);
+    }
+
+    private static HttpRequestMessage CreateJsonRequest(
+        HttpMethod method,
+        string path,
+        object? body,
+        string idempotencyKey)
+    {
+        var request = new HttpRequestMessage(method, path);
+        if (body is not null)
         {
-            Content = JsonContent.Create(body)
-        };
+            request.Content = JsonContent.Create(body);
+        }
+
         request.Headers.Add("Idempotency-Key", idempotencyKey);
         return request;
     }

@@ -208,6 +208,30 @@ components:
           $ref: '#/components/schemas/CompanyRole'
       additionalProperties: false
 
+    UpdateCompanyUserRequest:
+      type: object
+      required:
+        - companyRole
+        - membershipStatus
+      properties:
+        companyRole:
+          $ref: '#/components/schemas/CompanyRole'
+        membershipStatus:
+          type: string
+          enum: [active, invited, suspended]
+      additionalProperties: false
+
+    CompanyUsersResponse:
+      type: object
+      required:
+        - users
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserResponse'
+      additionalProperties: false
+
     UserResponse:
       type: object
       required:
@@ -346,6 +370,10 @@ components:
         createdAt:
           $ref: '#/components/schemas/DateTime'
       additionalProperties: false
+
+    UpdateCompanyRequest:
+      allOf:
+        - $ref: '#/components/schemas/RegisterCompanyRequest'
 
     CurrentUserCompanyResponse:
       type: object
@@ -660,6 +688,24 @@ paths:
           $ref: '#/components/responses/Conflict'
 
   /api/v1/companies/{companyUuid}/users:
+    get:
+      summary: List company users
+      description: OWNER or ADMIN may list users in the company, including suspended memberships for management screens.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CompanyUuidPath'
+      responses:
+        '200':
+          description: Company users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyUsersResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
       summary: Create a user inside a company (admin only)
       description: Future endpoint. OWNER or ADMIN may create a company user; invitation/reset flow is out of scope for the current registration implementation.
@@ -690,7 +736,7 @@ paths:
   /api/v1/companies/{companyUuid}/users/{userUuid}:
     get:
       summary: Get company-scoped user by UUID
-      description: Authorization rule: the requested user may view self; same-company OWNER or ADMIN may view other company users; others are forbidden.
+      description: "Authorization rule: the requested user may view self; same-company OWNER or ADMIN may view other company users; others are forbidden."
       security:
         - bearerAuth: []
       parameters:
@@ -709,6 +755,58 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+    patch:
+      summary: Update company user membership
+      description: OWNER or ADMIN may change a company user's companyRole or membershipStatus. The company must retain at least one active OWNER.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CompanyUuidPath'
+        - $ref: '#/components/parameters/UserUuidPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCompanyUserRequest'
+      responses:
+        '200':
+          description: Updated company user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      summary: Suspend company user membership
+      description: OWNER or ADMIN may soft-remove a company user by setting membershipStatus to suspended. The company must retain at least one active OWNER.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CompanyUuidPath'
+        - $ref: '#/components/parameters/UserUuidPath'
+      responses:
+        '204':
+          description: Company user suspended
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /api/v1/companies/{companyUuid}:
     get:
@@ -730,3 +828,34 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+    patch:
+      summary: Update company metadata
+      description: OWNER or ADMIN may update company profile metadata. Company status changes are handled by a separate admin flow.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CompanyUuidPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCompanyRequest'
+      responses:
+        '200':
+          description: Updated company metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
