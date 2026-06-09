@@ -7,4 +7,8 @@ public interface IUserAccountWriteRepository
     Task<long> CreateAsync(
         CreateUserAccountCommand command,
         CancellationToken cancellationToken);
+
+    Task MarkEmailVerifiedAsync(
+        long userId,
+        CancellationToken cancellationToken);
 }

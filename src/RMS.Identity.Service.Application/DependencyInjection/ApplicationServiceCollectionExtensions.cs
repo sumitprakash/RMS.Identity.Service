@@ -3,11 +3,13 @@ using Microsoft.Extensions.DependencyInjection;
 using RMS.Identity.Service.Application.Commands.Login;
 using RMS.Identity.Service.Application.Commands.Refresh;
 using RMS.Identity.Service.Application.Commands.SignUp;
+using RMS.Identity.Service.Application.Commands.VerifyEmail;
 using RMS.Identity.Service.Domain.Contracts.Login;
 using RMS.Identity.Service.Domain.Contracts.Companies;
 using RMS.Identity.Service.Domain.Contracts.CompanyUsers;
 using RMS.Identity.Service.Domain.Contracts.Refresh;
 using RMS.Identity.Service.Domain.Contracts.SignUp;
+using RMS.Identity.Service.Domain.Contracts.VerifyEmail;
 using RMS.Identity.Service.Infrastructure.Cqrs;
 
 namespace RMS.Identity.Service.Application.DependencyInjection;
@@ -29,6 +31,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<ICommandHandler<UpdateCompanyCommandRequest, UpdateCompanyCommandResponse>, UpdateCompanyCommandHandler>();
         services.AddScoped<ICommandHandler<UpdateCompanyStatusCommandRequest, UpdateCompanyStatusCommandResponse>, UpdateCompanyStatusCommandHandler>();
         services.AddScoped<ICommandHandler<UpdateCompanyUserCommandRequest, UpdateCompanyUserCommandResponse>, UpdateCompanyUserCommandHandler>();
+        services.AddScoped<ICommandHandler<VerifyEmailCommandRequest, VerifyEmailCommandResponse>, VerifyEmailCommandHandler>();
         return services;
     }
 }
