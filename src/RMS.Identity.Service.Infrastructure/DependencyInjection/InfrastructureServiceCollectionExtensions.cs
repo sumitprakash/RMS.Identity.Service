@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RMS.Identity.Service.Application.DependencyInjection;
+using RMS.Identity.Service.Application.Commands.SignUp;
 using RMS.Identity.Service.Infrastructure.Data;
 using RMS.Identity.Service.Infrastructure.Persistence.Companies;
 using RMS.Identity.Service.Infrastructure.Persistence.CompanyUsers;
@@ -42,6 +43,9 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IAuthTokenGenerator, JwtAuthTokenGenerator>();
         services.AddScoped<IRefreshTokenGenerator, RefreshTokenGenerator>();
         services.AddScoped<ITextHasher, Sha256TextHasher>();
+        services.AddOptions<EmailVerificationOptions>()
+            .Bind(configuration.GetSection(EmailVerificationOptions.SectionName))
+            .ValidateOnStart();
         services.AddOptions<EmailDeliveryOptions>()
             .Bind(configuration.GetSection(EmailDeliveryOptions.SectionName))
             .PostConfigure(options =>

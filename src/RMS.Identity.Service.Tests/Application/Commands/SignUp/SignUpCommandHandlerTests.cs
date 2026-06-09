@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using RMS.Identity.Service.Application.Commands.SignUp;
 using RMS.Identity.Service.Domain.Contracts.SignUp;
 using RMS.Identity.Service.Domain.Contracts.UserAccounts;
@@ -27,7 +28,8 @@ public sealed class SignUpCommandHandlerTests
             emailVerificationRepository,
             outboxRepository,
             new FakePasswordHasher(),
-            new FakeTextHasher());
+            new FakeTextHasher(),
+            Options.Create(new EmailVerificationOptions()));
 
         var response = await handler.HandleAsync(
             new SignUpCommandRequest(
@@ -51,9 +53,43 @@ public sealed class SignUpCommandHandlerTests
         Assert.Equal(response.UserUuid, outboxRepository.Account?.UserUuid);
     }
 
+    [Fact]
+    public async Task HandleAsync_WhenAutoVerifyEnabled_MarksEmailVerifiedWithoutOutboxEvent()
+    {
+        var userRepository = new FakeUserAccountRepository();
+        var emailVerificationRepository = new FakeEmailVerificationWriteRepository();
+        var outboxRepository = new FakeOutboxWriteRepository();
+        var handler = new SignUpCommandHandler(
+            userRepository,
+            userRepository,
+            new FakeAuditLogWriteRepository(),
+            emailVerificationRepository,
+            outboxRepository,
+            new FakePasswordHasher(),
+            new FakeTextHasher(),
+            Options.Create(new EmailVerificationOptions { AutoVerifyOnSignUp = true }));
+
+        var response = await handler.HandleAsync(
+            new SignUpCommandRequest(
+                " Alice@Example.com ",
+                "StrongPass@123",
+                "Alice",
+                null,
+                "Example",
+                "+919876543210"),
+            CancellationToken.None);
+
+        Assert.Equal("active", response.Status);
+        Assert.Equal(10, userRepository.VerifiedUserId);
+        Assert.Null(emailVerificationRepository.CreatedToken);
+        Assert.Null(outboxRepository.Token);
+    }
+
     private sealed class FakeUserAccountRepository : IUserAccountReadRepository, IUserAccountWriteRepository
     {
         private CreateUserAccountCommand? _createdUser;
+
+        public long? VerifiedUserId { get; private set; }
 
         public Task<bool> ExistsByUsernameAsync(string username, CancellationToken cancellationToken) =>
             Task.FromResult(false);
@@ -64,8 +100,11 @@ public sealed class SignUpCommandHandlerTests
             return Task.FromResult(10L);
         }
 
-        public Task MarkEmailVerifiedAsync(long userId, CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
+        public Task MarkEmailVerifiedAsync(long userId, CancellationToken cancellationToken)
+        {
+            VerifiedUserId = userId;
+            return Task.CompletedTask;
+        }
 
         public Task<UserAccount> GetByIdAsync(long userId, CancellationToken cancellationToken)
         {

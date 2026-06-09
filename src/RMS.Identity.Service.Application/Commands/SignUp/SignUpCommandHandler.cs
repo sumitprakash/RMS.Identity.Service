@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Microsoft.Extensions.Options;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
 using RMS.Identity.Service.Domain.Contracts.SignUp;
@@ -25,6 +26,7 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
     private readonly IOutboxWriteRepository _outboxWriteRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ITextHasher _textHasher;
+    private readonly EmailVerificationOptions _emailVerificationOptions;
 
     public SignUpCommandHandler(
         IUserAccountReadRepository userAccountReadRepository,
@@ -33,7 +35,8 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
         IEmailVerificationWriteRepository emailVerificationWriteRepository,
         IOutboxWriteRepository outboxWriteRepository,
         IPasswordHasher passwordHasher,
-        ITextHasher textHasher)
+        ITextHasher textHasher,
+        IOptions<EmailVerificationOptions> emailVerificationOptions)
     {
         _userAccountReadRepository = userAccountReadRepository;
         _userAccountWriteRepository = userAccountWriteRepository;
@@ -42,6 +45,7 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
         _outboxWriteRepository = outboxWriteRepository;
         _passwordHasher = passwordHasher;
         _textHasher = textHasher;
+        _emailVerificationOptions = emailVerificationOptions.Value;
     }
 
     public async Task<SignUpCommandResponse> HandleAsync(SignUpCommandRequest command, CancellationToken cancellationToken)
@@ -61,26 +65,37 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
             displayName);
         var userId = await _userAccountWriteRepository.CreateAsync(createUserCommand, cancellationToken);
         var account = await _userAccountReadRepository.GetByIdAsync(userId, cancellationToken);
-        var verificationToken = CreateVerificationToken();
-        var verificationExpiresAt = DateTime.UtcNow.Add(EmailVerificationTokenLifetime);
-        await _emailVerificationWriteRepository.CreateAsync(
-            new CreateEmailVerificationCommand(
-                account.UserId,
-                _textHasher.Hash(verificationToken),
-                EmailVerificationPurpose,
-                verificationExpiresAt),
-            cancellationToken);
-        await _outboxWriteRepository.InsertEmailVerificationRequestedAsync(
-            account,
-            verificationToken,
-            verificationExpiresAt,
-            cancellationToken);
+        var status = "pending";
+
+        if (_emailVerificationOptions.AutoVerifyOnSignUp)
+        {
+            await _userAccountWriteRepository.MarkEmailVerifiedAsync(account.UserId, cancellationToken);
+            status = "active";
+        }
+        else
+        {
+            var verificationToken = CreateVerificationToken();
+            var verificationExpiresAt = DateTime.UtcNow.Add(EmailVerificationTokenLifetime);
+            await _emailVerificationWriteRepository.CreateAsync(
+                new CreateEmailVerificationCommand(
+                    account.UserId,
+                    _textHasher.Hash(verificationToken),
+                    EmailVerificationPurpose,
+                    verificationExpiresAt),
+                cancellationToken);
+            await _outboxWriteRepository.InsertEmailVerificationRequestedAsync(
+                account,
+                verificationToken,
+                verificationExpiresAt,
+                cancellationToken);
+        }
+
         await _auditLogWriteRepository.InsertSignUpCreatedAsync(account, cancellationToken);
 
         return new SignUpCommandResponse(
             account.UserUuid,
             account.Username,
-            "pending",
+            status,
             account.CreatedAt
         );
     }
