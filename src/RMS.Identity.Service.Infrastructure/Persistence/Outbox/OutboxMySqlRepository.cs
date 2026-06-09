@@ -80,12 +80,15 @@ public sealed class OutboxMySqlRepository : IOutboxWriteRepository, IOutboxProce
 
         try
         {
+            var processingLeaseExpiresAt = TruncateToSecond(DateTime.UtcNow)
+                .AddSeconds(processingTimeoutSeconds);
             var messages = await SelectAvailableAsync(
                 connection,
                 transaction,
                 eventType,
                 batchSize,
                 maxRetries,
+                processingLeaseExpiresAt,
                 cancellationToken);
 
             if (messages.Count > 0)
@@ -94,7 +97,7 @@ public sealed class OutboxMySqlRepository : IOutboxWriteRepository, IOutboxProce
                     connection,
                     transaction,
                     messages.Select(message => message.OutboxId).ToArray(),
-                    processingTimeoutSeconds,
+                    processingLeaseExpiresAt,
                     cancellationToken);
             }
 
@@ -108,8 +111,9 @@ public sealed class OutboxMySqlRepository : IOutboxWriteRepository, IOutboxProce
         }
     }
 
-    public async Task MarkPublishedAsync(
+    public async Task<bool> MarkPublishedAsync(
         long outboxId,
+        DateTime processingLeaseExpiresAt,
         CancellationToken cancellationToken)
     {
         await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
@@ -118,15 +122,19 @@ public sealed class OutboxMySqlRepository : IOutboxWriteRepository, IOutboxProce
             $"""
             UPDATE {OutboxTable.Name}
             SET {OutboxTable.Columns.Status} = 'published'
-            WHERE {OutboxTable.Columns.OutboxId} = @OutboxId;
+            WHERE {OutboxTable.Columns.OutboxId} = @OutboxId
+              AND {OutboxTable.Columns.Status} = 'processing'
+              AND {OutboxTable.Columns.AvailableAt} = @ProcessingLeaseExpiresAt;
             """;
         command.Parameters.AddWithValue("@OutboxId", outboxId);
+        command.Parameters.AddWithValue("@ProcessingLeaseExpiresAt", processingLeaseExpiresAt);
 
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        return await command.ExecuteNonQueryAsync(cancellationToken) > 0;
     }
 
-    public async Task MarkFailedAsync(
+    public async Task<bool> MarkFailedAsync(
         long outboxId,
+        DateTime processingLeaseExpiresAt,
         DateTime availableAt,
         CancellationToken cancellationToken)
     {
@@ -138,12 +146,15 @@ public sealed class OutboxMySqlRepository : IOutboxWriteRepository, IOutboxProce
             SET {OutboxTable.Columns.Status} = 'failed',
                 {OutboxTable.Columns.Retries} = {OutboxTable.Columns.Retries} + 1,
                 {OutboxTable.Columns.AvailableAt} = @AvailableAt
-            WHERE {OutboxTable.Columns.OutboxId} = @OutboxId;
+            WHERE {OutboxTable.Columns.OutboxId} = @OutboxId
+              AND {OutboxTable.Columns.Status} = 'processing'
+              AND {OutboxTable.Columns.AvailableAt} = @ProcessingLeaseExpiresAt;
             """;
         command.Parameters.AddWithValue("@OutboxId", outboxId);
+        command.Parameters.AddWithValue("@ProcessingLeaseExpiresAt", processingLeaseExpiresAt);
         command.Parameters.AddWithValue("@AvailableAt", availableAt);
 
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        return await command.ExecuteNonQueryAsync(cancellationToken) > 0;
     }
 
     private static async Task<List<OutboxMessage>> SelectAvailableAsync(
@@ -152,6 +163,7 @@ public sealed class OutboxMySqlRepository : IOutboxWriteRepository, IOutboxProce
         string eventType,
         int batchSize,
         int maxRetries,
+        DateTime processingLeaseExpiresAt,
         CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
@@ -184,7 +196,8 @@ public sealed class OutboxMySqlRepository : IOutboxWriteRepository, IOutboxProce
                 reader.GetInt64(reader.GetOrdinal(OutboxTable.Columns.OutboxId)),
                 reader.GetString(OutboxTable.Columns.EventType),
                 reader.GetString(OutboxTable.Columns.Payload),
-                reader.GetInt32(reader.GetOrdinal(OutboxTable.Columns.Retries))));
+                reader.GetInt32(reader.GetOrdinal(OutboxTable.Columns.Retries)),
+                processingLeaseExpiresAt));
         }
 
         return messages;
@@ -194,7 +207,7 @@ public sealed class OutboxMySqlRepository : IOutboxWriteRepository, IOutboxProce
         MySqlConnection connection,
         MySqlTransaction transaction,
         IReadOnlyList<long> outboxIds,
-        int processingTimeoutSeconds,
+        DateTime processingLeaseExpiresAt,
         CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
@@ -212,11 +225,14 @@ public sealed class OutboxMySqlRepository : IOutboxWriteRepository, IOutboxProce
             $"""
             UPDATE {OutboxTable.Name}
             SET {OutboxTable.Columns.Status} = 'processing',
-                {OutboxTable.Columns.AvailableAt} = DATE_ADD(UTC_TIMESTAMP(), INTERVAL @ProcessingTimeoutSeconds SECOND)
+                {OutboxTable.Columns.AvailableAt} = @ProcessingLeaseExpiresAt
             WHERE {OutboxTable.Columns.OutboxId} IN ({string.Join(", ", parameterNames)});
             """;
-        command.Parameters.AddWithValue("@ProcessingTimeoutSeconds", processingTimeoutSeconds);
+        command.Parameters.AddWithValue("@ProcessingLeaseExpiresAt", processingLeaseExpiresAt);
 
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
+
+    private static DateTime TruncateToSecond(DateTime value) =>
+        new(value.Ticks - value.Ticks % TimeSpan.TicksPerSecond, DateTimeKind.Utc);
 }

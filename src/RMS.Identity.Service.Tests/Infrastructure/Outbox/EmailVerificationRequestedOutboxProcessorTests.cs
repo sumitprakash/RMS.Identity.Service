@@ -25,6 +25,7 @@ public sealed class EmailVerificationRequestedOutboxProcessorTests
         Assert.Equal("alice@example.com", emailSender.SentMessages[0].To);
         Assert.Contains("https://app.example.com/verify-email?token=token%2Bvalue", emailSender.SentMessages[0].Body);
         Assert.Equal(100, outboxRepository.PublishedOutboxId);
+        Assert.Equal(outboxRepository.Messages.Single().ProcessingLeaseExpiresAt, outboxRepository.PublishedProcessingLeaseExpiresAt);
         Assert.Null(outboxRepository.FailedOutboxId);
     }
 
@@ -41,6 +42,7 @@ public sealed class EmailVerificationRequestedOutboxProcessorTests
         Assert.Empty(emailSender.SentMessages);
         Assert.Null(outboxRepository.PublishedOutboxId);
         Assert.Equal(100, outboxRepository.FailedOutboxId);
+        Assert.Equal(outboxRepository.Messages.Single().ProcessingLeaseExpiresAt, outboxRepository.FailedProcessingLeaseExpiresAt);
         Assert.True(outboxRepository.FailedAvailableAt > DateTime.UtcNow);
     }
 
@@ -51,7 +53,8 @@ public sealed class EmailVerificationRequestedOutboxProcessorTests
             100,
             EmailVerificationRequestedOutboxProcessor.EventType,
             "{}",
-            0));
+            0,
+            DateTime.UtcNow.AddMinutes(5)));
         var emailSender = new FakeEmailSender();
         var processor = CreateProcessor(outboxRepository, emailSender);
 
@@ -91,20 +94,25 @@ public sealed class EmailVerificationRequestedOutboxProcessorTests
                 Token = "token+value",
                 ExpiresAt = DateTime.UtcNow.AddHours(24)
             }),
-            0);
+            0,
+            DateTime.UtcNow.AddMinutes(5));
 
     private sealed class FakeOutboxProcessingRepository : IOutboxProcessingRepository
     {
-        private readonly IReadOnlyCollection<OutboxMessage> _messages;
-
         public FakeOutboxProcessingRepository(params OutboxMessage[] messages)
         {
-            _messages = messages;
+            Messages = messages;
         }
+
+        public IReadOnlyCollection<OutboxMessage> Messages { get; }
 
         public long? PublishedOutboxId { get; private set; }
 
+        public DateTime? PublishedProcessingLeaseExpiresAt { get; private set; }
+
         public long? FailedOutboxId { get; private set; }
+
+        public DateTime? FailedProcessingLeaseExpiresAt { get; private set; }
 
         public DateTime? FailedAvailableAt { get; private set; }
 
@@ -114,22 +122,28 @@ public sealed class EmailVerificationRequestedOutboxProcessorTests
             int maxRetries,
             int processingTimeoutSeconds,
             CancellationToken cancellationToken) =>
-            Task.FromResult(_messages);
+            Task.FromResult(Messages);
 
-        public Task MarkPublishedAsync(long outboxId, CancellationToken cancellationToken)
+        public Task<bool> MarkPublishedAsync(
+            long outboxId,
+            DateTime processingLeaseExpiresAt,
+            CancellationToken cancellationToken)
         {
             PublishedOutboxId = outboxId;
-            return Task.CompletedTask;
+            PublishedProcessingLeaseExpiresAt = processingLeaseExpiresAt;
+            return Task.FromResult(true);
         }
 
-        public Task MarkFailedAsync(
+        public Task<bool> MarkFailedAsync(
             long outboxId,
+            DateTime processingLeaseExpiresAt,
             DateTime availableAt,
             CancellationToken cancellationToken)
         {
             FailedOutboxId = outboxId;
+            FailedProcessingLeaseExpiresAt = processingLeaseExpiresAt;
             FailedAvailableAt = availableAt;
-            return Task.CompletedTask;
+            return Task.FromResult(true);
         }
     }
 

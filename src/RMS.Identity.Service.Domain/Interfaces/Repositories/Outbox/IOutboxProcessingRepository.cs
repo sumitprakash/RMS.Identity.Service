@@ -11,12 +11,14 @@ public interface IOutboxProcessingRepository
         int processingTimeoutSeconds,
         CancellationToken cancellationToken);
 
-    Task MarkPublishedAsync(
+    Task<bool> MarkPublishedAsync(
         long outboxId,
+        DateTime processingLeaseExpiresAt,
         CancellationToken cancellationToken);
 
-    Task MarkFailedAsync(
+    Task<bool> MarkFailedAsync(
         long outboxId,
+        DateTime processingLeaseExpiresAt,
         DateTime availableAt,
         CancellationToken cancellationToken);
 }

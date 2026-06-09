@@ -67,7 +67,16 @@ public sealed class EmailVerificationRequestedOutboxProcessor
             }
 
             await _emailSender.SendAsync(CreateEmailMessage(payload), cancellationToken);
-            await _outboxRepository.MarkPublishedAsync(message.OutboxId, cancellationToken);
+            var published = await _outboxRepository.MarkPublishedAsync(
+                message.OutboxId,
+                message.ProcessingLeaseExpiresAt,
+                cancellationToken);
+            if (!published)
+            {
+                _logger.LogInformation(
+                    "Email verification outbox message {OutboxId} was not marked published because its processing lease changed.",
+                    message.OutboxId);
+            }
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -76,10 +85,17 @@ public sealed class EmailVerificationRequestedOutboxProcessor
                 "Failed to process email verification outbox message {OutboxId}.",
                 message.OutboxId);
 
-            await _outboxRepository.MarkFailedAsync(
+            var failed = await _outboxRepository.MarkFailedAsync(
                 message.OutboxId,
+                message.ProcessingLeaseExpiresAt,
                 DateTime.UtcNow.AddSeconds(_options.RetryDelaySeconds),
                 cancellationToken);
+            if (!failed)
+            {
+                _logger.LogInformation(
+                    "Email verification outbox message {OutboxId} was not marked failed because its processing lease changed.",
+                    message.OutboxId);
+            }
         }
     }
 
