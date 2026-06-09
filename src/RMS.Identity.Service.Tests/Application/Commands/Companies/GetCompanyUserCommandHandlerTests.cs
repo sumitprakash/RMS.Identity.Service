@@ -103,10 +103,19 @@ public sealed class GetCompanyUserCommandHandlerTests
             _user = user;
         }
 
+        public Task<IReadOnlyCollection<CompanyUserAccount>> ListByCompanyUuidAsync(
+            Guid companyUuid,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyCollection<CompanyUserAccount>>(
+                _user is null ? Array.Empty<CompanyUserAccount>() : new[] { _user });
+
         public Task<CompanyUserAccount?> GetByCompanyAndUserUuidAsync(
             Guid companyUuid,
             Guid userUuid,
             CancellationToken cancellationToken) =>
             Task.FromResult(_user);
+
+        public Task<int> CountActiveOwnersAsync(Guid companyUuid, CancellationToken cancellationToken) =>
+            Task.FromResult(_user is { CompanyRole: "OWNER", MembershipStatus: "active", IsActive: true } ? 1 : 0);
     }
 }

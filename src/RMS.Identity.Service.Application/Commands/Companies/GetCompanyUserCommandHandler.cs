@@ -1,7 +1,6 @@
 using System.Net;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.CompanyUsers;
-using RMS.Identity.Service.Domain.Entities.Companies;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.CompanyUsers;
 using RMS.Identity.Service.Infrastructure.Cqrs;
 
@@ -39,17 +38,7 @@ public sealed class GetCompanyUserCommandHandler : ICommandHandler<GetCompanyUse
             user.DisplayName,
             Array.Empty<string>(),
             user.CompanyRole,
-            ResolveStatus(user),
+            CompanyUserStatusResolver.Resolve(user),
             user.CreatedAt);
-    }
-
-    private static string ResolveStatus(CompanyUserAccount user)
-    {
-        if (!user.IsActive || string.Equals(user.MembershipStatus, "suspended", StringComparison.OrdinalIgnoreCase))
-        {
-            return "suspended";
-        }
-
-        return user.EmailVerified ? "active" : "pending";
     }
 }

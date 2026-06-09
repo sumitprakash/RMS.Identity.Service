@@ -147,6 +147,9 @@ public sealed class RegisterCompanyCommandHandlerTests
             return Task.FromResult(100L);
         }
 
+        public Task UpdateAsync(UpdateCompanyCommand command, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
         public Task<Company> GetByIdAsync(long companyId, CancellationToken cancellationToken)
         {
             var createdCompany = CreatedCompany ?? throw new InvalidOperationException("Company was not created.");
@@ -201,5 +204,8 @@ public sealed class RegisterCompanyCommandHandlerTests
             CreatedMembership = command;
             return Task.CompletedTask;
         }
+
+        public Task UpdateMembershipAsync(UpdateCompanyUserCommand command, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 }

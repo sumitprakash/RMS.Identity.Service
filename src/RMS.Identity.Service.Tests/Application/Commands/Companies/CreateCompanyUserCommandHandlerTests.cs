@@ -140,6 +140,9 @@ public sealed class CreateCompanyUserCommandHandlerTests
             CreatedMembership = command;
             return Task.CompletedTask;
         }
+
+        public Task UpdateMembershipAsync(UpdateCompanyUserCommand command, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 
     private sealed class FakePasswordHasher : IPasswordHasher

@@ -7,4 +7,8 @@ public interface ICompanyUserWriteRepository
     Task CreateAsync(
         CreateCompanyUserCommand command,
         CancellationToken cancellationToken);
+
+    Task UpdateMembershipAsync(
+        UpdateCompanyUserCommand command,
+        CancellationToken cancellationToken);
 }
