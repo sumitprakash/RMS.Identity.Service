@@ -12,8 +12,11 @@ using RMS.Identity.Service.Infrastructure.Persistence.Outbox;
 using RMS.Identity.Service.Infrastructure.Persistence.Roles;
 using RMS.Identity.Service.Infrastructure.Persistence.UserAccounts;
 using RMS.Identity.Service.Infrastructure.Persistence.VerifyEmail;
+using RMS.Identity.Service.Infrastructure.Notifications;
+using RMS.Identity.Service.Infrastructure.Outbox;
 using RMS.Identity.Service.Infrastructure.Security;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
+using RMS.Identity.Service.Domain.Interfaces.Notifications;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Auth;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.AuditLog;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Companies;
@@ -39,6 +42,27 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IAuthTokenGenerator, JwtAuthTokenGenerator>();
         services.AddScoped<IRefreshTokenGenerator, RefreshTokenGenerator>();
         services.AddScoped<ITextHasher, Sha256TextHasher>();
+        services.AddOptions<EmailDeliveryOptions>()
+            .Bind(configuration.GetSection(EmailDeliveryOptions.SectionName))
+            .PostConfigure(options =>
+            {
+                if (string.IsNullOrWhiteSpace(options.SmtpPasswordEnvVar))
+                {
+                    return;
+                }
+
+                options.SmtpPassword = configuration[options.SmtpPasswordEnvVar] ?? string.Empty;
+            })
+            .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.FromAddress), "Email sender address is required when email delivery is enabled.")
+            .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.VerificationUrlTemplate), "Email verification URL template is required when email delivery is enabled.")
+            .Validate(options => !options.Enabled || options.VerificationUrlTemplate.Contains("{token}", StringComparison.Ordinal), "Email verification URL template must contain the {token} placeholder.")
+            .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.SmtpHost), "SMTP host is required when email delivery is enabled.")
+            .Validate(options => options.PollIntervalSeconds > 0, "Email outbox poll interval must be greater than zero.")
+            .Validate(options => options.BatchSize > 0, "Email outbox batch size must be greater than zero.")
+            .Validate(options => options.MaxRetries > 0, "Email outbox max retries must be greater than zero.")
+            .Validate(options => options.RetryDelaySeconds > 0, "Email outbox retry delay must be greater than zero.")
+            .Validate(options => options.ProcessingTimeoutSeconds > 0, "Email outbox processing timeout must be greater than zero.")
+            .ValidateOnStart();
         services.AddOptions<JwtOptions>()
             .Bind(configuration.GetSection(JwtOptions.SectionName))
             .PostConfigure(options =>
@@ -82,7 +106,14 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IAuditLogWriteRepository>(
             provider => provider.GetRequiredService<AuditLogMySqlRepository>());
         services.AddScoped<IOperationalRoleReadRepository, OperationalRoleMySqlRepository>();
-        services.AddScoped<IOutboxWriteRepository, OutboxMySqlRepository>();
+        services.AddSingleton<IEmailSender, SmtpEmailSender>();
+        services.AddScoped<EmailVerificationRequestedOutboxProcessor>();
+        services.AddHostedService<EmailVerificationOutboxWorker>();
+        services.AddScoped<OutboxMySqlRepository>();
+        services.AddScoped<IOutboxWriteRepository>(
+            provider => provider.GetRequiredService<OutboxMySqlRepository>());
+        services.AddScoped<IOutboxProcessingRepository>(
+            provider => provider.GetRequiredService<OutboxMySqlRepository>());
         services.AddScoped<EmailVerificationMySqlRepository>();
         services.AddScoped<IEmailVerificationReadRepository>(
             provider => provider.GetRequiredService<EmailVerificationMySqlRepository>());
