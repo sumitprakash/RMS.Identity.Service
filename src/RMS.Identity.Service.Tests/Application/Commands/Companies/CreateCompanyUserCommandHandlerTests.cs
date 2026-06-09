@@ -113,6 +113,9 @@ public sealed class CreateCompanyUserCommandHandlerTests
             return Task.FromResult(10L);
         }
 
+        public Task MarkEmailVerifiedAsync(long userId, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
         public Task<UserAccount> GetByIdAsync(long userId, CancellationToken cancellationToken)
         {
             var createdUser = _createdUser ?? throw new InvalidOperationException("User was not created.");

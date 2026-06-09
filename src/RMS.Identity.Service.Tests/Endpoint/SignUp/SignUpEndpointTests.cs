@@ -66,12 +66,60 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             Assert.False(persisted.IsDeleted);
             Assert.Equal(body.CreatedAt, persisted.CreatedAt);
             Assert.Equal(1, persisted.AuditLogCount);
+            Assert.Equal(1, persisted.EmailVerificationTokenCount);
+            Assert.Equal(1, persisted.OutboxMessageCount);
         }
         finally
         {
             if (body is not null)
             {
                 await CleanupSignUpDataAsync(normalizedUsername, body.UserUuid, idempotencyKey);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task VerifyEmail_WithValidSignupToken_VerifiesEmailAndConsumesToken()
+    {
+        await _factory.EnsureDatabaseAvailableAsync();
+
+        var uniqueSuffix = Guid.NewGuid().ToString("N");
+        var normalizedUsername = $"verify.{uniqueSuffix}@example.com";
+        var idempotencyKey = Guid.NewGuid().ToString();
+        SignUpResponse? signupBody = null;
+
+        try
+        {
+            using var client = _factory.CreateClient();
+            using var signupRequest = CreateSignUpRequest(CreateValidBody(normalizedUsername), idempotencyKey);
+            using var signupResponse = await client.SendAsync(signupRequest);
+            Assert.Equal(HttpStatusCode.Created, signupResponse.StatusCode);
+            signupBody = await signupResponse.Content.ReadFromJsonAsync<SignUpResponse>(_jsonOptions);
+            Assert.NotNull(signupBody);
+
+            var token = await LoadEmailVerificationTokenFromOutboxAsync(signupBody.UserUuid);
+            Assert.False(string.IsNullOrWhiteSpace(token));
+
+            using var verifyResponse = await client.PostAsJsonAsync(
+                "/api/v1/users/verify-email",
+                new { token });
+            Assert.Equal(HttpStatusCode.OK, verifyResponse.StatusCode);
+
+            var verifyBody = await verifyResponse.Content.ReadFromJsonAsync<VerifyEmailResponseContract>(_jsonOptions);
+            Assert.NotNull(verifyBody);
+            Assert.True(verifyBody.Success);
+            Assert.Equal("Email verified successfully", verifyBody.Message);
+
+            var state = await LoadEmailVerificationStateAsync(signupBody.UserUuid);
+            Assert.NotNull(state);
+            Assert.True(state.EmailVerified);
+            Assert.True(state.TokenConsumed);
+        }
+        finally
+        {
+            if (signupBody is not null)
+            {
+                await CleanupSignUpDataAsync(normalizedUsername, signupBody.UserUuid, idempotencyKey);
             }
         }
     }
@@ -439,9 +487,13 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
                 ua.IsActive,
                 ua.IsDeleted,
                 ua.CreatedAt,
-                COUNT(DISTINCT al.AuditID) AS AuditLogCount
+                COUNT(DISTINCT al.AuditID) AS AuditLogCount,
+                COUNT(DISTINCT ev.EmailVerificationID) AS EmailVerificationTokenCount,
+                COUNT(DISTINCT ob.OutboxID) AS OutboxMessageCount
             FROM UserAccount ua
             LEFT JOIN AuditLog al ON al.RecordId = BIN_TO_UUID(ua.UserUUID) AND al.Action = 'signup_created'
+            LEFT JOIN EmailVerification ev ON ev.UserID = ua.UserID AND ev.Purpose = 'email_verification'
+            LEFT JOIN Outbox ob ON ob.AggregateUUID = ua.UserUUID AND ob.EventType = 'email_verification_requested'
             WHERE ua.Username = @Username
               AND ua.UserUUID = UUID_TO_BIN(@UserUuid)
             GROUP BY
@@ -475,7 +527,55 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             reader.GetBoolean(reader.GetOrdinal("IsActive")),
             reader.GetBoolean(reader.GetOrdinal("IsDeleted")),
             DateTime.SpecifyKind(reader.GetDateTime(reader.GetOrdinal("CreatedAt")), DateTimeKind.Utc),
-            reader.GetInt32(reader.GetOrdinal("AuditLogCount")));
+            reader.GetInt32(reader.GetOrdinal("AuditLogCount")),
+            reader.GetInt32(reader.GetOrdinal("EmailVerificationTokenCount")),
+            reader.GetInt32(reader.GetOrdinal("OutboxMessageCount")));
+    }
+
+    private async Task<string> LoadEmailVerificationTokenFromOutboxAsync(Guid userUuid)
+    {
+        await using var connection = await _factory.OpenDatabaseConnectionAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT JSON_UNQUOTE(JSON_EXTRACT(Payload, '$.Token')) AS Token
+            FROM Outbox
+            WHERE AggregateUUID = UUID_TO_BIN(@UserUuid)
+              AND EventType = 'email_verification_requested'
+            ORDER BY OutboxID DESC
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("@UserUuid", userUuid.ToString());
+
+        return Convert.ToString(await command.ExecuteScalarAsync())
+            ?? throw new InvalidOperationException("Expected email verification token in outbox.");
+    }
+
+    private async Task<EmailVerificationState?> LoadEmailVerificationStateAsync(Guid userUuid)
+    {
+        await using var connection = await _factory.OpenDatabaseConnectionAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT ua.EmailVerified, ev.Consumed
+            FROM UserAccount ua
+            INNER JOIN EmailVerification ev ON ev.UserID = ua.UserID
+            WHERE ua.UserUUID = UUID_TO_BIN(@UserUuid)
+              AND ev.Purpose = 'email_verification'
+            ORDER BY ev.EmailVerificationID DESC
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("@UserUuid", userUuid.ToString());
+
+        await using var reader = await command.ExecuteReaderAsync();
+        if (!await reader.ReadAsync())
+        {
+            return null;
+        }
+
+        return new EmailVerificationState(
+            reader.GetBoolean(reader.GetOrdinal("EmailVerified")),
+            reader.GetBoolean(reader.GetOrdinal("Consumed")));
     }
 
     private async Task<IdempotencyEntry?> LoadIdempotencyEntryAsync(string idempotencyKey)
@@ -512,6 +612,21 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
         await ExecuteNonQueryAsync(
             connection,
             "DELETE FROM AuditLog WHERE RecordId = @UserUuid;",
+            command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString()));
+
+        await ExecuteNonQueryAsync(
+            connection,
+            "DELETE FROM Outbox WHERE AggregateUUID = UUID_TO_BIN(@UserUuid);",
+            command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString()));
+
+        await ExecuteNonQueryAsync(
+            connection,
+            """
+            DELETE ev
+            FROM EmailVerification ev
+            INNER JOIN UserAccount ua ON ua.UserID = ev.UserID
+            WHERE ua.UserUUID = UUID_TO_BIN(@UserUuid);
+            """,
             command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString()));
 
         await ExecuteNonQueryAsync(
@@ -603,7 +718,9 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
         bool IsActive,
         bool IsDeleted,
         DateTime CreatedAt,
-        int AuditLogCount);
+        int AuditLogCount,
+        int EmailVerificationTokenCount,
+        int OutboxMessageCount);
 
     private sealed record IdempotencyEntry(
         string Method,
@@ -613,4 +730,8 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
         string ResponseBody);
 
     private sealed record ApiErrorContract(string Code, string Message);
+
+    private sealed record VerifyEmailResponseContract(bool Success, string Message);
+
+    private sealed record EmailVerificationState(bool EmailVerified, bool TokenConsumed);
 }

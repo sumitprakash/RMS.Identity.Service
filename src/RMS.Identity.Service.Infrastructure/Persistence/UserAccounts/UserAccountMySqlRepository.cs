@@ -87,6 +87,24 @@ public sealed class UserAccountMySqlRepository :
         }
     }
 
+    public async Task MarkEmailVerifiedAsync(
+        long userId,
+        CancellationToken cancellationToken)
+    {
+        var databaseTransaction = CurrentTransaction();
+        var updateCommand = databaseTransaction.Connection.CreateCommand();
+        updateCommand.Transaction = databaseTransaction.Transaction;
+        updateCommand.CommandText =
+            $"""
+            UPDATE {UserAccountTable.Name}
+            SET {UserAccountTable.Columns.EmailVerified} = 1
+            WHERE {UserAccountTable.Columns.UserId} = @UserId
+              AND {UserAccountTable.Columns.IsDeleted} = 0;
+            """;
+        updateCommand.Parameters.AddWithValue("@UserId", userId);
+        await updateCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     public async Task<UserAccount> GetByIdAsync(
         long userId,
         CancellationToken cancellationToken)
