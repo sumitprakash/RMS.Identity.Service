@@ -74,8 +74,15 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
                 "User account is not active.");
         }
 
+        var consumed = await _emailVerificationWriteRepository.TryConsumeAsync(
+            token.EmailVerificationId,
+            cancellationToken);
+        if (!consumed)
+        {
+            throw ValidationError("Email verification token has already been used.");
+        }
+
         await _userAccountWriteRepository.MarkEmailVerifiedAsync(user.UserId, cancellationToken);
-        await _emailVerificationWriteRepository.ConsumeAsync(token.EmailVerificationId, cancellationToken);
 
         return new VerifyEmailCommandResponse(true, "Email verified successfully");
     }

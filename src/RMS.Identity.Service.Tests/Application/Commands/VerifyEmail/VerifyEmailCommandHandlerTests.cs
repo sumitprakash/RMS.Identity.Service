@@ -36,6 +36,29 @@ public sealed class VerifyEmailCommandHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_WhenTokenConsumeDoesNotUpdate_ThrowsBadRequest()
+    {
+        var userRepository = new FakeUserAccountRepository();
+        var emailVerificationRepository = new FakeEmailVerificationRepository(
+            CreateToken(),
+            consumeSucceeds: false);
+        var handler = new VerifyEmailCommandHandler(
+            emailVerificationRepository,
+            emailVerificationRepository,
+            new FakeTextHasher(),
+            userRepository,
+            userRepository);
+
+        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+            handler.HandleAsync(new VerifyEmailCommandRequest("valid-token"), CancellationToken.None));
+
+        Assert.Equal((int)HttpStatusCode.BadRequest, exception.StatusCode);
+        Assert.Equal("VALIDATION_ERROR", exception.Code);
+        Assert.Equal(100, emailVerificationRepository.ConsumedEmailVerificationId);
+        Assert.Null(userRepository.VerifiedUserId);
+    }
+
+    [Fact]
     public async Task HandleAsync_WithUnknownToken_ThrowsNotFound()
     {
         var repository = new FakeEmailVerificationRepository(null);
@@ -103,10 +126,14 @@ public sealed class VerifyEmailCommandHandlerTests
     private sealed class FakeEmailVerificationRepository : IEmailVerificationReadRepository, IEmailVerificationWriteRepository
     {
         private readonly EmailVerificationToken? _token;
+        private readonly bool _consumeSucceeds;
 
-        public FakeEmailVerificationRepository(EmailVerificationToken? token)
+        public FakeEmailVerificationRepository(
+            EmailVerificationToken? token,
+            bool consumeSucceeds = true)
         {
             _token = token;
+            _consumeSucceeds = consumeSucceeds;
         }
 
         public long? ConsumedEmailVerificationId { get; private set; }
@@ -120,10 +147,10 @@ public sealed class VerifyEmailCommandHandlerTests
         public Task CreateAsync(CreateEmailVerificationCommand command, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
-        public Task ConsumeAsync(long emailVerificationId, CancellationToken cancellationToken)
+        public Task<bool> TryConsumeAsync(long emailVerificationId, CancellationToken cancellationToken)
         {
             ConsumedEmailVerificationId = emailVerificationId;
-            return Task.CompletedTask;
+            return Task.FromResult(_consumeSucceeds);
         }
     }
 

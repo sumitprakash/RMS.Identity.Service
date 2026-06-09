@@ -90,7 +90,7 @@ public sealed class EmailVerificationMySqlRepository :
             reader.GetBoolean(reader.GetOrdinal(EmailVerificationTable.Columns.Consumed)));
     }
 
-    public async Task ConsumeAsync(
+    public async Task<bool> TryConsumeAsync(
         long emailVerificationId,
         CancellationToken cancellationToken)
     {
@@ -101,11 +101,12 @@ public sealed class EmailVerificationMySqlRepository :
             $"""
             UPDATE {EmailVerificationTable.Name}
             SET {EmailVerificationTable.Columns.Consumed} = 1
-            WHERE {EmailVerificationTable.Columns.EmailVerificationId} = @EmailVerificationId;
+            WHERE {EmailVerificationTable.Columns.EmailVerificationId} = @EmailVerificationId
+              AND {EmailVerificationTable.Columns.Consumed} = 0;
             """;
         updateCommand.Parameters.AddWithValue("@EmailVerificationId", emailVerificationId);
 
-        await updateCommand.ExecuteNonQueryAsync(cancellationToken);
+        return await updateCommand.ExecuteNonQueryAsync(cancellationToken) > 0;
     }
 
     private MySqlDatabaseTransaction CurrentTransaction() =>

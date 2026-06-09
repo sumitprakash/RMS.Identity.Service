@@ -8,7 +8,7 @@ public interface IEmailVerificationWriteRepository
         CreateEmailVerificationCommand command,
         CancellationToken cancellationToken);
 
-    Task ConsumeAsync(
+    Task<bool> TryConsumeAsync(
         long emailVerificationId,
         CancellationToken cancellationToken);
 }

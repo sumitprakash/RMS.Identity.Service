@@ -95,7 +95,7 @@ public sealed class SignUpCommandHandlerTests
             return Task.CompletedTask;
         }
 
-        public Task ConsumeAsync(long emailVerificationId, CancellationToken cancellationToken) =>
+        public Task<bool> TryConsumeAsync(long emailVerificationId, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
     }
 
