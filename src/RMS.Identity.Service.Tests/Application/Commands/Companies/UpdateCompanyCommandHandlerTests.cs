@@ -104,6 +104,9 @@ public sealed class UpdateCompanyCommandHandlerTests
             return Task.CompletedTask;
         }
 
+        public Task UpdateStatusAsync(UpdateCompanyStatusCommand command, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
         public Task<Company> GetByIdAsync(long companyId, CancellationToken cancellationToken) =>
             Task.FromResult(_company);
 

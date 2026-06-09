@@ -11,4 +11,8 @@ public interface ICompanyWriteRepository
     Task UpdateAsync(
         UpdateCompanyCommand command,
         CancellationToken cancellationToken);
+
+    Task UpdateStatusAsync(
+        UpdateCompanyStatusCommand command,
+        CancellationToken cancellationToken);
 }

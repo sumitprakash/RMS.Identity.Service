@@ -8,6 +8,7 @@ using RMS.Identity.Service.Infrastructure.Persistence.CompanyUsers;
 using RMS.Identity.Service.Infrastructure.Idempotency;
 using RMS.Identity.Service.Infrastructure.Persistence.Auth;
 using RMS.Identity.Service.Infrastructure.Persistence.AuditLog;
+using RMS.Identity.Service.Infrastructure.Persistence.Roles;
 using RMS.Identity.Service.Infrastructure.Persistence.UserAccounts;
 using RMS.Identity.Service.Infrastructure.Security;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
@@ -16,6 +17,7 @@ using RMS.Identity.Service.Domain.Interfaces.Repositories.AuditLog;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Companies;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.CompanyUsers;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Idempotency;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.Roles;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
 using RMS.Identity.Service.Domain.Interfaces.Security;
 
@@ -75,6 +77,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<AuditLogMySqlRepository>();
         services.AddScoped<IAuditLogWriteRepository>(
             provider => provider.GetRequiredService<AuditLogMySqlRepository>());
+        services.AddScoped<IOperationalRoleReadRepository, OperationalRoleMySqlRepository>();
 
         return services;
     }

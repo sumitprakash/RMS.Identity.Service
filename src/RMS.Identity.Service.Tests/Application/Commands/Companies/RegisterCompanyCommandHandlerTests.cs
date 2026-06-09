@@ -150,6 +150,9 @@ public sealed class RegisterCompanyCommandHandlerTests
         public Task UpdateAsync(UpdateCompanyCommand command, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
+        public Task UpdateStatusAsync(UpdateCompanyStatusCommand command, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
         public Task<Company> GetByIdAsync(long companyId, CancellationToken cancellationToken)
         {
             var createdCompany = CreatedCompany ?? throw new InvalidOperationException("Company was not created.");

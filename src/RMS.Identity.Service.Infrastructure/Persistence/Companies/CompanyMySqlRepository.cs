@@ -156,6 +156,32 @@ public sealed class CompanyMySqlRepository :
         }
     }
 
+    public async Task UpdateStatusAsync(
+        UpdateCompanyStatusCommand command,
+        CancellationToken cancellationToken)
+    {
+        var databaseTransaction = CurrentTransaction();
+        var updateCommand = databaseTransaction.Connection.CreateCommand();
+        updateCommand.Transaction = databaseTransaction.Transaction;
+        updateCommand.CommandText =
+            $"""
+            UPDATE {CompanyTable.Name}
+            SET {CompanyTable.Columns.CompanyStatus} = @CompanyStatus
+            WHERE {CompanyTable.Columns.CompanyUuid} = UUID_TO_BIN(@CompanyUuid)
+              AND {CompanyTable.Columns.IsDeleted} = 0;
+            """;
+        updateCommand.Parameters.AddWithValue("@CompanyUuid", command.CompanyUuid.ToString());
+        updateCommand.Parameters.AddWithValue("@CompanyStatus", command.Status);
+
+        if (await updateCommand.ExecuteNonQueryAsync(cancellationToken) == 0)
+        {
+            throw new ServiceException(
+                (int)HttpStatusCode.NotFound,
+                "COMPANY_NOT_FOUND",
+                "Company could not be found.");
+        }
+    }
+
     public async Task<Company> GetByIdAsync(
         long companyId,
         CancellationToken cancellationToken)
