@@ -56,6 +56,7 @@ builder.Services.AddScoped<CreateCompanyUserRequestValidator>();
 builder.Services.AddScoped<CreateCompanyUserRequestValidationFilter>();
 builder.Services.AddScoped<IAccessTokenUserResolver, JwtAccessTokenUserResolver>();
 builder.Services.AddScoped<ICompanyAccessAuthorizer, CompanyAccessAuthorizer>();
+builder.Services.AddScoped<IPlatformAdminAuthorizer, PlatformAdminAuthorizer>();
 
 var app = builder.Build();
 

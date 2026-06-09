@@ -375,6 +375,15 @@ components:
       allOf:
         - $ref: '#/components/schemas/RegisterCompanyRequest'
 
+    UpdateCompanyStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/CompanyStatus'
+      additionalProperties: false
+
     CurrentUserCompanyResponse:
       type: object
       required:
@@ -641,6 +650,39 @@ paths:
           $ref: '#/components/responses/Unauthorized'
 
   # ---------- COMPANY / ADMIN ----------
+  /api/v1/admin/companies/{companyUuid}/status:
+    patch:
+      summary: Update company verification status
+      description: Platform-admin only. Valid transitions are pending_verification to verified or rejected, verified to suspended, and suspended to verified.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CompanyUuidPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCompanyStatusRequest'
+      responses:
+        '200':
+          description: Updated company metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
   /api/v1/current-user/companies:
     get:
       summary: List current user companies
