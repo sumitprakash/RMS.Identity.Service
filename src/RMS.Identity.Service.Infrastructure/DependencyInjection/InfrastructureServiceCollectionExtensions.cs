@@ -84,7 +84,11 @@ public static class InfrastructureServiceCollectionExtensions
                     return;
                 }
 
-                options.SigningKey = configuration[options.SigningKeyEnvVar] ?? string.Empty;
+                var signingKey = configuration[options.SigningKeyEnvVar];
+                if (!string.IsNullOrWhiteSpace(signingKey))
+                {
+                    options.SigningKey = signingKey;
+                }
             })
             .Validate(options => !string.IsNullOrWhiteSpace(options.Issuer), "JWT issuer is required.")
             .Validate(options => !string.IsNullOrWhiteSpace(options.Audience), "JWT audience is required.")

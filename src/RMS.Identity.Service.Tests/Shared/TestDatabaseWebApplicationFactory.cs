@@ -16,7 +16,9 @@ public class TestDatabaseWebApplicationFactory : WebApplicationFactory<Program>
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:Default"] = ConnectionString
+                ["ConnectionStrings:Default"] = ConnectionString,
+                ["Jwt:SigningKey"] = "replace-this-development-signing-key-with-a-secure-secret",
+                ["Jwt:SigningKeyEnvVar"] = string.Empty
             });
         });
     }

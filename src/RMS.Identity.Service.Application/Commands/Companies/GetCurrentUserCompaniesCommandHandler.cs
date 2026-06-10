@@ -1,5 +1,8 @@
+using System.Net;
+using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.Companies;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Companies;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
 using RMS.Identity.Service.Infrastructure.Cqrs;
 
 namespace RMS.Identity.Service.Application.Commands.Companies;
@@ -7,16 +10,29 @@ namespace RMS.Identity.Service.Application.Commands.Companies;
 public sealed class GetCurrentUserCompaniesCommandHandler : ICommandHandler<GetCurrentUserCompaniesCommandRequest, GetCurrentUserCompaniesCommandResponse>
 {
     private readonly ICompanyMembershipReadRepository _companyMembershipReadRepository;
+    private readonly IUserAccountReadRepository _userAccountReadRepository;
 
-    public GetCurrentUserCompaniesCommandHandler(ICompanyMembershipReadRepository companyMembershipReadRepository)
+    public GetCurrentUserCompaniesCommandHandler(
+        ICompanyMembershipReadRepository companyMembershipReadRepository,
+        IUserAccountReadRepository userAccountReadRepository)
     {
         _companyMembershipReadRepository = companyMembershipReadRepository;
+        _userAccountReadRepository = userAccountReadRepository;
     }
 
     public async Task<GetCurrentUserCompaniesCommandResponse> HandleAsync(
         GetCurrentUserCompaniesCommandRequest command,
         CancellationToken cancellationToken)
     {
+        var user = await _userAccountReadRepository.GetByUuidAsync(command.UserUuid, cancellationToken);
+        if (!user.IsActive || user.IsDeleted)
+        {
+            throw new ServiceException(
+                (int)HttpStatusCode.Forbidden,
+                "USER_NOT_ACTIVE",
+                "User is not allowed to access companies.");
+        }
+
         var companies = await _companyMembershipReadRepository.ListByUserUuidAsync(command.UserUuid, cancellationToken);
         return new GetCurrentUserCompaniesCommandResponse(
             companies
