@@ -4,11 +4,14 @@ using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.Companies;
 using RMS.Identity.Service.Domain.Contracts.CompanyUsers;
 using RMS.Identity.Service.Domain.Contracts.UserAccounts;
+using RMS.Identity.Service.Domain.Contracts.VerifyEmail;
 using RMS.Identity.Service.Domain.Entities.Companies;
 using RMS.Identity.Service.Domain.Entities.UserAccounts;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Companies;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.CompanyUsers;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.Outbox;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.VerifyEmail;
 using RMS.Identity.Service.Domain.Interfaces.Security;
 
 namespace RMS.Identity.Service.Tests.Application.Commands.Companies;
@@ -22,12 +25,17 @@ public sealed class CreateCompanyUserCommandHandlerTests
     {
         var userRepository = new FakeUserAccountRepository();
         var companyUserRepository = new FakeCompanyUserWriteRepository();
+        var emailVerificationRepository = new FakeEmailVerificationWriteRepository();
+        var outboxRepository = new FakeOutboxWriteRepository();
         var handler = new CreateCompanyUserCommandHandler(
             new FakeCompanyReadRepository(),
             userRepository,
             userRepository,
             companyUserRepository,
-            new FakePasswordHasher());
+            emailVerificationRepository,
+            outboxRepository,
+            new FakePasswordHasher(),
+            new FakeTextHasher());
 
         var response = await handler.HandleAsync(
             new CreateCompanyUserCommandRequest(CompanyUuid, " Cashier@Example.com ", " Store Cashier ", "member"),
@@ -41,6 +49,12 @@ public sealed class CreateCompanyUserCommandHandlerTests
         Assert.Equal("active", companyUserRepository.CreatedMembership?.MembershipStatus);
         Assert.Equal(100, companyUserRepository.CreatedMembership?.CompanyId);
         Assert.Equal(10, companyUserRepository.CreatedMembership?.UserId);
+        Assert.NotNull(emailVerificationRepository.CreatedVerification);
+        Assert.Equal(10, emailVerificationRepository.CreatedVerification.UserId);
+        Assert.Equal("email_verification", emailVerificationRepository.CreatedVerification.Purpose);
+        Assert.NotNull(outboxRepository.EmailVerificationAccount);
+        Assert.Equal(response.UserUuid, outboxRepository.EmailVerificationAccount.UserUuid);
+        Assert.Equal($"hashed-text:{outboxRepository.EmailVerificationToken}", emailVerificationRepository.CreatedVerification.TokenHash);
     }
 
     [Fact]
@@ -52,7 +66,10 @@ public sealed class CreateCompanyUserCommandHandlerTests
             userRepository,
             userRepository,
             new FakeCompanyUserWriteRepository(),
-            new FakePasswordHasher());
+            new FakeEmailVerificationWriteRepository(),
+            new FakeOutboxWriteRepository(),
+            new FakePasswordHasher(),
+            new FakeTextHasher());
 
         var exception = await Assert.ThrowsAsync<ServiceException>(() =>
             handler.HandleAsync(
@@ -144,8 +161,44 @@ public sealed class CreateCompanyUserCommandHandlerTests
             return Task.CompletedTask;
         }
 
+        public Task<int> CountActiveOwnersForUpdateAsync(Guid companyUuid, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
         public Task UpdateMembershipAsync(UpdateCompanyUserCommand command, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+    }
+
+    private sealed class FakeEmailVerificationWriteRepository : IEmailVerificationWriteRepository
+    {
+        public CreateEmailVerificationCommand? CreatedVerification { get; private set; }
+
+        public Task CreateAsync(CreateEmailVerificationCommand command, CancellationToken cancellationToken)
+        {
+            CreatedVerification = command;
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> TryConsumeAsync(long emailVerificationId, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed class FakeOutboxWriteRepository : IOutboxWriteRepository
+    {
+        public UserAccount? EmailVerificationAccount { get; private set; }
+        public string? EmailVerificationToken { get; private set; }
+        public DateTime? EmailVerificationExpiresAt { get; private set; }
+
+        public Task InsertEmailVerificationRequestedAsync(
+            UserAccount account,
+            string token,
+            DateTime expiresAt,
+            CancellationToken cancellationToken)
+        {
+            EmailVerificationAccount = account;
+            EmailVerificationToken = token;
+            EmailVerificationExpiresAt = expiresAt;
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakePasswordHasher : IPasswordHasher
@@ -153,5 +206,10 @@ public sealed class CreateCompanyUserCommandHandlerTests
         public string Hash(string value) => $"hashed:{value}";
 
         public bool Verify(string value, string hash) => hash == Hash(value);
+    }
+
+    private sealed class FakeTextHasher : ITextHasher
+    {
+        public string Hash(string value) => $"hashed-text:{value}";
     }
 }

@@ -74,6 +74,7 @@ public sealed class CompanyMembershipMySqlRepository : ICompanyMembershipReadRep
             SELECT
                 BIN_TO_UUID(ua.{UserAccountTable.Columns.UserUuid}) AS UserUuid,
                 BIN_TO_UUID(c.{CompanyTable.Columns.CompanyUuid}) AS CompanyUuid,
+                c.{CompanyTable.Columns.CompanyStatus},
                 cu.{CompanyUserTable.Columns.CompanyRole},
                 cu.{CompanyUserTable.Columns.MembershipStatus}
             FROM {UserAccountTable.Name} ua
@@ -99,6 +100,7 @@ public sealed class CompanyMembershipMySqlRepository : ICompanyMembershipReadRep
         return new CompanyMembership(
             Guid.Parse(reader.GetString("UserUuid")),
             Guid.Parse(reader.GetString("CompanyUuid")),
+            reader.GetString(CompanyTable.Columns.CompanyStatus),
             reader.GetString(CompanyUserTable.Columns.CompanyRole),
             reader.GetString(CompanyUserTable.Columns.MembershipStatus));
     }

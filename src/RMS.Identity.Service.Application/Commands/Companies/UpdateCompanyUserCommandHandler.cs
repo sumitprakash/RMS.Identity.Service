@@ -78,7 +78,7 @@ public sealed class UpdateCompanyUserCommandHandler : ICommandHandler<UpdateComp
             return;
         }
 
-        if (await _companyUserReadRepository.CountActiveOwnersAsync(companyUuid, cancellationToken) <= 1)
+        if (await _companyUserWriteRepository.CountActiveOwnersForUpdateAsync(companyUuid, cancellationToken) <= 1)
         {
             throw new ServiceException(
                 (int)HttpStatusCode.Conflict,

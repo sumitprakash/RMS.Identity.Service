@@ -208,6 +208,9 @@ public sealed class RegisterCompanyCommandHandlerTests
             return Task.CompletedTask;
         }
 
+        public Task<int> CountActiveOwnersForUpdateAsync(Guid companyUuid, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
         public Task UpdateMembershipAsync(UpdateCompanyUserCommand command, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
     }
