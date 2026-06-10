@@ -3,9 +3,12 @@ using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
 using RMS.Identity.Service.Domain.Contracts.CompanyUsers;
 using RMS.Identity.Service.Domain.Contracts.UserAccounts;
+using RMS.Identity.Service.Domain.Contracts.VerifyEmail;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Companies;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.CompanyUsers;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.Outbox;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.VerifyEmail;
 using RMS.Identity.Service.Domain.Interfaces.Security;
 using RMS.Identity.Service.Infrastructure.Cqrs;
 
@@ -13,26 +16,37 @@ namespace RMS.Identity.Service.Application.Commands.Companies;
 
 public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateCompanyUserCommandRequest, CreateCompanyUserCommandResponse>
 {
+    private const string EmailVerificationPurpose = "email_verification";
+    private static readonly TimeSpan EmailVerificationTokenLifetime = TimeSpan.FromHours(24);
     private static readonly string[] AllowedCompanyRoles = ["OWNER", "ADMIN", "MEMBER"];
 
     private readonly ICompanyReadRepository _companyReadRepository;
     private readonly IUserAccountReadRepository _userAccountReadRepository;
     private readonly IUserAccountWriteRepository _userAccountWriteRepository;
     private readonly ICompanyUserWriteRepository _companyUserWriteRepository;
+    private readonly IEmailVerificationWriteRepository _emailVerificationWriteRepository;
+    private readonly IOutboxWriteRepository _outboxWriteRepository;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly ITextHasher _textHasher;
 
     public CreateCompanyUserCommandHandler(
         ICompanyReadRepository companyReadRepository,
         IUserAccountReadRepository userAccountReadRepository,
         IUserAccountWriteRepository userAccountWriteRepository,
         ICompanyUserWriteRepository companyUserWriteRepository,
-        IPasswordHasher passwordHasher)
+        IEmailVerificationWriteRepository emailVerificationWriteRepository,
+        IOutboxWriteRepository outboxWriteRepository,
+        IPasswordHasher passwordHasher,
+        ITextHasher textHasher)
     {
         _companyReadRepository = companyReadRepository;
         _userAccountReadRepository = userAccountReadRepository;
         _userAccountWriteRepository = userAccountWriteRepository;
         _companyUserWriteRepository = companyUserWriteRepository;
+        _emailVerificationWriteRepository = emailVerificationWriteRepository;
+        _outboxWriteRepository = outboxWriteRepository;
         _passwordHasher = passwordHasher;
+        _textHasher = textHasher;
     }
 
     public async Task<CreateCompanyUserCommandResponse> HandleAsync(
@@ -60,6 +74,21 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
                 TrimToNull(command.DisplayName)),
             cancellationToken);
         var user = await _userAccountReadRepository.GetByIdAsync(userId, cancellationToken);
+        var verificationToken = CreateVerificationToken();
+        var verificationExpiresAt = DateTime.UtcNow.Add(EmailVerificationTokenLifetime);
+
+        await _emailVerificationWriteRepository.CreateAsync(
+            new CreateEmailVerificationCommand(
+                user.UserId,
+                _textHasher.Hash(verificationToken),
+                EmailVerificationPurpose,
+                verificationExpiresAt),
+            cancellationToken);
+        await _outboxWriteRepository.InsertEmailVerificationRequestedAsync(
+            user,
+            verificationToken,
+            verificationExpiresAt,
+            cancellationToken);
 
         await _companyUserWriteRepository.CreateAsync(
             new CreateCompanyUserCommand(company.CompanyId, user.UserId, companyRole, "active"),
@@ -88,6 +117,15 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
 
     private static string CreateTemporaryPassword() =>
         Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+
+    private static string CreateVerificationToken() =>
+        Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
+
+    private static string Base64UrlEncode(byte[] bytes) =>
+        Convert.ToBase64String(bytes)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
 
     private static string? TrimToNull(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();

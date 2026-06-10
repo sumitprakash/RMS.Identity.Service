@@ -188,6 +188,42 @@ public sealed class CompanyUserMySqlRepository :
         return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
     }
 
+    public async Task<int> CountActiveOwnersForUpdateAsync(
+        Guid companyUuid,
+        CancellationToken cancellationToken)
+    {
+        var databaseTransaction = CurrentTransaction();
+        var command = databaseTransaction.Connection.CreateCommand();
+        command.Transaction = databaseTransaction.Transaction;
+        command.CommandText =
+            $"""
+            SELECT cu.{CompanyUserTable.Columns.CompanyUserId}
+            FROM {CompanyTable.Name} c
+            INNER JOIN {CompanyUserTable.Name} cu
+                ON cu.{CompanyUserTable.Columns.CompanyId} = c.{CompanyTable.Columns.CompanyId}
+            INNER JOIN {UserAccountTable.Name} ua
+                ON ua.{UserAccountTable.Columns.UserId} = cu.{CompanyUserTable.Columns.UserId}
+            WHERE c.{CompanyTable.Columns.CompanyUuid} = UUID_TO_BIN(@CompanyUuid)
+              AND c.{CompanyTable.Columns.IsDeleted} = 0
+              AND ua.{UserAccountTable.Columns.IsDeleted} = 0
+              AND ua.{UserAccountTable.Columns.IsActive} = 1
+              AND cu.{CompanyUserTable.Columns.CompanyRole} = 'OWNER'
+              AND cu.{CompanyUserTable.Columns.MembershipStatus} = 'active'
+            ORDER BY cu.{CompanyUserTable.Columns.CompanyUserId}
+            FOR UPDATE;
+            """;
+        command.Parameters.AddWithValue("@CompanyUuid", companyUuid.ToString());
+
+        var count = 0;
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            count++;
+        }
+
+        return count;
+    }
+
     public async Task UpdateMembershipAsync(
         UpdateCompanyUserCommand command,
         CancellationToken cancellationToken)

@@ -8,6 +8,10 @@ public interface ICompanyUserWriteRepository
         CreateCompanyUserCommand command,
         CancellationToken cancellationToken);
 
+    Task<int> CountActiveOwnersForUpdateAsync(
+        Guid companyUuid,
+        CancellationToken cancellationToken);
+
     Task UpdateMembershipAsync(
         UpdateCompanyUserCommand command,
         CancellationToken cancellationToken);

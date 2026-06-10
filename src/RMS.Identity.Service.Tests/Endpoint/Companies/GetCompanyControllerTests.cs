@@ -68,7 +68,7 @@ public sealed class GetCompanyControllerTests
             Guid userUuid,
             Guid companyUuid,
             CancellationToken cancellationToken) =>
-            Task.FromResult(new CompanyMembership(userUuid, companyUuid, "OWNER", "active"));
+            Task.FromResult(new CompanyMembership(userUuid, companyUuid, "verified", "OWNER", "active"));
 
         public Task<CompanyMembership> AuthorizeRoleAsync(
             Guid userUuid,

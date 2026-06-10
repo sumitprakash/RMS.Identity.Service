@@ -45,6 +45,14 @@ public sealed class CompanyAccessAuthorizer : ICompanyAccessAuthorizer
                 "User does not have active access to this company.");
         }
 
+        if (!CanAccessCompany(membership.CompanyStatus))
+        {
+            throw new ServiceException(
+                StatusCodes.Status403Forbidden,
+                "COMPANY_ACCESS_DENIED",
+                "Company is not available for user access.");
+        }
+
         return membership;
     }
 
@@ -65,4 +73,8 @@ public sealed class CompanyAccessAuthorizer : ICompanyAccessAuthorizer
 
         return membership;
     }
+
+    private static bool CanAccessCompany(string companyStatus) =>
+        string.Equals(companyStatus, "pending_verification", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(companyStatus, "verified", StringComparison.OrdinalIgnoreCase);
 }

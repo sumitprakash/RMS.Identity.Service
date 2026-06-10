@@ -86,6 +86,9 @@ public sealed class UpdateCompanyUserCommandHandlerTests
         public Task CreateAsync(CreateCompanyUserCommand command, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
+        public Task<int> CountActiveOwnersForUpdateAsync(Guid companyUuid, CancellationToken cancellationToken) =>
+            Task.FromResult(_activeOwnerCount);
+
         public Task UpdateMembershipAsync(UpdateCompanyUserCommand command, CancellationToken cancellationToken)
         {
             UpdatedMembership = command;

@@ -750,10 +750,11 @@ paths:
           $ref: '#/components/responses/Forbidden'
     post:
       summary: Create a user inside a company (admin only)
-      description: Future endpoint. OWNER or ADMIN may create a company user; invitation/reset flow is out of scope for the current registration implementation.
+      description: OWNER or ADMIN may create a pending company user and request email verification. Password setup/reset flow is handled separately.
       security:
         - bearerAuth: []
       parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CompanyUuidPath'
       requestBody:
         required: true
@@ -774,6 +775,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /api/v1/companies/{companyUuid}/users/{userUuid}:
     get:

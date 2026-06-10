@@ -15,7 +15,7 @@ public sealed class CompanyAccessAuthorizerTests
     {
         var userUuid = Guid.NewGuid();
         var companyUuid = Guid.NewGuid();
-        var membership = new CompanyMembership(userUuid, companyUuid, "OWNER", "active");
+        var membership = new CompanyMembership(userUuid, companyUuid, "verified", "OWNER", "active");
         var authorizer = new CompanyAccessAuthorizer(
             new StubCompanyMembershipReadRepository(membership),
             new StubUserAccountReadRepository(CreateUser(userUuid)));
@@ -45,7 +45,7 @@ public sealed class CompanyAccessAuthorizerTests
     {
         var userUuid = Guid.NewGuid();
         var companyUuid = Guid.NewGuid();
-        var membership = new CompanyMembership(userUuid, companyUuid, "OWNER", "active");
+        var membership = new CompanyMembership(userUuid, companyUuid, "verified", "OWNER", "active");
         var authorizer = new CompanyAccessAuthorizer(
             new StubCompanyMembershipReadRepository(membership),
             new StubUserAccountReadRepository(CreateUser(userUuid, isActive: false)));
@@ -62,7 +62,7 @@ public sealed class CompanyAccessAuthorizerTests
     {
         var userUuid = Guid.NewGuid();
         var companyUuid = Guid.NewGuid();
-        var membership = new CompanyMembership(userUuid, companyUuid, "MEMBER", "active");
+        var membership = new CompanyMembership(userUuid, companyUuid, "verified", "MEMBER", "active");
         var authorizer = new CompanyAccessAuthorizer(
             new StubCompanyMembershipReadRepository(membership),
             new StubUserAccountReadRepository(CreateUser(userUuid)));
@@ -72,6 +72,25 @@ public sealed class CompanyAccessAuthorizerTests
 
         Assert.Equal(StatusCodes.Status403Forbidden, exception.StatusCode);
         Assert.Equal("COMPANY_ROLE_REQUIRED", exception.Code);
+    }
+
+    [Theory]
+    [InlineData("rejected")]
+    [InlineData("suspended")]
+    public async Task AuthorizeMembershipAsync_WithUnavailableCompanyStatus_ThrowsForbidden(string companyStatus)
+    {
+        var userUuid = Guid.NewGuid();
+        var companyUuid = Guid.NewGuid();
+        var membership = new CompanyMembership(userUuid, companyUuid, companyStatus, "OWNER", "active");
+        var authorizer = new CompanyAccessAuthorizer(
+            new StubCompanyMembershipReadRepository(membership),
+            new StubUserAccountReadRepository(CreateUser(userUuid)));
+
+        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+            authorizer.AuthorizeMembershipAsync(userUuid, companyUuid, CancellationToken.None));
+
+        Assert.Equal(StatusCodes.Status403Forbidden, exception.StatusCode);
+        Assert.Equal("COMPANY_ACCESS_DENIED", exception.Code);
     }
 
     private static UserAccount CreateUser(Guid userUuid, bool isActive = true) =>
