@@ -75,7 +75,7 @@ public sealed class IdempotencyService : IIdempotencyService
                 await _idempotencyWriteRepository.StoreResponseAsync(
                     idempotencyRequest.Key,
                     response.StatusCode,
-                    string.IsNullOrWhiteSpace(response.Body) ? "null" : response.Body,
+                    ToStoredResponseBody(response),
                     cancellationToken);
 
                 return response;
@@ -111,7 +111,10 @@ public sealed class IdempotencyService : IIdempotencyService
             throw InProgress();
         }
 
-        return new IdempotencyResponse(record.ResponseCode.Value, "application/json", record.ResponseBody);
+        var responseCode = record.ResponseCode.Value;
+        return ResponseMustNotIncludeBody(responseCode)
+            ? new IdempotencyResponse(responseCode, null, string.Empty)
+            : new IdempotencyResponse(responseCode, "application/json", record.ResponseBody);
     }
 
     private static async Task<IdempotencyResponse> CaptureResponseAsync(HttpContext context, RequestDelegate next, CancellationToken cancellationToken)
@@ -151,8 +154,22 @@ public sealed class IdempotencyService : IIdempotencyService
             response.ContentType = idempotencyResponse.ContentType;
         }
 
-        await response.WriteAsync(idempotencyResponse.Body, cancellationToken);
+        if (!ResponseMustNotIncludeBody(idempotencyResponse.StatusCode)
+            && !string.IsNullOrEmpty(idempotencyResponse.Body))
+        {
+            await response.WriteAsync(idempotencyResponse.Body, cancellationToken);
+        }
     }
+
+    private static string ToStoredResponseBody(IdempotencyResponse response) =>
+        string.IsNullOrWhiteSpace(response.Body) || ResponseMustNotIncludeBody(response.StatusCode)
+            ? "null"
+            : response.Body;
+
+    private static bool ResponseMustNotIncludeBody(int statusCode) =>
+        statusCode is StatusCodes.Status204NoContent
+            or StatusCodes.Status205ResetContent
+            or StatusCodes.Status304NotModified;
 
     private static ServiceException Conflict(string message) =>
         new((int)HttpStatusCode.Conflict, "IDEMPOTENCY_KEY_REUSED", message);
