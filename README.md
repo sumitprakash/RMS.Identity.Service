@@ -499,11 +499,12 @@ Currently out of scope for this service:
 
 ## Current Validation Baseline
 
-At the time this README was written, the following passed on the current codebase:
+During this documentation update, the following passed on the current codebase:
 
 ```text
 dotnet build src\RMS.Identity.Service.sln -v minimal
-dotnet test src\RMS.Identity.Service.Tests\RMS.Identity.Service.Tests.csproj -v minimal
 ```
 
-The full test run used an isolated MySQL database with the canonical schema and reported `90/90` passing tests.
+A full test run with `dotnet test src\RMS.Identity.Service.sln -v minimal` compiled the solution and ran the test assembly, but the configured local MySQL database was not on the canonical company schema. The result was `77/90` passing, with all 13 failures stopped by `TestDatabaseWebApplicationFactory.EnsureCompanySchemaAsync` before exercising company endpoint behavior.
+
+Re-run the full suite against an isolated database initialized from `reference/db/sql_schema.sql` before treating DB-backed endpoint tests as validated.
