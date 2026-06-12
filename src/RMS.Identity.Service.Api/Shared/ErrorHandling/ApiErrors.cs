@@ -1,4 +1,4 @@
-using RMS.Identity.Service.Domain.Shared.Errors;
+using RMS.Identity.Service.Application.Shared.Errors;
 
 namespace RMS.Identity.Service.Api.Shared.ErrorHandling;
 

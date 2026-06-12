@@ -1,4 +1,4 @@
-namespace RMS.Identity.Service.Domain.Shared.Errors;
+namespace RMS.Identity.Service.Application.Shared.Errors;
 
 public readonly record struct ServiceErrorCode
 {

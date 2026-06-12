@@ -1,6 +1,5 @@
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
-using RMS.Identity.Service.Domain.Shared.Errors;
 
 namespace RMS.Identity.Service.Infrastructure.Data;
 
