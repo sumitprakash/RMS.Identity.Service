@@ -1,4 +1,4 @@
-using RMS.Identity.Service.Infrastructure.Cqrs;
+using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 
 namespace RMS.Identity.Service.Domain.Contracts.CompanyUsers;
 

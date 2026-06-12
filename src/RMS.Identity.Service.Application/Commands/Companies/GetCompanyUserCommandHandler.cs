@@ -2,7 +2,7 @@ using System.Net;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.CompanyUsers;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.CompanyUsers;
-using RMS.Identity.Service.Infrastructure.Cqrs;
+using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 
 namespace RMS.Identity.Service.Application.Commands.Companies;
 

@@ -1,5 +1,6 @@
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
+using RMS.Identity.Service.Domain.Shared.Errors;
 
 namespace RMS.Identity.Service.Infrastructure.Data;
 
@@ -10,6 +11,6 @@ public sealed class DatabaseTransactionAccessor : IDatabaseTransactionAccessor
     public IDatabaseTransaction GetCurrent()
     {
         return Current
-            ?? throw new ServiceException(500, "DATABASE_TRANSACTION_MISSING", "Database transaction is not available.");
+            ?? throw new ServiceException(ServiceStatusErrorCodes.InternalServerError, ServiceErrors.General.DatabaseTransactionMissing);
     }
 }

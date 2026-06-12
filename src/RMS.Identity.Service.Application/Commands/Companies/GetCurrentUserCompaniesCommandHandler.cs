@@ -3,7 +3,7 @@ using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.Companies;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Companies;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
-using RMS.Identity.Service.Infrastructure.Cqrs;
+using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 
 namespace RMS.Identity.Service.Application.Commands.Companies;
 

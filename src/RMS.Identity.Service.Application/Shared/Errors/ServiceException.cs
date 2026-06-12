@@ -1,18 +1,31 @@
+using RMS.Identity.Service.Domain.Shared.Errors;
+
 namespace RMS.Identity.Service.Application.Shared.Errors;
 
-public sealed class ServiceException : Exception
+public abstract class ServiceException : Exception
 {
-    public ServiceException(int statusCode, string code, string message, object? details = null)
-        : base(message)
-    {
-        StatusCode = statusCode;
-        Code = code;
-        Details = details;
-    }
+    public ServiceStatusErrorCodes StatusCode { get; }
 
-    public int StatusCode { get; }
-
-    public string Code { get; }
+    public ServiceError? Error { get; }
 
     public object? Details { get; }
+    
+    public ServiceException(ServiceStatusErrorCodes statusCode, ServiceError error, object? details): base(error.Message)
+    {
+        this.StatusCode = statusCode;
+        this.Error = error;
+        this.Details = details;
+    }
+
+    public ServiceException(ServiceStatusErrorCodes statusCode, string message, object? details) : base(message)
+    {
+        this.StatusCode = statusCode;
+        this.Error = new ServiceError(null, message);
+        this.Details = details;
+    }
+
+    public string ToErrorResponseCode()
+    {
+        return $"{StatusCode}-{Error?.ServiceErrorMessage}";
+    }
 }

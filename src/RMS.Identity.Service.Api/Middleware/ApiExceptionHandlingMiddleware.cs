@@ -1,9 +1,9 @@
-using System.Net;
-using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Api.Shared.ErrorHandling;
+using RMS.Identity.Service.Application.Shared.Errors;
+using RMS.Identity.Service.Domain.Shared.Errors;
+using System.Text.Json;
 
 namespace RMS.Identity.Service.Api.Middleware;
 
@@ -31,7 +31,7 @@ public sealed class ApiExceptionHandlingMiddleware
         }
         catch (ServiceException exception)
         {
-            context.Response.StatusCode = exception.StatusCode;
+            context.Response.StatusCode = (int)exception.StatusCode;
             context.Response.ContentType = "application/json";
 
             var response = ApiErrorResponse.Create(exception.Code, exception.Message, exception.Details);
@@ -41,10 +41,14 @@ public sealed class ApiExceptionHandlingMiddleware
         {
             _logger.LogError(exception, "Unhandled exception while processing request.");
 
-            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            var internalError = ServiceErrors.General.UnhandledException;
+
+            context.Response.StatusCode = (int)ServiceStatusErrorCodes.InternalServerError;
             context.Response.ContentType = "application/json";
 
-            var response = ApiErrorResponse.Create("INTERNAL_SERVER_ERROR", "An unexpected error occurred.");
+            var response = ApiErrorResponse.Create(
+                internalError.ToResponseCode((int)ServiceStatusErrorCodes.InternalServerError),
+                internalError.Message);
             await context.Response.WriteAsync(JsonSerializer.Serialize(response, _jsonSerializerOptions));
         }
     }

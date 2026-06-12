@@ -4,7 +4,7 @@ using RMS.Identity.Service.Domain.Contracts.Refresh;
 using RMS.Identity.Service.Domain.Entities.Auth;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Auth;
 using RMS.Identity.Service.Domain.Interfaces.Security;
-using RMS.Identity.Service.Infrastructure.Cqrs;
+using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 
 namespace RMS.Identity.Service.Application.Commands.Refresh;
 

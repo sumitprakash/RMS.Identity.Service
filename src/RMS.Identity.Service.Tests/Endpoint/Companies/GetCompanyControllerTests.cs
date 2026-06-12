@@ -5,7 +5,7 @@ using RMS.Identity.Service.Api.Shared.Auth;
 using RMS.Identity.Service.Domain.Contracts.Companies;
 using RMS.Identity.Service.Domain.Entities.Companies;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
-using RMS.Identity.Service.Infrastructure.Cqrs;
+using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 
 namespace RMS.Identity.Service.Tests.Endpoint.Companies;
 
