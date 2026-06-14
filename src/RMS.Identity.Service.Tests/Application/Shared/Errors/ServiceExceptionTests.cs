@@ -9,7 +9,7 @@ public sealed class ServiceExceptionTests
     {
         var error = new ServiceError(new ServiceErrorCode(7, 3), "Something failed.");
 
-        var exception = new ServiceException(ServiceStatusErrorCodes.Conflict, error);
+        var exception = new ConflictException(error, null);
 
         Assert.Equal(409, exception.StatusCode);
         Assert.Equal("409-7-3", exception.Code);
@@ -23,49 +23,29 @@ public sealed class ServiceExceptionTests
     [Fact]
     public void Constructor_WithStructuredCodeAndMessage_FormatsResponseCode()
     {
-        var exception = new ServiceException(
-            ServiceStatusErrorCodes.InternalServerError,
-            new ServiceErrorCode(1, 2),
-            "Failed to do something.");
+        var error = new ServiceError(new ServiceErrorCode(1, 2), "Failed to do something.");
+        var exception = new InternalServerErrorException(error, null);
 
         Assert.Equal(500, exception.StatusCode);
         Assert.Equal("500-1-2", exception.Code);
         Assert.Equal("Failed to do something.", exception.Message);
         Assert.Equal(ServiceStatusErrorCodes.InternalServerError, exception.ExceptionType);
-        Assert.Null(exception.Error);
+        Assert.Same(error, exception.Error);
         Assert.Equal(new ServiceErrorCode(1, 2), exception.ErrorCode);
         Assert.Equal(new ServiceErrorCode(1, 2), exception.StructuredCode);
     }
 
     [Fact]
-    public void Constructor_WithLegacyCode_KeepsLegacyResponseFields()
+    public void Constructor_WithMessageOnlyError_KeepsMessageAndStatus()
     {
-        var exception = new ServiceException(404, "USER_NOT_FOUND", "User could not be found.");
+        var exception = new ResourceNotFoundException("User could not be found.");
 
         Assert.Equal(404, exception.StatusCode);
-        Assert.Equal("USER_NOT_FOUND", exception.Code);
+        Assert.Equal("404", exception.Code);
         Assert.Equal("User could not be found.", exception.Message);
-        Assert.Null(exception.ExceptionType);
-        Assert.Null(exception.Error);
+        Assert.Equal(ServiceStatusErrorCodes.NotFound, exception.ExceptionType);
+        Assert.NotNull(exception.Error);
         Assert.Null(exception.ErrorCode);
-    }
-
-    [Theory]
-    [InlineData(99)]
-    [InlineData(600)]
-    public void Constructor_WithInvalidStatusCode_Throws(int statusCode)
-    {
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            new ServiceException(statusCode, "ERROR", "Something failed."));
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData(" ")]
-    public void Constructor_WithBlankCode_Throws(string code)
-    {
-        Assert.Throws<ArgumentException>(() =>
-            new ServiceException(500, code, "Something failed."));
     }
 
     [Theory]
@@ -74,7 +54,7 @@ public sealed class ServiceExceptionTests
     public void Constructor_WithBlankMessage_Throws(string message)
     {
         Assert.Throws<ArgumentException>(() =>
-            new ServiceException(500, "ERROR", message));
+            new InternalServerErrorException(message));
     }
 
     [Fact]

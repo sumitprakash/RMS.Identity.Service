@@ -1,4 +1,3 @@
-using System.Net;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.Refresh;
 using RMS.Identity.Service.Domain.Entities.Auth;
@@ -80,5 +79,5 @@ public sealed class RefreshCommandHandler : ICommandHandler<RefreshCommandReques
     }
 
     private static ServiceException InvalidRefreshToken() =>
-        new((int)HttpStatusCode.Unauthorized, "INVALID_REFRESH_TOKEN", "Refresh token is invalid.");
+        new UnauthorizedException("Refresh token is invalid.");
 }

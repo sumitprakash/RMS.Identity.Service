@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.Net;
 using System.Text.RegularExpressions;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
@@ -99,5 +98,5 @@ public sealed class UpdateCompanyCommandHandler : ICommandHandler<UpdateCompanyC
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static ServiceException ValidationError(string message) =>
-        new((int)HttpStatusCode.BadRequest, "VALIDATION_ERROR", message);
+        new BadRequestException(message);
 }

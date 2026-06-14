@@ -27,4 +27,9 @@ public sealed class ServiceError
             ServiceErrorMessage = Message;
         }
     }
+
+    public string ToResponseCode(int statusCode) =>
+        Code.HasValue
+            ? Code.Value.ToResponseCode(statusCode)
+            : statusCode.ToString();
 }

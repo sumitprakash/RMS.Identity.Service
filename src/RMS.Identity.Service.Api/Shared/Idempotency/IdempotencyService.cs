@@ -1,4 +1,3 @@
-using System.Net;
 using System.Text;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.Idempotency;
@@ -172,10 +171,10 @@ public sealed class IdempotencyService : IIdempotencyService
             or StatusCodes.Status304NotModified;
 
     private static ServiceException Conflict(string message) =>
-        new((int)HttpStatusCode.Conflict, "IDEMPOTENCY_KEY_REUSED", message);
+        new ConflictException(message);
 
     private static ServiceException InProgress() =>
-        new((int)HttpStatusCode.Conflict, "IDEMPOTENCY_IN_PROGRESS", "Idempotent request is already in progress.");
+        new ConflictException("Idempotent request is already in progress.");
 
     private sealed record IdempotencyResponse(
         int StatusCode,

@@ -16,7 +16,7 @@ public sealed class ApiExceptionHandlingMiddlewareTests
     public async Task InvokeAsync_WithStructuredServiceException_WritesStructuredErrorResponse()
     {
         var middleware = CreateMiddleware(_ =>
-            throw new ServiceException(ServiceStatusErrorCodes.InternalServerError, ServiceErrors.General.DatabaseTransactionMissing));
+            throw new InternalServerErrorException(ServiceErrors.General.DatabaseTransactionMissing, null));
         var context = CreateHttpContext();
 
         await middleware.InvokeAsync(context);

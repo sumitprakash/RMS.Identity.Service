@@ -35,13 +35,13 @@ public sealed class RegisterCompanyCommandHandler : ICommandHandler<RegisterComp
         var owner = await _userAccountReadRepository.GetByUuidAsync(command.OwnerUserUuid, cancellationToken);
         if (!owner.IsActive || owner.IsDeleted)
         {
-            throw new ServiceException(403, "USER_NOT_ACTIVE", "User is not allowed to register a company.");
+            throw new ForbiddenException("User is not allowed to register a company.");
         }
 
         var normalizedGstin = NormalizeGstin(command.Gstin);
         if (await _companyReadRepository.ExistsByGstinAsync(normalizedGstin, cancellationToken))
         {
-            throw new ServiceException(409, "COMPANY_EXISTS", "Company GSTIN already exists.");
+            throw new ConflictException("Company GSTIN already exists.");
         }
 
         var createCompanyCommand = new CreateCompanyCommand(

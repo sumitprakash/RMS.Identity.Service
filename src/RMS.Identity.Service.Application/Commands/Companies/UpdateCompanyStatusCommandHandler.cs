@@ -1,4 +1,3 @@
-using System.Net;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.Companies;
 using RMS.Identity.Service.Domain.Entities.Companies;
@@ -80,10 +79,7 @@ public sealed class UpdateCompanyStatusCommandHandler : ICommandHandler<UpdateCo
         if (!AllowedTransitions.TryGetValue(currentStatus, out var allowedTargets)
             || !allowedTargets.Contains(targetStatus, StringComparer.Ordinal))
         {
-            throw new ServiceException(
-                (int)HttpStatusCode.Conflict,
-                "INVALID_COMPANY_STATUS_TRANSITION",
-                $"Company status cannot transition from {currentStatus} to {targetStatus}.");
+            throw new ConflictException($"Company status cannot transition from {currentStatus} to {targetStatus}.");
         }
     }
 
@@ -105,5 +101,5 @@ public sealed class UpdateCompanyStatusCommandHandler : ICommandHandler<UpdateCo
             company.Status);
 
     private static ServiceException ValidationError(string message) =>
-        new((int)HttpStatusCode.BadRequest, "VALIDATION_ERROR", message);
+        new BadRequestException(message);
 }

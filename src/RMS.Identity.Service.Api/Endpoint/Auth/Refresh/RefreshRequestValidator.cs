@@ -13,5 +13,5 @@ public sealed class RefreshRequestValidator
     }
 
     private static ServiceException ValidationError(string message) =>
-        new(StatusCodes.Status400BadRequest, "VALIDATION_ERROR", message);
+        new BadRequestException(message);
 }

@@ -1,4 +1,3 @@
-using System.Net;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.Companies;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Companies;
@@ -27,10 +26,7 @@ public sealed class GetCurrentUserCompaniesCommandHandler : ICommandHandler<GetC
         var user = await _userAccountReadRepository.GetByUuidAsync(command.UserUuid, cancellationToken);
         if (!user.IsActive || user.IsDeleted)
         {
-            throw new ServiceException(
-                (int)HttpStatusCode.Forbidden,
-                "USER_NOT_ACTIVE",
-                "User is not allowed to access companies.");
+            throw new ForbiddenException("User is not allowed to access companies.");
         }
 
         var companies = await _companyMembershipReadRepository.ListByUserUuidAsync(command.UserUuid, cancellationToken);

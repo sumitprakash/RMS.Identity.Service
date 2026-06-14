@@ -6,7 +6,6 @@ using RMS.Identity.Service.Domain.Interfaces.Persistence;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Companies;
 using RMS.Identity.Service.Infrastructure.Data;
 using RMS.Identity.Service.Infrastructure.Persistence.Schema;
-using System.Net;
 
 namespace RMS.Identity.Service.Infrastructure.Persistence.Companies;
 
@@ -104,7 +103,7 @@ public sealed class CompanyMySqlRepository :
         }
         catch (MySqlException exception) when (exception.Number == 1062)
         {
-            throw new ServiceException((int)HttpStatusCode.Conflict, "COMPANY_EXISTS", "Company GSTIN already exists.");
+            throw new ConflictException("Company GSTIN already exists.");
         }
     }
 
@@ -152,7 +151,7 @@ public sealed class CompanyMySqlRepository :
         }
         catch (MySqlException exception) when (exception.Number == 1062)
         {
-            throw new ServiceException((int)HttpStatusCode.Conflict, "COMPANY_EXISTS", "Company GSTIN already exists.");
+            throw new ConflictException("Company GSTIN already exists.");
         }
     }
 
@@ -175,10 +174,7 @@ public sealed class CompanyMySqlRepository :
 
         if (await updateCommand.ExecuteNonQueryAsync(cancellationToken) == 0)
         {
-            throw new ServiceException(
-                (int)HttpStatusCode.NotFound,
-                "COMPANY_NOT_FOUND",
-                "Company could not be found.");
+            throw new ResourceNotFoundException("Company could not be found.");
         }
     }
 
@@ -191,10 +187,7 @@ public sealed class CompanyMySqlRepository :
             WHERE {CompanyTable.Columns.CompanyId} = @CompanyId
             """,
             command => command.Parameters.AddWithValue("@CompanyId", companyId),
-            () => new ServiceException(
-                (int)HttpStatusCode.InternalServerError,
-                "COMPANY_READ_FAILED",
-                "Company could not be loaded."),
+            () => new InternalServerErrorException("Company could not be loaded."),
             cancellationToken);
     }
 
@@ -208,10 +201,7 @@ public sealed class CompanyMySqlRepository :
               AND {CompanyTable.Columns.IsDeleted} = 0
             """,
             command => command.Parameters.AddWithValue("@CompanyUuid", companyUuid.ToString()),
-            () => new ServiceException(
-                (int)HttpStatusCode.NotFound,
-                "COMPANY_NOT_FOUND",
-                "Company could not be found."),
+            () => new ResourceNotFoundException("Company could not be found."),
             cancellationToken);
     }
 

@@ -6,7 +6,6 @@ using RMS.Identity.Service.Domain.Interfaces.Persistence;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.CompanyUsers;
 using RMS.Identity.Service.Infrastructure.Data;
 using RMS.Identity.Service.Infrastructure.Persistence.Schema;
-using System.Net;
 
 namespace RMS.Identity.Service.Infrastructure.Persistence.CompanyUsers;
 
@@ -56,10 +55,7 @@ public sealed class CompanyUserMySqlRepository :
         }
         catch (MySqlException exception) when (exception.Number == 1062)
         {
-            throw new ServiceException(
-                (int)HttpStatusCode.Conflict,
-                "COMPANY_USER_EXISTS",
-                "User already belongs to this company.");
+            throw new ConflictException("User already belongs to this company.");
         }
     }
 
@@ -253,10 +249,7 @@ public sealed class CompanyUserMySqlRepository :
 
         if (await updateCommand.ExecuteNonQueryAsync(cancellationToken) == 0)
         {
-            throw new ServiceException(
-                (int)HttpStatusCode.NotFound,
-                "COMPANY_USER_NOT_FOUND",
-                "Company user could not be found.");
+            throw new ResourceNotFoundException("Company user could not be found.");
         }
     }
 

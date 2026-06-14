@@ -1,4 +1,3 @@
-using System.Net;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.VerifyEmail;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
@@ -49,10 +48,7 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
 
         if (token is null)
         {
-            throw new ServiceException(
-                (int)HttpStatusCode.NotFound,
-                "EMAIL_VERIFICATION_NOT_FOUND",
-                "Email verification token could not be found.");
+            throw new ResourceNotFoundException("Email verification token could not be found.");
         }
 
         if (token.Consumed)
@@ -68,10 +64,7 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
         var user = await _userAccountReadRepository.GetByIdAsync(token.UserId, cancellationToken);
         if (!user.IsActive || user.IsDeleted)
         {
-            throw new ServiceException(
-                (int)HttpStatusCode.Forbidden,
-                "USER_NOT_ACTIVE",
-                "User account is not active.");
+            throw new ForbiddenException("User account is not active.");
         }
 
         var consumed = await _emailVerificationWriteRepository.TryConsumeAsync(
@@ -88,5 +81,5 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
     }
 
     private static ServiceException ValidationError(string message) =>
-        new((int)HttpStatusCode.BadRequest, "VALIDATION_ERROR", message);
+        new BadRequestException(message);
 }

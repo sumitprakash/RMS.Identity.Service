@@ -1,4 +1,3 @@
-using System.Net;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
 using RMS.Identity.Service.Domain.Contracts.Login;
@@ -87,8 +86,8 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommandRequest, L
     }
 
     private static ServiceException InvalidCredentials() =>
-        new((int)HttpStatusCode.Unauthorized, "INVALID_CREDENTIALS", "Username or password is incorrect.");
+        new UnauthorizedException("Username or password is incorrect.");
 
     private static ServiceException Forbidden(string code, string message) =>
-        new((int)HttpStatusCode.Forbidden, code, message);
+        new ForbiddenException(message);
 }
