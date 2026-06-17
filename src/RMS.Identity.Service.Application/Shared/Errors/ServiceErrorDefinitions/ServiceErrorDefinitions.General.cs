@@ -1,6 +1,6 @@
 namespace RMS.Identity.Service.Application.Shared.Errors;
 
-public static partial class ServiceErrors
+public static partial class ServiceErrorDefinitions
 {
     public static class General
     {

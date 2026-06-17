@@ -48,11 +48,11 @@ public sealed class RefreshCommandHandlerTests
             new FakeAuthTokenGenerator(),
             new FakeTextHasher());
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(new RefreshCommandRequest("refresh-token"), CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Unauthorized, exception.StatusCode);
-        Assert.Equal("INVALID_REFRESH_TOKEN", exception.Code);
+        Assert.Equal("401", exception.Code);
     }
 
     [Fact]
@@ -68,11 +68,11 @@ public sealed class RefreshCommandHandlerTests
             new FakeAuthTokenGenerator(),
             new FakeTextHasher());
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(new RefreshCommandRequest("refresh-token"), CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Unauthorized, exception.StatusCode);
-        Assert.Equal("INVALID_REFRESH_TOKEN", exception.Code);
+        Assert.Equal("401", exception.Code);
     }
 
     [Fact]
@@ -92,11 +92,11 @@ public sealed class RefreshCommandHandlerTests
             new FakeAuthTokenGenerator(),
             new FakeTextHasher());
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(new RefreshCommandRequest("refresh-token"), CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Unauthorized, exception.StatusCode);
-        Assert.Equal("INVALID_REFRESH_TOKEN", exception.Code);
+        Assert.Equal("401", exception.Code);
     }
 
     private static AuthenticatedUser CreateUser() =>

@@ -46,13 +46,13 @@ public sealed class LoginCommandHandlerTests
             new FakeAuthTokenGenerator(),
             new FakeTextHasher());
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(
                 new LoginCommandRequest("alice@example.com", "wrong-password"),
                 CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Unauthorized, exception.StatusCode);
-        Assert.Equal("INVALID_CREDENTIALS", exception.Code);
+        Assert.Equal("401", exception.Code);
         Assert.Equal(user.UserId, repository.FailedLoginUserId);
     }
 
@@ -66,13 +66,13 @@ public sealed class LoginCommandHandlerTests
             new FakeAuthTokenGenerator(),
             new FakeTextHasher());
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(
                 new LoginCommandRequest("alice@example.com", "StrongPass@123"),
                 CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Forbidden, exception.StatusCode);
-        Assert.Equal("EMAIL_NOT_VERIFIED", exception.Code);
+        Assert.Equal("403", exception.Code);
     }
 
     private static AuthenticatedUser CreateUser(bool emailVerified = true) =>

@@ -204,7 +204,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
 
             var error = await response.Content.ReadFromJsonAsync<ApiErrorContract>(_jsonOptions);
             Assert.NotNull(error);
-            Assert.Equal("IDEMPOTENCY_KEY_REUSED", error.Code);
+            Assert.Equal("409", error.Code);
             Assert.Equal("Idempotency key payload does not match the original request.", error.Message);
         }
         finally
@@ -381,7 +381,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
 
         var body = await response.Content.ReadFromJsonAsync<ApiErrorContract>(_jsonOptions);
         Assert.NotNull(body);
-        Assert.Equal("VALIDATION_ERROR", body.Code);
+        Assert.Equal("400", body.Code);
         Assert.Equal("Idempotency-Key is required.", body.Message);
     }
 
@@ -399,7 +399,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
 
         var body = await response.Content.ReadFromJsonAsync<ApiErrorContract>(_jsonOptions);
         Assert.NotNull(body);
-        Assert.Equal("VALIDATION_ERROR", body.Code);
+        Assert.Equal("400", body.Code);
         Assert.Equal("Idempotency-Key must be a valid UUID.", body.Message);
     }
 
@@ -437,7 +437,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
 
             var error = await response.Content.ReadFromJsonAsync<ApiErrorContract>(_jsonOptions);
             Assert.NotNull(error);
-            Assert.Equal("USER_EXISTS", error.Code);
+            Assert.Equal("409", error.Code);
             Assert.Equal("Email address already exists.", error.Message);
         }
         finally

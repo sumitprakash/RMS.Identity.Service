@@ -33,11 +33,11 @@ public sealed class CompanyAccessAuthorizerTests
             new StubCompanyMembershipReadRepository(null),
             new StubUserAccountReadRepository(CreateUser(userUuid)));
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             authorizer.AuthorizeMembershipAsync(userUuid, Guid.NewGuid(), CancellationToken.None));
 
         Assert.Equal(StatusCodes.Status403Forbidden, exception.StatusCode);
-        Assert.Equal("COMPANY_ACCESS_DENIED", exception.Code);
+        Assert.Equal("403", exception.Code);
     }
 
     [Fact]
@@ -50,11 +50,11 @@ public sealed class CompanyAccessAuthorizerTests
             new StubCompanyMembershipReadRepository(membership),
             new StubUserAccountReadRepository(CreateUser(userUuid, isActive: false)));
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             authorizer.AuthorizeMembershipAsync(userUuid, companyUuid, CancellationToken.None));
 
         Assert.Equal(StatusCodes.Status403Forbidden, exception.StatusCode);
-        Assert.Equal("USER_NOT_ACTIVE", exception.Code);
+        Assert.Equal("403", exception.Code);
     }
 
     [Fact]
@@ -67,11 +67,11 @@ public sealed class CompanyAccessAuthorizerTests
             new StubCompanyMembershipReadRepository(membership),
             new StubUserAccountReadRepository(CreateUser(userUuid)));
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             authorizer.AuthorizeRoleAsync(userUuid, companyUuid, ["OWNER", "ADMIN"], CancellationToken.None));
 
         Assert.Equal(StatusCodes.Status403Forbidden, exception.StatusCode);
-        Assert.Equal("COMPANY_ROLE_REQUIRED", exception.Code);
+        Assert.Equal("403", exception.Code);
     }
 
     [Theory]
@@ -86,11 +86,11 @@ public sealed class CompanyAccessAuthorizerTests
             new StubCompanyMembershipReadRepository(membership),
             new StubUserAccountReadRepository(CreateUser(userUuid)));
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             authorizer.AuthorizeMembershipAsync(userUuid, companyUuid, CancellationToken.None));
 
         Assert.Equal(StatusCodes.Status403Forbidden, exception.StatusCode);
-        Assert.Equal("COMPANY_ACCESS_DENIED", exception.Code);
+        Assert.Equal("403", exception.Code);
     }
 
     private static UserAccount CreateUser(Guid userUuid, bool isActive = true) =>

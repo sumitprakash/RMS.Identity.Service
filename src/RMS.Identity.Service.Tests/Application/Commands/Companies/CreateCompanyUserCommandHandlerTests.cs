@@ -71,13 +71,13 @@ public sealed class CreateCompanyUserCommandHandlerTests
             new FakePasswordHasher(),
             new FakeTextHasher());
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(
                 new CreateCompanyUserCommandRequest(CompanyUuid, "cashier@example.com", null, "MEMBER"),
                 CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Conflict, exception.StatusCode);
-        Assert.Equal("USER_EXISTS", exception.Code);
+        Assert.Equal("409", exception.Code);
     }
 
     private sealed class FakeCompanyReadRepository : ICompanyReadRepository

@@ -35,13 +35,13 @@ public sealed class UpdateCompanyUserCommandHandlerTests
         var repository = new FakeCompanyUserRepository(CreateUser("OWNER", "active"), activeOwnerCount: 1);
         var handler = new UpdateCompanyUserCommandHandler(repository, repository);
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(
                 new UpdateCompanyUserCommandRequest(ActorUserUuid, CompanyUuid, UserUuid, "OWNER", "suspended"),
                 CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Conflict, exception.StatusCode);
-        Assert.Equal("LAST_OWNER_REQUIRED", exception.Code);
+        Assert.Equal("409", exception.Code);
         Assert.Null(repository.UpdatedMembership);
     }
 

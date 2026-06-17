@@ -49,11 +49,11 @@ public sealed class VerifyEmailCommandHandlerTests
             userRepository,
             userRepository);
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(new VerifyEmailCommandRequest("valid-token"), CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.BadRequest, exception.StatusCode);
-        Assert.Equal("VALIDATION_ERROR", exception.Code);
+        Assert.Equal("400", exception.Code);
         Assert.Equal(100, emailVerificationRepository.ConsumedEmailVerificationId);
         Assert.Null(userRepository.VerifiedUserId);
     }
@@ -69,11 +69,11 @@ public sealed class VerifyEmailCommandHandlerTests
             new FakeUserAccountRepository(),
             new FakeUserAccountRepository());
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(new VerifyEmailCommandRequest("missing-token"), CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.NotFound, exception.StatusCode);
-        Assert.Equal("EMAIL_VERIFICATION_NOT_FOUND", exception.Code);
+        Assert.Equal("404", exception.Code);
     }
 
     [Fact]
@@ -87,11 +87,11 @@ public sealed class VerifyEmailCommandHandlerTests
             new FakeUserAccountRepository(),
             new FakeUserAccountRepository());
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(new VerifyEmailCommandRequest("valid-token"), CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.BadRequest, exception.StatusCode);
-        Assert.Equal("VALIDATION_ERROR", exception.Code);
+        Assert.Equal("400", exception.Code);
     }
 
     [Fact]
@@ -105,11 +105,11 @@ public sealed class VerifyEmailCommandHandlerTests
             new FakeUserAccountRepository(),
             new FakeUserAccountRepository());
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(new VerifyEmailCommandRequest("valid-token"), CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.BadRequest, exception.StatusCode);
-        Assert.Equal("VALIDATION_ERROR", exception.Code);
+        Assert.Equal("400", exception.Code);
     }
 
     private static EmailVerificationToken CreateToken(

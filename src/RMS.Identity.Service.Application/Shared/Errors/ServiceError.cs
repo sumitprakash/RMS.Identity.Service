@@ -6,8 +6,6 @@ public sealed class ServiceError
 
     public string Message { get; }
 
-    public string ServiceErrorMessage {  get; }
-
     public ServiceError(ServiceErrorCode? code, string message)
     {
         if (string.IsNullOrWhiteSpace(message))
@@ -17,19 +15,5 @@ public sealed class ServiceError
 
         Code = code;
         Message = message;
-
-        if (Code.HasValue)
-        {
-            ServiceErrorMessage = $"{Code.Value.ErrorCode}: {Message}";
-        }
-        else
-        {
-            ServiceErrorMessage = Message;
-        }
     }
-
-    public string ToResponseCode(int statusCode) =>
-        Code.HasValue
-            ? Code.Value.ToResponseCode(statusCode)
-            : statusCode.ToString();
 }

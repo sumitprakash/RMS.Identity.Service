@@ -14,10 +14,8 @@ public sealed class ServiceExceptionTests
         Assert.Equal(409, exception.StatusCode);
         Assert.Equal("409-7-3", exception.Code);
         Assert.Equal("Something failed.", exception.Message);
-        Assert.Equal(ServiceStatusErrorCodes.Conflict, exception.ExceptionType);
         Assert.Same(error, exception.Error);
-        Assert.Equal(new ServiceErrorCode(7, 3), exception.ErrorCode);
-        Assert.Equal(new ServiceErrorCode(7, 3), exception.StructuredCode);
+        Assert.Equal(new ServiceErrorCode(7, 3), exception.Error.Code);
     }
 
     [Fact]
@@ -29,10 +27,8 @@ public sealed class ServiceExceptionTests
         Assert.Equal(500, exception.StatusCode);
         Assert.Equal("500-1-2", exception.Code);
         Assert.Equal("Failed to do something.", exception.Message);
-        Assert.Equal(ServiceStatusErrorCodes.InternalServerError, exception.ExceptionType);
         Assert.Same(error, exception.Error);
-        Assert.Equal(new ServiceErrorCode(1, 2), exception.ErrorCode);
-        Assert.Equal(new ServiceErrorCode(1, 2), exception.StructuredCode);
+        Assert.Equal(new ServiceErrorCode(1, 2), exception.Error.Code);
     }
 
     [Fact]
@@ -43,9 +39,8 @@ public sealed class ServiceExceptionTests
         Assert.Equal(404, exception.StatusCode);
         Assert.Equal("404", exception.Code);
         Assert.Equal("User could not be found.", exception.Message);
-        Assert.Equal(ServiceStatusErrorCodes.NotFound, exception.ExceptionType);
         Assert.NotNull(exception.Error);
-        Assert.Null(exception.ErrorCode);
+        Assert.Null(exception.Error.Code);
     }
 
     [Theory]
@@ -58,18 +53,16 @@ public sealed class ServiceExceptionTests
     }
 
     [Fact]
-    public void ToResponseCode_WithDefaultCode_Throws()
+    public void Constructor_WithInvalidGroup_Throws()
     {
-        var code = default(ServiceErrorCode);
-
-        Assert.Throws<InvalidOperationException>(() => code.ToResponseCode((int)ServiceStatusErrorCodes.InternalServerError));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ServiceErrorCode(0, 1));
     }
 
     [Fact]
-    public void ServiceErrors_WithCatalogEntry_FormatsResponseCode()
+    public void ServiceErrorDefinitions_WithCatalogEntry_FormatsResponseCode()
     {
-        var code = ServiceErrors.Users.UserNotFound.ToResponseCode((int)ServiceStatusErrorCodes.NotFound);
+        var exception = new ResourceNotFoundException(ServiceErrorDefinitions.Users.UserNotFound, null);
 
-        Assert.Equal("404-3-1", code);
+        Assert.Equal("404-3-1", exception.Code);
     }
 }

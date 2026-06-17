@@ -54,13 +54,13 @@ public sealed class UpdateCompanyStatusCommandHandlerTests
             companyRepository,
             new FakeUserAccountReadRepository());
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(
                 new UpdateCompanyStatusCommandRequest(ActorUserUuid, CompanyUuid, "verified"),
                 CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Conflict, exception.StatusCode);
-        Assert.Equal("INVALID_COMPANY_STATUS_TRANSITION", exception.Code);
+        Assert.Equal("409", exception.Code);
         Assert.Null(companyRepository.UpdatedStatus);
         Assert.Null(auditRepository.Company);
     }

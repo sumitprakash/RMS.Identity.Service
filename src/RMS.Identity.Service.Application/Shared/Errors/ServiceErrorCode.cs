@@ -25,19 +25,4 @@ public readonly record struct ServiceErrorCode
 
         ErrorCode = $"{Group}-{Number}";
     }
-
-    public string ToResponseCode(int statusCode)
-    {
-        if (Group <= 0 || Number <= 0)
-        {
-            throw new InvalidOperationException("Service error code is not initialized.");
-        }
-
-        if (statusCode is < 100 or > 599)
-        {
-            throw new ArgumentOutOfRangeException(nameof(statusCode), "HTTP status code must be between 100 and 599.");
-        }
-
-        return $"{statusCode}-{ErrorCode}";
-    }
 }

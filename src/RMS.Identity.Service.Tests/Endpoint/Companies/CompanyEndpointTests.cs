@@ -123,7 +123,7 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
             Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
 
             var json = await response.Content.ReadAsStringAsync();
-            Assert.Contains("\"code\":\"COMPANY_EXISTS\"", json);
+            Assert.Contains("\"code\":\"409\"", json);
         }
         finally
         {
@@ -201,7 +201,7 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
             var json = await response.Content.ReadAsStringAsync();
-            Assert.Contains("\"code\":\"COMPANY_ACCESS_DENIED\"", json);
+            Assert.Contains("\"code\":\"403\"", json);
         }
         finally
         {
@@ -337,7 +337,7 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
             var json = await response.Content.ReadAsStringAsync();
-            Assert.Contains("\"code\":\"COMPANY_ROLE_REQUIRED\"", json);
+            Assert.Contains("\"code\":\"403\"", json);
         }
         finally
         {

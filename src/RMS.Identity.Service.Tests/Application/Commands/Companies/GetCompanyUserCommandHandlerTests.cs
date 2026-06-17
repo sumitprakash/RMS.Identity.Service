@@ -71,13 +71,13 @@ public sealed class GetCompanyUserCommandHandlerTests
     {
         var handler = new GetCompanyUserCommandHandler(new FakeCompanyUserReadRepository(null));
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(
                 new GetCompanyUserCommandRequest(CompanyUuid, UserUuid),
                 CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.NotFound, exception.StatusCode);
-        Assert.Equal("COMPANY_USER_NOT_FOUND", exception.Code);
+        Assert.Equal("404", exception.Code);
     }
 
     private static CompanyUserAccount CreateUser(

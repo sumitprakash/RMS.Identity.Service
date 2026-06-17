@@ -1,5 +1,3 @@
-using RMS.Identity.Service.Application.Shared.Errors;
-
 namespace RMS.Identity.Service.Application.Shared.Errors
 {
     public class ForbiddenException : ServiceException
