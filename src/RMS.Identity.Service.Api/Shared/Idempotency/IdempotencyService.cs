@@ -171,10 +171,10 @@ public sealed class IdempotencyService : IIdempotencyService
             or StatusCodes.Status304NotModified;
 
     private static ServiceException Conflict(string message) =>
-        new ConflictException(message);
+        new ApplicationServiceException(ServiceStatusErrorCodes.Conflict, message);
 
     private static ServiceException InProgress() =>
-        new ConflictException("Idempotent request is already in progress.");
+        new ApplicationServiceException(ServiceStatusErrorCodes.Conflict, "Idempotent request is already in progress.");
 
     private sealed record IdempotencyResponse(
         int StatusCode,

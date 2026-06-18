@@ -10,18 +10,16 @@ public abstract class ServiceException : Exception
 
     public string Code => GetErrorCode();
 
-    public ServiceException(ServiceStatusErrorCodes statusCode, ServiceError error, object? details = null): base(error.Message)
+    protected ServiceException(ServiceError error, object? details = null): base(error.Message)
     {
-        StatusCode = (int)statusCode;
+        StatusCode = (int)error.StatusCode;
         Error = error;
         Details = details;
     }
 
-    public ServiceException(ServiceStatusErrorCodes statusCode, string message, object? details = null) : base(message)
+    protected ServiceException(ServiceStatusErrorCodes statusCode, string message, object? details = null)
+        : this(new ServiceError(statusCode, null, message), details)
     {
-        StatusCode = (int)statusCode;
-        Error = new ServiceError(null, message);
-        Details = details;
     }
 
     private string GetErrorCode()

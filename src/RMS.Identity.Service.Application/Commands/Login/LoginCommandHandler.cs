@@ -86,8 +86,8 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommandRequest, L
     }
 
     private static ServiceException InvalidCredentials() =>
-        new UnauthorizedException(ServiceErrorDefinitions.Auth.InvalidCredentials);
+        new ApplicationServiceException(ServiceErrorDefinitions.Auth.InvalidCredentials);
 
     private static ServiceException Forbidden(ServiceError error) =>
-        new ForbiddenException(error);
+        new ApplicationServiceException(error);
 }

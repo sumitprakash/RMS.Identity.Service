@@ -79,7 +79,7 @@ public sealed class UpdateCompanyStatusCommandHandler : ICommandHandler<UpdateCo
         if (!AllowedTransitions.TryGetValue(currentStatus, out var allowedTargets)
             || !allowedTargets.Contains(targetStatus, StringComparer.Ordinal))
         {
-            throw new ConflictException(ServiceErrorDefinitions.Companies.InvalidCompanyStatusTransition);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Companies.InvalidCompanyStatusTransition);
         }
     }
 
@@ -101,5 +101,5 @@ public sealed class UpdateCompanyStatusCommandHandler : ICommandHandler<UpdateCo
             company.Status);
 
     private static ServiceException ValidationError(string message) =>
-        new BadRequestException(message);
+        new ApplicationServiceException(ServiceStatusErrorCodes.BadRequest, message);
 }

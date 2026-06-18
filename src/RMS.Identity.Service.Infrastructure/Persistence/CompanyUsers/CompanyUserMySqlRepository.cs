@@ -55,7 +55,7 @@ public sealed class CompanyUserMySqlRepository :
         }
         catch (MySqlException exception) when (exception.Number == 1062)
         {
-            throw new ConflictException("User already belongs to this company.");
+            throw new ApplicationServiceException(ServiceStatusErrorCodes.Conflict, "User already belongs to this company.");
         }
     }
 
@@ -249,7 +249,7 @@ public sealed class CompanyUserMySqlRepository :
 
         if (await updateCommand.ExecuteNonQueryAsync(cancellationToken) == 0)
         {
-            throw new ResourceNotFoundException(ServiceErrorDefinitions.CompanyUsers.CompanyUserNotFound);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.CompanyUsers.CompanyUserNotFound);
         }
     }
 

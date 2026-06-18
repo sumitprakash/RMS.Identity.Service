@@ -7,9 +7,9 @@ public sealed class ServiceExceptionTests
     [Fact]
     public void Constructor_WithStructuredError_FormatsResponseCode()
     {
-        var error = new ServiceError(new ServiceErrorCode(7, 3), "Something failed.");
+        var error = new ServiceError(ServiceStatusErrorCodes.Conflict, new ServiceErrorCode(7, 3), "Something failed.");
 
-        var exception = new ConflictException(error);
+        var exception = new ApplicationServiceException(error);
 
         Assert.Equal(409, exception.StatusCode);
         Assert.Equal("409-7-3", exception.Code);
@@ -21,8 +21,8 @@ public sealed class ServiceExceptionTests
     [Fact]
     public void Constructor_WithStructuredCodeAndMessage_FormatsResponseCode()
     {
-        var error = new ServiceError(new ServiceErrorCode(1, 2), "Failed to do something.");
-        var exception = new InternalServerErrorException(error);
+        var error = new ServiceError(ServiceStatusErrorCodes.InternalServerError, new ServiceErrorCode(1, 2), "Failed to do something.");
+        var exception = new ApplicationServiceException(error);
 
         Assert.Equal(500, exception.StatusCode);
         Assert.Equal("500-1-2", exception.Code);
@@ -34,7 +34,7 @@ public sealed class ServiceExceptionTests
     [Fact]
     public void Constructor_WithMessageOnlyError_KeepsMessageAndStatus()
     {
-        var exception = new ResourceNotFoundException("User could not be found.");
+        var exception = new ApplicationServiceException(ServiceStatusErrorCodes.NotFound, "User could not be found.");
 
         Assert.Equal(404, exception.StatusCode);
         Assert.Equal("404", exception.Code);
@@ -49,7 +49,7 @@ public sealed class ServiceExceptionTests
     public void Constructor_WithBlankMessage_Throws(string message)
     {
         Assert.Throws<ArgumentException>(() =>
-            new InternalServerErrorException(message));
+            new ApplicationServiceException(ServiceStatusErrorCodes.InternalServerError, message));
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public sealed class ServiceExceptionTests
     [Fact]
     public void ServiceErrorDefinitions_WithCatalogEntry_FormatsResponseCode()
     {
-        var exception = new ResourceNotFoundException(ServiceErrorDefinitions.Users.UserNotFound);
+        var exception = new ApplicationServiceException(ServiceErrorDefinitions.Users.UserNotFound);
 
         Assert.Equal("404-3-1", exception.Code);
     }

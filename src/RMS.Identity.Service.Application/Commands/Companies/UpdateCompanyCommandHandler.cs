@@ -98,5 +98,5 @@ public sealed class UpdateCompanyCommandHandler : ICommandHandler<UpdateCompanyC
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static ServiceException ValidationError(string message) =>
-        new BadRequestException(message);
+        new ApplicationServiceException(ServiceStatusErrorCodes.BadRequest, message);
 }

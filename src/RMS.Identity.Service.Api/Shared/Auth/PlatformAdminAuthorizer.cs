@@ -26,12 +26,12 @@ public sealed class PlatformAdminAuthorizer : IPlatformAdminAuthorizer
         var user = await _userAccountReadRepository.GetByUuidAsync(userUuid, cancellationToken);
         if (!user.IsActive || user.IsDeleted)
         {
-            throw new ForbiddenException(ServiceErrorDefinitions.Auth.UserNotActive);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Auth.UserNotActive);
         }
 
         if (!await _operationalRoleReadRepository.UserHasAnyRoleAsync(userUuid, PlatformAdminRoles, cancellationToken))
         {
-            throw new ForbiddenException(ServiceErrorDefinitions.Auth.PlatformAdminRequired);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Auth.PlatformAdminRequired);
         }
     }
 }

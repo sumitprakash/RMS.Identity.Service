@@ -31,12 +31,12 @@ internal static class IdempotencyRequestFactory
         var idempotencyKey = request.Headers[IdempotencyHttpHeaders.HeaderName].FirstOrDefault();
         if (string.IsNullOrWhiteSpace(idempotencyKey))
         {
-            throw new BadRequestException("Idempotency-Key is required.");
+            throw new ApplicationServiceException(ServiceStatusErrorCodes.BadRequest, "Idempotency-Key is required.");
         }
 
         if (!Guid.TryParse(idempotencyKey, out var parsedIdempotencyKey) || parsedIdempotencyKey == Guid.Empty)
         {
-            throw new BadRequestException("Idempotency-Key must be a valid UUID.");
+            throw new ApplicationServiceException(ServiceStatusErrorCodes.BadRequest, "Idempotency-Key must be a valid UUID.");
         }
 
         return parsedIdempotencyKey;

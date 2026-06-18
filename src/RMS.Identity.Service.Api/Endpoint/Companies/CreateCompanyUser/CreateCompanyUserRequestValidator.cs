@@ -32,5 +32,5 @@ public sealed class CreateCompanyUserRequestValidator
     }
 
     private static ServiceException ValidationError(string message) =>
-        new BadRequestException(message);
+        new ApplicationServiceException(ServiceStatusErrorCodes.BadRequest, message);
 }

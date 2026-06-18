@@ -56,14 +56,14 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
         var normalizedUsername = EmailAddressValidator.Normalize(command.Username);
         if (await _userAccountReadRepository.ExistsByUsernameAsync(normalizedUsername, cancellationToken))
         {
-            throw new ConflictException(ServiceErrorDefinitions.Users.UserExists);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Users.UserExists);
         }
 
         var companyRole = NormalizeCompanyRole(command.CompanyRole);
         var company = await _companyReadRepository.GetByUuidAsync(command.CompanyUuid, cancellationToken);
         if (company.IsDeleted)
         {
-            throw new ResourceNotFoundException(ServiceErrorDefinitions.Companies.CompanyNotFound);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Companies.CompanyNotFound);
         }
 
         var userId = await _userAccountWriteRepository.CreateAsync(
@@ -109,7 +109,7 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
         var normalized = companyRole.Trim().ToUpperInvariant();
         if (!AllowedCompanyRoles.Contains(normalized, StringComparer.Ordinal))
         {
-            throw new BadRequestException("Company role must be OWNER, ADMIN, or MEMBER.");
+            throw new ApplicationServiceException(ServiceStatusErrorCodes.BadRequest, "Company role must be OWNER, ADMIN, or MEMBER.");
         }
 
         return normalized;

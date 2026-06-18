@@ -44,5 +44,5 @@ public sealed class SignUpRequestValidator
     }
 
     private static ServiceException ValidationError(string message) =>
-        new BadRequestException(message);
+        new ApplicationServiceException(ServiceStatusErrorCodes.BadRequest, message);
 }

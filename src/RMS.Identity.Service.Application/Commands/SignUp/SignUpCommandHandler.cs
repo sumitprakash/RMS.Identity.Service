@@ -93,7 +93,7 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
                 .Select(part => part!.Trim()));
 
     private static Exception UserAlreadyExists() =>
-        new ConflictException(ServiceErrorDefinitions.Users.UserExists);
+        new ApplicationServiceException(ServiceErrorDefinitions.Users.UserExists);
 
     private static string CreateVerificationToken() =>
         Base64UrlEncode(RandomNumberGenerator.GetBytes(32));

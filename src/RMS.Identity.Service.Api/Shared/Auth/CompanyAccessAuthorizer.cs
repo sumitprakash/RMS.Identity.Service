@@ -26,7 +26,7 @@ public sealed class CompanyAccessAuthorizer : ICompanyAccessAuthorizer
         var user = await _userAccountReadRepository.GetByUuidAsync(userUuid, cancellationToken);
         if (!user.IsActive || user.IsDeleted)
         {
-            throw new ForbiddenException(ServiceErrorDefinitions.Auth.UserNotActive);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Auth.UserNotActive);
         }
 
         var membership = await _companyMembershipReadRepository.GetMembershipAsync(
@@ -36,12 +36,12 @@ public sealed class CompanyAccessAuthorizer : ICompanyAccessAuthorizer
 
         if (membership is null || !string.Equals(membership.MembershipStatus, "active", StringComparison.OrdinalIgnoreCase))
         {
-            throw new ForbiddenException(ServiceErrorDefinitions.Auth.CompanyAccessDenied);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Auth.CompanyAccessDenied);
         }
 
         if (!CanAccessCompany(membership.CompanyStatus))
         {
-            throw new ForbiddenException(ServiceErrorDefinitions.Auth.CompanyAccessDenied);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Auth.CompanyAccessDenied);
         }
 
         return membership;
@@ -56,7 +56,7 @@ public sealed class CompanyAccessAuthorizer : ICompanyAccessAuthorizer
         var membership = await AuthorizeMembershipAsync(userUuid, companyUuid, cancellationToken);
         if (!allowedRoles.Contains(membership.CompanyRole, StringComparer.OrdinalIgnoreCase))
         {
-            throw new ForbiddenException(ServiceErrorDefinitions.Auth.CompanyRoleRequired);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Auth.CompanyRoleRequired);
         }
 
         return membership;

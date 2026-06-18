@@ -54,7 +54,7 @@ public sealed class UpdateCompanyUserCommandHandler : ICommandHandler<UpdateComp
         Guid userUuid,
         CancellationToken cancellationToken) =>
         await _companyUserReadRepository.GetByCompanyAndUserUuidAsync(companyUuid, userUuid, cancellationToken)
-        ?? throw new ResourceNotFoundException(ServiceErrorDefinitions.CompanyUsers.CompanyUserNotFound);
+        ?? throw new ApplicationServiceException(ServiceErrorDefinitions.CompanyUsers.CompanyUserNotFound);
 
     private async Task PreventRemovingLastActiveOwnerAsync(
         Guid companyUuid,
@@ -76,7 +76,7 @@ public sealed class UpdateCompanyUserCommandHandler : ICommandHandler<UpdateComp
 
         if (await _companyUserWriteRepository.CountActiveOwnersForUpdateAsync(companyUuid, cancellationToken) <= 1)
         {
-            throw new ConflictException(ServiceErrorDefinitions.CompanyUsers.LastOwnerRequired);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.CompanyUsers.LastOwnerRequired);
         }
     }
 
@@ -118,5 +118,5 @@ public sealed class UpdateCompanyUserCommandHandler : ICommandHandler<UpdateComp
             user.CreatedAt);
 
     private static ServiceException ValidationError(string message) =>
-        new BadRequestException(message);
+        new ApplicationServiceException(ServiceStatusErrorCodes.BadRequest, message);
 }

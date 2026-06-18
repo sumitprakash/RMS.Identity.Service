@@ -103,7 +103,7 @@ public sealed class CompanyMySqlRepository :
         }
         catch (MySqlException exception) when (exception.Number == 1062)
         {
-            throw new ConflictException(ServiceErrorDefinitions.Companies.CompanyExists);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Companies.CompanyExists);
         }
     }
 
@@ -151,7 +151,7 @@ public sealed class CompanyMySqlRepository :
         }
         catch (MySqlException exception) when (exception.Number == 1062)
         {
-            throw new ConflictException(ServiceErrorDefinitions.Companies.CompanyExists);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Companies.CompanyExists);
         }
     }
 
@@ -174,7 +174,7 @@ public sealed class CompanyMySqlRepository :
 
         if (await updateCommand.ExecuteNonQueryAsync(cancellationToken) == 0)
         {
-            throw new ResourceNotFoundException(ServiceErrorDefinitions.Companies.CompanyNotFound);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Companies.CompanyNotFound);
         }
     }
 
@@ -187,7 +187,7 @@ public sealed class CompanyMySqlRepository :
             WHERE {CompanyTable.Columns.CompanyId} = @CompanyId
             """,
             command => command.Parameters.AddWithValue("@CompanyId", companyId),
-            () => new InternalServerErrorException("Company could not be loaded."),
+            () => new ApplicationServiceException(ServiceStatusErrorCodes.InternalServerError, "Company could not be loaded."),
             cancellationToken);
     }
 
@@ -201,7 +201,7 @@ public sealed class CompanyMySqlRepository :
               AND {CompanyTable.Columns.IsDeleted} = 0
             """,
             command => command.Parameters.AddWithValue("@CompanyUuid", companyUuid.ToString()),
-            () => new ResourceNotFoundException(ServiceErrorDefinitions.Companies.CompanyNotFound),
+            () => new ApplicationServiceException(ServiceErrorDefinitions.Companies.CompanyNotFound),
             cancellationToken);
     }
 

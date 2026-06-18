@@ -48,23 +48,23 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
 
         if (token is null)
         {
-            throw new ResourceNotFoundException(ServiceErrorDefinitions.EmailVerification.EmailVerificationNotFound);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.EmailVerification.EmailVerificationNotFound);
         }
 
         if (token.Consumed)
         {
-            throw new BadRequestException(ServiceErrorDefinitions.EmailVerification.EmailVerificationAlreadyUsed);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.EmailVerification.EmailVerificationAlreadyUsed);
         }
 
         if (token.ExpiresAt <= DateTime.UtcNow)
         {
-            throw new BadRequestException(ServiceErrorDefinitions.EmailVerification.EmailVerificationExpired);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.EmailVerification.EmailVerificationExpired);
         }
 
         var user = await _userAccountReadRepository.GetByIdAsync(token.UserId, cancellationToken);
         if (!user.IsActive || user.IsDeleted)
         {
-            throw new ForbiddenException(ServiceErrorDefinitions.Auth.UserNotActive);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Auth.UserNotActive);
         }
 
         var consumed = await _emailVerificationWriteRepository.TryConsumeAsync(
@@ -72,7 +72,7 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
             cancellationToken);
         if (!consumed)
         {
-            throw new BadRequestException(ServiceErrorDefinitions.EmailVerification.EmailVerificationAlreadyUsed);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.EmailVerification.EmailVerificationAlreadyUsed);
         }
 
         await _userAccountWriteRepository.MarkEmailVerifiedAsync(user.UserId, cancellationToken);
@@ -81,5 +81,5 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
     }
 
     private static ServiceException ValidationError(string message) =>
-        new BadRequestException(message);
+        new ApplicationServiceException(ServiceStatusErrorCodes.BadRequest, message);
 }

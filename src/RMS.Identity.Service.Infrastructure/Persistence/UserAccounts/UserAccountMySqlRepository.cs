@@ -82,7 +82,7 @@ public sealed class UserAccountMySqlRepository :
         }
         catch (MySqlException exception) when (exception.Number == 1062)
         {
-            throw new ConflictException(ServiceErrorDefinitions.Users.UserExists);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Users.UserExists);
         }
     }
 
@@ -130,7 +130,7 @@ public sealed class UserAccountMySqlRepository :
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (!await reader.ReadAsync(cancellationToken))
         {
-            throw new InternalServerErrorException("User account could not be loaded.");
+            throw new ApplicationServiceException(ServiceStatusErrorCodes.InternalServerError, "User account could not be loaded.");
         }
 
         return new UserAccount(
@@ -171,7 +171,7 @@ public sealed class UserAccountMySqlRepository :
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (!await reader.ReadAsync(cancellationToken))
         {
-            throw new ResourceNotFoundException(ServiceErrorDefinitions.Users.UserNotFound);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Users.UserNotFound);
         }
 
         return new UserAccount(
