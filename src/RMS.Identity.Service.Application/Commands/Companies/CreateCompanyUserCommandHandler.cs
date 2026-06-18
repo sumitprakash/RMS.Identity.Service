@@ -56,14 +56,14 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
         var normalizedUsername = EmailAddressValidator.Normalize(command.Username);
         if (await _userAccountReadRepository.ExistsByUsernameAsync(normalizedUsername, cancellationToken))
         {
-            throw new ConflictException("Email address already exists.");
+            throw new ConflictException(ServiceErrorDefinitions.Users.UserExists);
         }
 
         var companyRole = NormalizeCompanyRole(command.CompanyRole);
         var company = await _companyReadRepository.GetByUuidAsync(command.CompanyUuid, cancellationToken);
         if (company.IsDeleted)
         {
-            throw new ResourceNotFoundException("Company could not be found.");
+            throw new ResourceNotFoundException(ServiceErrorDefinitions.Companies.CompanyNotFound);
         }
 
         var userId = await _userAccountWriteRepository.CreateAsync(

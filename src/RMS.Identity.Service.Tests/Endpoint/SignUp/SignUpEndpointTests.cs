@@ -437,7 +437,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
 
             var error = await response.Content.ReadFromJsonAsync<ApiErrorContract>(_jsonOptions);
             Assert.NotNull(error);
-            Assert.Equal("409", error.Code);
+            Assert.Equal("409-3-2", error.Code);
             Assert.Equal("Email address already exists.", error.Message);
         }
         finally

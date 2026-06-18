@@ -6,11 +6,11 @@ namespace RMS.Identity.Service.Application.Shared.Errors
     {
         private const ServiceStatusErrorCodes statusCode = ServiceStatusErrorCodes.Unauthorized;
 
-        public UnauthorizedException(ServiceError error, object? details) : base(statusCode, error, details)
+        public UnauthorizedException(ServiceError error, object? details = null) : base(statusCode, error, details)
         {
         }
 
-        public UnauthorizedException(string message) : this(new ServiceError(null, message), null)
+        public UnauthorizedException(string message) : this(new ServiceError(null, message))
         {
         }
     }

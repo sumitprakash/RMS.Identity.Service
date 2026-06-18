@@ -48,23 +48,23 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
 
         if (token is null)
         {
-            throw new ResourceNotFoundException("Email verification token could not be found.");
+            throw new ResourceNotFoundException(ServiceErrorDefinitions.EmailVerification.EmailVerificationNotFound);
         }
 
         if (token.Consumed)
         {
-            throw ValidationError("Email verification token has already been used.");
+            throw new BadRequestException(ServiceErrorDefinitions.EmailVerification.EmailVerificationAlreadyUsed);
         }
 
         if (token.ExpiresAt <= DateTime.UtcNow)
         {
-            throw ValidationError("Email verification token has expired.");
+            throw new BadRequestException(ServiceErrorDefinitions.EmailVerification.EmailVerificationExpired);
         }
 
         var user = await _userAccountReadRepository.GetByIdAsync(token.UserId, cancellationToken);
         if (!user.IsActive || user.IsDeleted)
         {
-            throw new ForbiddenException("User account is not active.");
+            throw new ForbiddenException(ServiceErrorDefinitions.Auth.UserNotActive);
         }
 
         var consumed = await _emailVerificationWriteRepository.TryConsumeAsync(
@@ -72,7 +72,7 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
             cancellationToken);
         if (!consumed)
         {
-            throw ValidationError("Email verification token has already been used.");
+            throw new BadRequestException(ServiceErrorDefinitions.EmailVerification.EmailVerificationAlreadyUsed);
         }
 
         await _userAccountWriteRepository.MarkEmailVerifiedAsync(user.UserId, cancellationToken);

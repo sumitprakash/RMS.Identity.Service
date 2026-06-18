@@ -41,7 +41,7 @@ public sealed class UpdateCompanyUserCommandHandlerTests
                 CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Conflict, exception.StatusCode);
-        Assert.Equal("409", exception.Code);
+        Assert.Equal("409-5-2", exception.Code);
         Assert.Null(repository.UpdatedMembership);
     }
 

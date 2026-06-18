@@ -26,7 +26,7 @@ public sealed class GetCurrentUserCompaniesCommandHandler : ICommandHandler<GetC
         var user = await _userAccountReadRepository.GetByUuidAsync(command.UserUuid, cancellationToken);
         if (!user.IsActive || user.IsDeleted)
         {
-            throw new ForbiddenException("User is not allowed to access companies.");
+            throw new ForbiddenException(ServiceErrorDefinitions.Auth.UserNotActive);
         }
 
         var companies = await _companyMembershipReadRepository.ListByUserUuidAsync(command.UserUuid, cancellationToken);

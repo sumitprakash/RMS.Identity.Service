@@ -4,11 +4,11 @@ namespace RMS.Identity.Service.Application.Shared.Errors
     {
         private const ServiceStatusErrorCodes statusCode = ServiceStatusErrorCodes.Forbidden;
 
-        public ForbiddenException(ServiceError error, object? details) : base(statusCode, error, details)
+        public ForbiddenException(ServiceError error, object? details = null) : base(statusCode, error, details)
         {
         }
 
-        public ForbiddenException(string message) : base(statusCode, message, null)
+        public ForbiddenException(string message) : base(statusCode, message)
         {
         }
     }

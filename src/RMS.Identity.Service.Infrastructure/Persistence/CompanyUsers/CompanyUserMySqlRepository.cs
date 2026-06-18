@@ -249,7 +249,7 @@ public sealed class CompanyUserMySqlRepository :
 
         if (await updateCommand.ExecuteNonQueryAsync(cancellationToken) == 0)
         {
-            throw new ResourceNotFoundException("Company user could not be found.");
+            throw new ResourceNotFoundException(ServiceErrorDefinitions.CompanyUsers.CompanyUserNotFound);
         }
     }
 

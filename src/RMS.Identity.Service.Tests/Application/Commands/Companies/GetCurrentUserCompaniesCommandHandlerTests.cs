@@ -48,7 +48,7 @@ public sealed class GetCurrentUserCompaniesCommandHandlerTests
                 CancellationToken.None));
 
         Assert.Equal(StatusCodes.Status403Forbidden, exception.StatusCode);
-        Assert.Equal("403", exception.Code);
+        Assert.Equal("403-2-9", exception.Code);
     }
 
     private static UserCompanyMembership CreateMembership() =>

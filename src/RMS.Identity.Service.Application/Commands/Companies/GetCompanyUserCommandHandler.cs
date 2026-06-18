@@ -25,7 +25,7 @@ public sealed class GetCompanyUserCommandHandler : ICommandHandler<GetCompanyUse
 
         if (user is null)
         {
-            throw new ResourceNotFoundException("Company user could not be found.");
+            throw new ResourceNotFoundException(ServiceErrorDefinitions.CompanyUsers.CompanyUserNotFound);
         }
 
         return new GetCompanyUserCommandResponse(

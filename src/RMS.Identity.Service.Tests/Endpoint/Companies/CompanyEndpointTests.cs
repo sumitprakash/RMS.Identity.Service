@@ -123,7 +123,7 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
             Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
 
             var json = await response.Content.ReadAsStringAsync();
-            Assert.Contains("\"code\":\"409\"", json);
+            Assert.Contains("\"code\":\"409-4-2\"", json);
         }
         finally
         {
@@ -201,7 +201,7 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
             var json = await response.Content.ReadAsStringAsync();
-            Assert.Contains("\"code\":\"403\"", json);
+            Assert.Contains("\"code\":\"403-2-7\"", json);
         }
         finally
         {
@@ -229,7 +229,7 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
 
             var json = await response.Content.ReadAsStringAsync();
-            Assert.Contains("\"code\":\"COMPANY_NOT_FOUND\"", json);
+            Assert.Contains("\"code\":\"404-4-1\"", json);
         }
         finally
         {
@@ -337,7 +337,7 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
             var json = await response.Content.ReadAsStringAsync();
-            Assert.Contains("\"code\":\"403\"", json);
+            Assert.Contains("\"code\":\"403-2-8\"", json);
         }
         finally
         {

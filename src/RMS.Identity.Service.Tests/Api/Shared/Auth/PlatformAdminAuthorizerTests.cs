@@ -32,7 +32,7 @@ public sealed class PlatformAdminAuthorizerTests
             authorizer.AuthorizeAsync(UserUuid, CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Forbidden, exception.StatusCode);
-        Assert.Equal("403", exception.Code);
+        Assert.Equal("403-2-6", exception.Code);
     }
 
     private static UserAccount CreateUser(bool isActive = true) =>

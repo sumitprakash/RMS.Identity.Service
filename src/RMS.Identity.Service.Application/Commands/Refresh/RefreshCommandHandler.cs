@@ -79,5 +79,5 @@ public sealed class RefreshCommandHandler : ICommandHandler<RefreshCommandReques
     }
 
     private static ServiceException InvalidRefreshToken() =>
-        new UnauthorizedException("Refresh token is invalid.");
+        new UnauthorizedException(ServiceErrorDefinitions.Auth.InvalidRefreshToken);
 }

@@ -37,7 +37,7 @@ public sealed class CompanyAccessAuthorizerTests
             authorizer.AuthorizeMembershipAsync(userUuid, Guid.NewGuid(), CancellationToken.None));
 
         Assert.Equal(StatusCodes.Status403Forbidden, exception.StatusCode);
-        Assert.Equal("403", exception.Code);
+        Assert.Equal("403-2-7", exception.Code);
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public sealed class CompanyAccessAuthorizerTests
             authorizer.AuthorizeMembershipAsync(userUuid, companyUuid, CancellationToken.None));
 
         Assert.Equal(StatusCodes.Status403Forbidden, exception.StatusCode);
-        Assert.Equal("403", exception.Code);
+        Assert.Equal("403-2-9", exception.Code);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public sealed class CompanyAccessAuthorizerTests
             authorizer.AuthorizeRoleAsync(userUuid, companyUuid, ["OWNER", "ADMIN"], CancellationToken.None));
 
         Assert.Equal(StatusCodes.Status403Forbidden, exception.StatusCode);
-        Assert.Equal("403", exception.Code);
+        Assert.Equal("403-2-8", exception.Code);
     }
 
     [Theory]
@@ -90,7 +90,7 @@ public sealed class CompanyAccessAuthorizerTests
             authorizer.AuthorizeMembershipAsync(userUuid, companyUuid, CancellationToken.None));
 
         Assert.Equal(StatusCodes.Status403Forbidden, exception.StatusCode);
-        Assert.Equal("403", exception.Code);
+        Assert.Equal("403-2-7", exception.Code);
     }
 
     private static UserAccount CreateUser(Guid userUuid, bool isActive = true) =>

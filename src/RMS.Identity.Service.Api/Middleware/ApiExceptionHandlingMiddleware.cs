@@ -47,7 +47,7 @@ public sealed class ApiExceptionHandlingMiddleware
                 throw;
             }
 
-            var internalError = new InternalServerErrorException(ServiceErrorDefinitions.General.UnhandledException, null);
+            var internalError = new InternalServerErrorException(ServiceErrorDefinitions.General.UnhandledException);
             await HandleServiceExceptionAsync(context, internalError);
         }
     }

@@ -103,7 +103,7 @@ public sealed class CompanyMySqlRepository :
         }
         catch (MySqlException exception) when (exception.Number == 1062)
         {
-            throw new ConflictException("Company GSTIN already exists.");
+            throw new ConflictException(ServiceErrorDefinitions.Companies.CompanyExists);
         }
     }
 
@@ -151,7 +151,7 @@ public sealed class CompanyMySqlRepository :
         }
         catch (MySqlException exception) when (exception.Number == 1062)
         {
-            throw new ConflictException("Company GSTIN already exists.");
+            throw new ConflictException(ServiceErrorDefinitions.Companies.CompanyExists);
         }
     }
 
@@ -174,7 +174,7 @@ public sealed class CompanyMySqlRepository :
 
         if (await updateCommand.ExecuteNonQueryAsync(cancellationToken) == 0)
         {
-            throw new ResourceNotFoundException("Company could not be found.");
+            throw new ResourceNotFoundException(ServiceErrorDefinitions.Companies.CompanyNotFound);
         }
     }
 
@@ -201,7 +201,7 @@ public sealed class CompanyMySqlRepository :
               AND {CompanyTable.Columns.IsDeleted} = 0
             """,
             command => command.Parameters.AddWithValue("@CompanyUuid", companyUuid.ToString()),
-            () => new ResourceNotFoundException("Company could not be found."),
+            () => new ResourceNotFoundException(ServiceErrorDefinitions.Companies.CompanyNotFound),
             cancellationToken);
     }
 

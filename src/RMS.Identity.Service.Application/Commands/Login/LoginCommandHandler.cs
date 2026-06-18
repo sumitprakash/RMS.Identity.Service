@@ -70,24 +70,24 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommandRequest, L
     {
         if (user.IsDeleted || !user.IsActive)
         {
-            throw Forbidden("ACCOUNT_INACTIVE", "User account is inactive.");
+            throw Forbidden(ServiceErrorDefinitions.Auth.AccountInactive);
         }
 
         if (user.LockedUntil is not null && user.LockedUntil > DateTime.UtcNow)
         {
-            throw Forbidden("ACCOUNT_LOCKED", "User account is temporarily locked.");
+            throw Forbidden(ServiceErrorDefinitions.Auth.AccountLocked);
         }
 
         if (!user.EmailVerified)
         {
-            throw Forbidden("EMAIL_NOT_VERIFIED", "Email address is not verified.");
+            throw Forbidden(ServiceErrorDefinitions.Auth.EmailNotVerified);
         }
 
     }
 
     private static ServiceException InvalidCredentials() =>
-        new UnauthorizedException("Username or password is incorrect.");
+        new UnauthorizedException(ServiceErrorDefinitions.Auth.InvalidCredentials);
 
-    private static ServiceException Forbidden(string code, string message) =>
-        new ForbiddenException(message);
+    private static ServiceException Forbidden(ServiceError error) =>
+        new ForbiddenException(error);
 }

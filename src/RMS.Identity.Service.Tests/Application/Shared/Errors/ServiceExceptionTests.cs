@@ -9,7 +9,7 @@ public sealed class ServiceExceptionTests
     {
         var error = new ServiceError(new ServiceErrorCode(7, 3), "Something failed.");
 
-        var exception = new ConflictException(error, null);
+        var exception = new ConflictException(error);
 
         Assert.Equal(409, exception.StatusCode);
         Assert.Equal("409-7-3", exception.Code);
@@ -22,7 +22,7 @@ public sealed class ServiceExceptionTests
     public void Constructor_WithStructuredCodeAndMessage_FormatsResponseCode()
     {
         var error = new ServiceError(new ServiceErrorCode(1, 2), "Failed to do something.");
-        var exception = new InternalServerErrorException(error, null);
+        var exception = new InternalServerErrorException(error);
 
         Assert.Equal(500, exception.StatusCode);
         Assert.Equal("500-1-2", exception.Code);
@@ -61,7 +61,7 @@ public sealed class ServiceExceptionTests
     [Fact]
     public void ServiceErrorDefinitions_WithCatalogEntry_FormatsResponseCode()
     {
-        var exception = new ResourceNotFoundException(ServiceErrorDefinitions.Users.UserNotFound, null);
+        var exception = new ResourceNotFoundException(ServiceErrorDefinitions.Users.UserNotFound);
 
         Assert.Equal("404-3-1", exception.Code);
     }

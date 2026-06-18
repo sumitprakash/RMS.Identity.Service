@@ -82,7 +82,7 @@ public sealed class UserAccountMySqlRepository :
         }
         catch (MySqlException exception) when (exception.Number == 1062)
         {
-            throw new ConflictException("Email address already exists.");
+            throw new ConflictException(ServiceErrorDefinitions.Users.UserExists);
         }
     }
 
@@ -171,7 +171,7 @@ public sealed class UserAccountMySqlRepository :
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (!await reader.ReadAsync(cancellationToken))
         {
-            throw new ResourceNotFoundException("User could not be found.");
+            throw new ResourceNotFoundException(ServiceErrorDefinitions.Users.UserNotFound);
         }
 
         return new UserAccount(

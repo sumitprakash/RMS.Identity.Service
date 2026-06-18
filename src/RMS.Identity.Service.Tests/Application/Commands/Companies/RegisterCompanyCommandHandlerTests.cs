@@ -59,7 +59,7 @@ public sealed class RegisterCompanyCommandHandlerTests
             handler.HandleAsync(CreateRequest(), CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Conflict, exception.StatusCode);
-        Assert.Equal("409", exception.Code);
+        Assert.Equal("409-4-2", exception.Code);
         Assert.Null(companyRepository.CreatedCompany);
         Assert.Null(companyUserRepository.CreatedMembership);
     }
@@ -79,7 +79,7 @@ public sealed class RegisterCompanyCommandHandlerTests
             handler.HandleAsync(CreateRequest(), CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Forbidden, exception.StatusCode);
-        Assert.Equal("403", exception.Code);
+        Assert.Equal("403-2-9", exception.Code);
     }
 
     private static RegisterCompanyCommandRequest CreateRequest() =>

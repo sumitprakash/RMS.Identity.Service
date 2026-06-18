@@ -52,7 +52,7 @@ public sealed class RefreshCommandHandlerTests
             handler.HandleAsync(new RefreshCommandRequest("refresh-token"), CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Unauthorized, exception.StatusCode);
-        Assert.Equal("401", exception.Code);
+        Assert.Equal("401-2-2", exception.Code);
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public sealed class RefreshCommandHandlerTests
             handler.HandleAsync(new RefreshCommandRequest("refresh-token"), CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Unauthorized, exception.StatusCode);
-        Assert.Equal("401", exception.Code);
+        Assert.Equal("401-2-2", exception.Code);
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public sealed class RefreshCommandHandlerTests
             handler.HandleAsync(new RefreshCommandRequest("refresh-token"), CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Unauthorized, exception.StatusCode);
-        Assert.Equal("401", exception.Code);
+        Assert.Equal("401-2-2", exception.Code);
     }
 
     private static AuthenticatedUser CreateUser() =>

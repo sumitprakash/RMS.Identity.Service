@@ -60,7 +60,7 @@ public sealed class UpdateCompanyStatusCommandHandlerTests
                 CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Conflict, exception.StatusCode);
-        Assert.Equal("409", exception.Code);
+        Assert.Equal("409-4-3", exception.Code);
         Assert.Null(companyRepository.UpdatedStatus);
         Assert.Null(auditRepository.Company);
     }

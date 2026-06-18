@@ -77,7 +77,7 @@ public sealed class CreateCompanyUserCommandHandlerTests
                 CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Conflict, exception.StatusCode);
-        Assert.Equal("409", exception.Code);
+        Assert.Equal("409-3-2", exception.Code);
     }
 
     private sealed class FakeCompanyReadRepository : ICompanyReadRepository

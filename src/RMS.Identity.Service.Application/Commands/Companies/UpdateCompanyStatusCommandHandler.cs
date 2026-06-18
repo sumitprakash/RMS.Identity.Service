@@ -79,7 +79,7 @@ public sealed class UpdateCompanyStatusCommandHandler : ICommandHandler<UpdateCo
         if (!AllowedTransitions.TryGetValue(currentStatus, out var allowedTargets)
             || !allowedTargets.Contains(targetStatus, StringComparer.Ordinal))
         {
-            throw new ConflictException($"Company status cannot transition from {currentStatus} to {targetStatus}.");
+            throw new ConflictException(ServiceErrorDefinitions.Companies.InvalidCompanyStatusTransition);
         }
     }
 

@@ -77,7 +77,7 @@ public sealed class GetCompanyUserCommandHandlerTests
                 CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.NotFound, exception.StatusCode);
-        Assert.Equal("404", exception.Code);
+        Assert.Equal("404-5-1", exception.Code);
     }
 
     private static CompanyUserAccount CreateUser(

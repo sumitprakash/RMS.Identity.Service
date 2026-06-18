@@ -4,11 +4,11 @@ namespace RMS.Identity.Service.Application.Shared.Errors
     {
         private const ServiceStatusErrorCodes statusCode = ServiceStatusErrorCodes.InternalServerError;
 
-        public InternalServerErrorException(ServiceError error, object? details) : base(statusCode, error, details)
+        public InternalServerErrorException(ServiceError error, object? details = null) : base(statusCode, error, details)
         {
         }
 
-        public InternalServerErrorException(string message) : base(statusCode, message, null)
+        public InternalServerErrorException(string message) : base(statusCode, message)
         {
         }
     }

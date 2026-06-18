@@ -53,7 +53,7 @@ public sealed class VerifyEmailCommandHandlerTests
             handler.HandleAsync(new VerifyEmailCommandRequest("valid-token"), CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.BadRequest, exception.StatusCode);
-        Assert.Equal("400", exception.Code);
+        Assert.Equal("400-6-2", exception.Code);
         Assert.Equal(100, emailVerificationRepository.ConsumedEmailVerificationId);
         Assert.Null(userRepository.VerifiedUserId);
     }
@@ -73,7 +73,7 @@ public sealed class VerifyEmailCommandHandlerTests
             handler.HandleAsync(new VerifyEmailCommandRequest("missing-token"), CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.NotFound, exception.StatusCode);
-        Assert.Equal("404", exception.Code);
+        Assert.Equal("404-6-1", exception.Code);
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public sealed class VerifyEmailCommandHandlerTests
             handler.HandleAsync(new VerifyEmailCommandRequest("valid-token"), CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.BadRequest, exception.StatusCode);
-        Assert.Equal("400", exception.Code);
+        Assert.Equal("400-6-2", exception.Code);
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public sealed class VerifyEmailCommandHandlerTests
             handler.HandleAsync(new VerifyEmailCommandRequest("valid-token"), CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.BadRequest, exception.StatusCode);
-        Assert.Equal("400", exception.Code);
+        Assert.Equal("400-6-3", exception.Code);
     }
 
     private static EmailVerificationToken CreateToken(

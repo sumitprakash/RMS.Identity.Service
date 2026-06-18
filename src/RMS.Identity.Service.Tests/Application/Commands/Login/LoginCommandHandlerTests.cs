@@ -52,7 +52,7 @@ public sealed class LoginCommandHandlerTests
                 CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Unauthorized, exception.StatusCode);
-        Assert.Equal("401", exception.Code);
+        Assert.Equal("401-2-1", exception.Code);
         Assert.Equal(user.UserId, repository.FailedLoginUserId);
     }
 
@@ -72,7 +72,7 @@ public sealed class LoginCommandHandlerTests
                 CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Forbidden, exception.StatusCode);
-        Assert.Equal("403", exception.Code);
+        Assert.Equal("403-2-5", exception.Code);
     }
 
     private static AuthenticatedUser CreateUser(bool emailVerified = true) =>

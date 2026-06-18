@@ -10,6 +10,6 @@ public sealed class DatabaseTransactionAccessor : IDatabaseTransactionAccessor
     public IDatabaseTransaction GetCurrent()
     {
         return Current
-            ?? throw new InternalServerErrorException(ServiceErrorDefinitions.General.DatabaseTransactionMissing, null);
+            ?? throw new InternalServerErrorException(ServiceErrorDefinitions.General.DatabaseTransactionMissing);
     }
 }
