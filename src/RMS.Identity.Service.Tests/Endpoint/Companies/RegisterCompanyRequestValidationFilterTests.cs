@@ -33,6 +33,7 @@ public sealed class RegisterCompanyRequestValidationFilterTests
         var result = Assert.IsType<BadRequestObjectResult>(context.Result);
         var body = Assert.IsType<ApiErrorResponse>(result.Value);
         Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
+        Assert.Equal(ServiceIdentity.Code, body.ServiceCode);
         Assert.Equal("400", body.Code);
         Assert.Equal("GSTIN must be a valid GSTIN.", body.Message);
     }

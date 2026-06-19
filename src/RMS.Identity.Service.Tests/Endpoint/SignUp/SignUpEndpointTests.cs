@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using MySqlConnector;
 using RMS.Identity.Service.Api.Endpoint.SignUp;
+using RMS.Identity.Service.Api.Shared.ErrorHandling;
 
 namespace RMS.Identity.Service.Tests.Endpoint.SignUp;
 
@@ -204,6 +205,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
 
             var error = await response.Content.ReadFromJsonAsync<ApiErrorContract>(_jsonOptions);
             Assert.NotNull(error);
+            Assert.Equal(ServiceIdentity.Code, error.ServiceCode);
             Assert.Equal("409-7-4", error.Code);
             Assert.Equal("Idempotency key payload does not match the original request.", error.Message);
         }
@@ -332,6 +334,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
 
         var body = await response.Content.ReadFromJsonAsync<ApiErrorContract>(_jsonOptions);
         Assert.NotNull(body);
+        Assert.Equal(ServiceIdentity.Code, body.ServiceCode);
         Assert.Equal("400-1-3", body.Code);
         Assert.Equal("Request validation failed.", body.Message);
     }
@@ -381,6 +384,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
 
         var body = await response.Content.ReadFromJsonAsync<ApiErrorContract>(_jsonOptions);
         Assert.NotNull(body);
+        Assert.Equal(ServiceIdentity.Code, body.ServiceCode);
         Assert.Equal("400-7-1", body.Code);
         Assert.Equal("Idempotency-Key is required.", body.Message);
     }
@@ -399,6 +403,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
 
         var body = await response.Content.ReadFromJsonAsync<ApiErrorContract>(_jsonOptions);
         Assert.NotNull(body);
+        Assert.Equal(ServiceIdentity.Code, body.ServiceCode);
         Assert.Equal("400-7-2", body.Code);
         Assert.Equal("Idempotency-Key must be a valid UUID.", body.Message);
     }
@@ -430,13 +435,16 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
 
             var json = await response.Content.ReadAsStringAsync();
+            Assert.Contains("\"serviceCode\"", json);
             Assert.Contains("\"code\"", json);
             Assert.Contains("\"message\"", json);
+            Assert.DoesNotContain("\"ServiceCode\"", json);
             Assert.DoesNotContain("\"Code\"", json);
             Assert.DoesNotContain("\"Message\"", json);
 
             var error = await response.Content.ReadFromJsonAsync<ApiErrorContract>(_jsonOptions);
             Assert.NotNull(error);
+            Assert.Equal(ServiceIdentity.Code, error.ServiceCode);
             Assert.Equal("409-3-2", error.Code);
             Assert.Equal("Email address already exists.", error.Message);
         }
@@ -729,7 +737,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
         int ResponseCode,
         string ResponseBody);
 
-    private sealed record ApiErrorContract(string Code, string Message);
+    private sealed record ApiErrorContract(string ServiceCode, string Code, string Message);
 
     private sealed record VerifyEmailResponseContract(bool Success, string Message);
 

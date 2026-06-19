@@ -23,6 +23,7 @@ public sealed class ApiExceptionHandlingMiddlewareTests
 
         var response = await ReadResponseAsync(context);
         Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);
+        Assert.Equal(ServiceIdentity.Code, response.ServiceCode);
         Assert.Equal("500-1-2", response.Code);
         Assert.Equal("Database transaction is not available.", response.Message);
     }
@@ -37,6 +38,7 @@ public sealed class ApiExceptionHandlingMiddlewareTests
 
         var response = await ReadResponseAsync(context);
         Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);
+        Assert.Equal(ServiceIdentity.Code, response.ServiceCode);
         Assert.Equal("500-1-1", response.Code);
         Assert.Equal("An unexpected error occurred.", response.Message);
     }

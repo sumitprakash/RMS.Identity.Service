@@ -509,12 +509,16 @@ components:
     ErrorResponse:
       type: object
       required:
+        - serviceCode
         - code
         - message
       properties:
+        serviceCode:
+          type: string
+          example: RMS-101
         code:
           type: string
-          example: VALIDATION_ERROR
+          example: 400-1-3
         message:
           type: string
           example: Request validation failed
