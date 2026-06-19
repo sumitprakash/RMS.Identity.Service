@@ -3,12 +3,13 @@ using RMS.Identity.Service.Application.Shared.Errors;
 namespace RMS.Identity.Service.Api.Shared.ErrorHandling;
 
 public sealed record ApiErrorResponse(
+    string ServiceCode,
     string Code,
     string Message,
     object? Details = null)
 {
     public static ApiErrorResponse Create(string code, string message, object? details = null) =>
-        new(code, message, details);
+        new(ServiceIdentity.Code, code, message, details);
 
     public static ApiErrorResponse Create(ServiceError error, object? details = null)
     {
@@ -16,6 +17,6 @@ public sealed record ApiErrorResponse(
             ? $"{(int)error.StatusCode}-{error.Code.Value.ErrorCode}"
             : ((int)error.StatusCode).ToString();
 
-        return new ApiErrorResponse(code, error.Message, details);
+        return new ApiErrorResponse(ServiceIdentity.Code, code, error.Message, details);
     }
 }
