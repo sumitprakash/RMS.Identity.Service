@@ -1,10 +1,9 @@
-using System.Net;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.VerifyEmail;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.VerifyEmail;
 using RMS.Identity.Service.Domain.Interfaces.Security;
-using RMS.Identity.Service.Infrastructure.Cqrs;
+using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 
 namespace RMS.Identity.Service.Application.Commands.VerifyEmail;
 
@@ -49,29 +48,23 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
 
         if (token is null)
         {
-            throw new ServiceException(
-                (int)HttpStatusCode.NotFound,
-                "EMAIL_VERIFICATION_NOT_FOUND",
-                "Email verification token could not be found.");
+            throw new ApplicationServiceException(ServiceErrorDefinitions.EmailVerification.EmailVerificationNotFound);
         }
 
         if (token.Consumed)
         {
-            throw ValidationError("Email verification token has already been used.");
+            throw new ApplicationServiceException(ServiceErrorDefinitions.EmailVerification.EmailVerificationAlreadyUsed);
         }
 
         if (token.ExpiresAt <= DateTime.UtcNow)
         {
-            throw ValidationError("Email verification token has expired.");
+            throw new ApplicationServiceException(ServiceErrorDefinitions.EmailVerification.EmailVerificationExpired);
         }
 
         var user = await _userAccountReadRepository.GetByIdAsync(token.UserId, cancellationToken);
         if (!user.IsActive || user.IsDeleted)
         {
-            throw new ServiceException(
-                (int)HttpStatusCode.Forbidden,
-                "USER_NOT_ACTIVE",
-                "User account is not active.");
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Auth.UserNotActive);
         }
 
         var consumed = await _emailVerificationWriteRepository.TryConsumeAsync(
@@ -79,7 +72,7 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
             cancellationToken);
         if (!consumed)
         {
-            throw ValidationError("Email verification token has already been used.");
+            throw new ApplicationServiceException(ServiceErrorDefinitions.EmailVerification.EmailVerificationAlreadyUsed);
         }
 
         await _userAccountWriteRepository.MarkEmailVerifiedAsync(user.UserId, cancellationToken);
@@ -88,5 +81,5 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
     }
 
     private static ServiceException ValidationError(string message) =>
-        new((int)HttpStatusCode.BadRequest, "VALIDATION_ERROR", message);
+        new ApplicationServiceException(ServiceStatusErrorCodes.BadRequest, message);
 }

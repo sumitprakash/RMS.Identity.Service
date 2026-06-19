@@ -1,4 +1,4 @@
-namespace RMS.Identity.Service.Infrastructure.Cqrs;
+namespace RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 
 public interface ICommandHandler<in TCommand, TResponse>
     where TCommand : ICommand<TResponse>

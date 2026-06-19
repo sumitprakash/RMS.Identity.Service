@@ -1,4 +1,4 @@
-namespace RMS.Identity.Service.Infrastructure.Cqrs;
+namespace RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 
 public interface IQueryHandler<in TQuery, TResponse>
     where TQuery : IQuery<TResponse>

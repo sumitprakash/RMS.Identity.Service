@@ -1,11 +1,10 @@
-using System.Net;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
 using RMS.Identity.Service.Domain.Contracts.Login;
 using RMS.Identity.Service.Domain.Entities.Auth;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Auth;
 using RMS.Identity.Service.Domain.Interfaces.Security;
-using RMS.Identity.Service.Infrastructure.Cqrs;
+using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 
 namespace RMS.Identity.Service.Application.Commands.Login;
 
@@ -71,24 +70,24 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommandRequest, L
     {
         if (user.IsDeleted || !user.IsActive)
         {
-            throw Forbidden("ACCOUNT_INACTIVE", "User account is inactive.");
+            throw Forbidden(ServiceErrorDefinitions.Auth.AccountInactive);
         }
 
         if (user.LockedUntil is not null && user.LockedUntil > DateTime.UtcNow)
         {
-            throw Forbidden("ACCOUNT_LOCKED", "User account is temporarily locked.");
+            throw Forbidden(ServiceErrorDefinitions.Auth.AccountLocked);
         }
 
         if (!user.EmailVerified)
         {
-            throw Forbidden("EMAIL_NOT_VERIFIED", "Email address is not verified.");
+            throw Forbidden(ServiceErrorDefinitions.Auth.EmailNotVerified);
         }
 
     }
 
     private static ServiceException InvalidCredentials() =>
-        new((int)HttpStatusCode.Unauthorized, "INVALID_CREDENTIALS", "Username or password is incorrect.");
+        new ApplicationServiceException(ServiceErrorDefinitions.Auth.InvalidCredentials);
 
-    private static ServiceException Forbidden(string code, string message) =>
-        new((int)HttpStatusCode.Forbidden, code, message);
+    private static ServiceException Forbidden(ServiceError error) =>
+        new ApplicationServiceException(error);
 }

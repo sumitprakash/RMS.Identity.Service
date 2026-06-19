@@ -26,9 +26,12 @@ public sealed class CreateCompanyUserRequestValidationFilter : IActionFilter
         {
             _validator.Validate(request);
         }
-        catch (ServiceException exception)
+        catch (ServiceException exception) when (exception.StatusCode == StatusCodes.Status400BadRequest)
         {
-            context.Result = new BadRequestObjectResult(ApiErrorResponse.Create(exception.Code, exception.Message));
+            context.Result = new BadRequestObjectResult(ApiErrorResponse.Create(
+                exception.Code,
+                exception.Message,
+                exception.Details));
         }
     }
 

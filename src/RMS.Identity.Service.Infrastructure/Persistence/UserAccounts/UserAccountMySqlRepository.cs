@@ -6,7 +6,6 @@ using RMS.Identity.Service.Domain.Interfaces.Persistence;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
 using RMS.Identity.Service.Infrastructure.Data;
 using RMS.Identity.Service.Infrastructure.Persistence.Schema;
-using System.Net;
 
 namespace RMS.Identity.Service.Infrastructure.Persistence.UserAccounts;
 
@@ -83,7 +82,7 @@ public sealed class UserAccountMySqlRepository :
         }
         catch (MySqlException exception) when (exception.Number == 1062)
         {
-            throw new ServiceException((int)HttpStatusCode.Conflict, "USER_EXISTS", "Email address already exists.");
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Users.UserExists);
         }
     }
 
@@ -131,10 +130,7 @@ public sealed class UserAccountMySqlRepository :
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (!await reader.ReadAsync(cancellationToken))
         {
-            throw new ServiceException(
-                (int)HttpStatusCode.InternalServerError,
-                "USER_ACCOUNT_READ_FAILED",
-                "User account could not be loaded.");
+            throw new ApplicationServiceException(ServiceStatusErrorCodes.InternalServerError, "User account could not be loaded.");
         }
 
         return new UserAccount(
@@ -175,10 +171,7 @@ public sealed class UserAccountMySqlRepository :
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (!await reader.ReadAsync(cancellationToken))
         {
-            throw new ServiceException(
-                (int)HttpStatusCode.NotFound,
-                "USER_NOT_FOUND",
-                "User could not be found.");
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Users.UserNotFound);
         }
 
         return new UserAccount(

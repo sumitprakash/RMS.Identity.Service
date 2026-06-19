@@ -29,7 +29,7 @@ public sealed class SignUpRequestValidationFilterTests
         var result = Assert.IsType<BadRequestObjectResult>(context.Result);
         var body = Assert.IsType<ApiErrorResponse>(result.Value);
         Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
-        Assert.Equal("VALIDATION_ERROR", body.Code);
+        Assert.Equal("400", body.Code);
         Assert.Equal("First name is required.", body.Message);
     }
 

@@ -1,9 +1,8 @@
-using System.Net;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.CompanyUsers;
 using RMS.Identity.Service.Domain.Entities.Companies;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.CompanyUsers;
-using RMS.Identity.Service.Infrastructure.Cqrs;
+using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 
 namespace RMS.Identity.Service.Application.Commands.Companies;
 
@@ -55,10 +54,7 @@ public sealed class UpdateCompanyUserCommandHandler : ICommandHandler<UpdateComp
         Guid userUuid,
         CancellationToken cancellationToken) =>
         await _companyUserReadRepository.GetByCompanyAndUserUuidAsync(companyUuid, userUuid, cancellationToken)
-        ?? throw new ServiceException(
-            (int)HttpStatusCode.NotFound,
-            "COMPANY_USER_NOT_FOUND",
-            "Company user could not be found.");
+        ?? throw new ApplicationServiceException(ServiceErrorDefinitions.CompanyUsers.CompanyUserNotFound);
 
     private async Task PreventRemovingLastActiveOwnerAsync(
         Guid companyUuid,
@@ -80,10 +76,7 @@ public sealed class UpdateCompanyUserCommandHandler : ICommandHandler<UpdateComp
 
         if (await _companyUserWriteRepository.CountActiveOwnersForUpdateAsync(companyUuid, cancellationToken) <= 1)
         {
-            throw new ServiceException(
-                (int)HttpStatusCode.Conflict,
-                "LAST_OWNER_REQUIRED",
-                "Company must retain at least one active OWNER.");
+            throw new ApplicationServiceException(ServiceErrorDefinitions.CompanyUsers.LastOwnerRequired);
         }
     }
 
@@ -125,5 +118,5 @@ public sealed class UpdateCompanyUserCommandHandler : ICommandHandler<UpdateComp
             user.CreatedAt);
 
     private static ServiceException ValidationError(string message) =>
-        new((int)HttpStatusCode.BadRequest, "VALIDATION_ERROR", message);
+        new ApplicationServiceException(ServiceStatusErrorCodes.BadRequest, message);
 }

@@ -5,7 +5,7 @@ using RMS.Identity.Service.Domain.Contracts.CompanyUsers;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Companies;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.CompanyUsers;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
-using RMS.Identity.Service.Infrastructure.Cqrs;
+using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 
 namespace RMS.Identity.Service.Application.Commands.Companies;
 
@@ -35,13 +35,13 @@ public sealed class RegisterCompanyCommandHandler : ICommandHandler<RegisterComp
         var owner = await _userAccountReadRepository.GetByUuidAsync(command.OwnerUserUuid, cancellationToken);
         if (!owner.IsActive || owner.IsDeleted)
         {
-            throw new ServiceException(403, "USER_NOT_ACTIVE", "User is not allowed to register a company.");
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Auth.UserNotActive);
         }
 
         var normalizedGstin = NormalizeGstin(command.Gstin);
         if (await _companyReadRepository.ExistsByGstinAsync(normalizedGstin, cancellationToken))
         {
-            throw new ServiceException(409, "COMPANY_EXISTS", "Company GSTIN already exists.");
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Companies.CompanyExists);
         }
 
         var createCompanyCommand = new CreateCompanyCommand(

@@ -26,10 +26,7 @@ public sealed class CompanyAccessAuthorizer : ICompanyAccessAuthorizer
         var user = await _userAccountReadRepository.GetByUuidAsync(userUuid, cancellationToken);
         if (!user.IsActive || user.IsDeleted)
         {
-            throw new ServiceException(
-                StatusCodes.Status403Forbidden,
-                "USER_NOT_ACTIVE",
-                "User is not allowed to access this company.");
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Auth.UserNotActive);
         }
 
         var membership = await _companyMembershipReadRepository.GetMembershipAsync(
@@ -39,18 +36,12 @@ public sealed class CompanyAccessAuthorizer : ICompanyAccessAuthorizer
 
         if (membership is null || !string.Equals(membership.MembershipStatus, "active", StringComparison.OrdinalIgnoreCase))
         {
-            throw new ServiceException(
-                StatusCodes.Status403Forbidden,
-                "COMPANY_ACCESS_DENIED",
-                "User does not have active access to this company.");
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Auth.CompanyAccessDenied);
         }
 
         if (!CanAccessCompany(membership.CompanyStatus))
         {
-            throw new ServiceException(
-                StatusCodes.Status403Forbidden,
-                "COMPANY_ACCESS_DENIED",
-                "Company is not available for user access.");
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Auth.CompanyAccessDenied);
         }
 
         return membership;
@@ -65,10 +56,7 @@ public sealed class CompanyAccessAuthorizer : ICompanyAccessAuthorizer
         var membership = await AuthorizeMembershipAsync(userUuid, companyUuid, cancellationToken);
         if (!allowedRoles.Contains(membership.CompanyRole, StringComparer.OrdinalIgnoreCase))
         {
-            throw new ServiceException(
-                StatusCodes.Status403Forbidden,
-                "COMPANY_ROLE_REQUIRED",
-                "User does not have the required company role.");
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Auth.CompanyRoleRequired);
         }
 
         return membership;

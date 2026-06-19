@@ -55,11 +55,11 @@ public sealed class RegisterCompanyCommandHandlerTests
             companyRepository,
             companyUserRepository);
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(CreateRequest(), CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Conflict, exception.StatusCode);
-        Assert.Equal("COMPANY_EXISTS", exception.Code);
+        Assert.Equal("409-4-2", exception.Code);
         Assert.Null(companyRepository.CreatedCompany);
         Assert.Null(companyUserRepository.CreatedMembership);
     }
@@ -75,11 +75,11 @@ public sealed class RegisterCompanyCommandHandlerTests
             companyRepository,
             new FakeCompanyUserWriteRepository());
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(CreateRequest(), CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Forbidden, exception.StatusCode);
-        Assert.Equal("USER_NOT_ACTIVE", exception.Code);
+        Assert.Equal("403-2-9", exception.Code);
     }
 
     private static RegisterCompanyCommandRequest CreateRequest() =>

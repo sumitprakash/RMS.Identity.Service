@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using RMS.Identity.Service.Api.Shared.Auth;
 using RMS.Identity.Service.Domain.Contracts.CompanyUsers;
-using RMS.Identity.Service.Infrastructure.Cqrs;
+using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 
 namespace RMS.Identity.Service.Api.Endpoint.Companies.UpdateCompanyUser;
 

@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using RMS.Identity.Service.Api.Shared.ErrorHandling;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.Idempotency;
 using RMS.Identity.Service.Domain.Interfaces.Security;
@@ -31,12 +32,12 @@ internal static class IdempotencyRequestFactory
         var idempotencyKey = request.Headers[IdempotencyHttpHeaders.HeaderName].FirstOrDefault();
         if (string.IsNullOrWhiteSpace(idempotencyKey))
         {
-            throw new ServiceException(400, "VALIDATION_ERROR", "Idempotency-Key is required.");
+            throw new ApplicationServiceException(ApiErrors.BadRequest.IdempotencyKeyRequired);
         }
 
         if (!Guid.TryParse(idempotencyKey, out var parsedIdempotencyKey) || parsedIdempotencyKey == Guid.Empty)
         {
-            throw new ServiceException(400, "VALIDATION_ERROR", "Idempotency-Key must be a valid UUID.");
+            throw new ApplicationServiceException(ApiErrors.BadRequest.IdempotencyKeyInvalidUuid);
         }
 
         return parsedIdempotencyKey;

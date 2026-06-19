@@ -1,18 +1,34 @@
 namespace RMS.Identity.Service.Application.Shared.Errors;
 
-public sealed class ServiceException : Exception
+public abstract class ServiceException : Exception
 {
-    public ServiceException(int statusCode, string code, string message, object? details = null)
-        : base(message)
+    public int StatusCode { get; }
+
+    public ServiceError Error { get; }
+
+    public object? Details { get; }
+
+    public string Code => GetErrorCode();
+
+    protected ServiceException(ServiceError error, object? details = null): base(error.Message)
     {
-        StatusCode = statusCode;
-        Code = code;
+        StatusCode = (int)error.StatusCode;
+        Error = error;
         Details = details;
     }
 
-    public int StatusCode { get; }
+    protected ServiceException(ServiceStatusErrorCodes statusCode, string message, object? details = null)
+        : this(new ServiceError(statusCode, null, message), details)
+    {
+    }
 
-    public string Code { get; }
+    private string GetErrorCode()
+    {
+        if (!Error.Code.HasValue)
+        {
+            return StatusCode.ToString();
+        }
 
-    public object? Details { get; }
+        return $"{StatusCode}-{Error.Code.Value.ErrorCode}";
+    }
 }

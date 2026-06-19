@@ -1,4 +1,3 @@
-using System.Net;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
 
@@ -33,5 +32,5 @@ public sealed class CreateCompanyUserRequestValidator
     }
 
     private static ServiceException ValidationError(string message) =>
-        new((int)HttpStatusCode.BadRequest, "VALIDATION_ERROR", message);
+        new ApplicationServiceException(ServiceStatusErrorCodes.BadRequest, message);
 }

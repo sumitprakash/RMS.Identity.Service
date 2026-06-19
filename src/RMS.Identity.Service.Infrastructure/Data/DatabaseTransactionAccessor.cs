@@ -10,6 +10,6 @@ public sealed class DatabaseTransactionAccessor : IDatabaseTransactionAccessor
     public IDatabaseTransaction GetCurrent()
     {
         return Current
-            ?? throw new ServiceException(500, "DATABASE_TRANSACTION_MISSING", "Database transaction is not available.");
+            ?? throw new ApplicationServiceException(ServiceErrorDefinitions.General.DatabaseTransactionMissing);
     }
 }

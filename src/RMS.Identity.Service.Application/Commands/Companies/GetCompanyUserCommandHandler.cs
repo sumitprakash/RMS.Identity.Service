@@ -1,8 +1,7 @@
-using System.Net;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.CompanyUsers;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.CompanyUsers;
-using RMS.Identity.Service.Infrastructure.Cqrs;
+using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 
 namespace RMS.Identity.Service.Application.Commands.Companies;
 
@@ -26,10 +25,7 @@ public sealed class GetCompanyUserCommandHandler : ICommandHandler<GetCompanyUse
 
         if (user is null)
         {
-            throw new ServiceException(
-                (int)HttpStatusCode.NotFound,
-                "COMPANY_USER_NOT_FOUND",
-                "Company user could not be found.");
+            throw new ApplicationServiceException(ServiceErrorDefinitions.CompanyUsers.CompanyUserNotFound);
         }
 
         return new GetCompanyUserCommandResponse(

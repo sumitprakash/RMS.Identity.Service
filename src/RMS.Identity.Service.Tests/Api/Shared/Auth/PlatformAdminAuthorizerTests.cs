@@ -28,11 +28,11 @@ public sealed class PlatformAdminAuthorizerTests
             new FakeOperationalRoleReadRepository(hasRole: false),
             new FakeUserAccountReadRepository(CreateUser()));
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             authorizer.AuthorizeAsync(UserUuid, CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Forbidden, exception.StatusCode);
-        Assert.Equal("PLATFORM_ADMIN_REQUIRED", exception.Code);
+        Assert.Equal("403-2-6", exception.Code);
     }
 
     private static UserAccount CreateUser(bool isActive = true) =>

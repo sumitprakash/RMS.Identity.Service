@@ -1,9 +1,8 @@
-using System.Net;
-using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Api.Shared.ErrorHandling;
+using RMS.Identity.Service.Application.Shared.Errors;
+using System.Text.Json;
 
 namespace RMS.Identity.Service.Api.Middleware;
 
@@ -31,21 +30,40 @@ public sealed class ApiExceptionHandlingMiddleware
         }
         catch (ServiceException exception)
         {
-            context.Response.StatusCode = exception.StatusCode;
-            context.Response.ContentType = "application/json";
+            if (context.Response.HasStarted)
+            {
+                _logger.LogWarning(exception, "Unable to write service error response because the response has already started.");
+                throw;
+            }
 
-            var response = ApiErrorResponse.Create(exception.Code, exception.Message, exception.Details);
-            await context.Response.WriteAsync(JsonSerializer.Serialize(response, _jsonSerializerOptions));
+            await HandleServiceExceptionAsync(context, exception);
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "Unhandled exception while processing request.");
 
-            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            context.Response.ContentType = "application/json";
+            if (context.Response.HasStarted)
+            {
+                throw;
+            }
 
-            var response = ApiErrorResponse.Create("INTERNAL_SERVER_ERROR", "An unexpected error occurred.");
-            await context.Response.WriteAsync(JsonSerializer.Serialize(response, _jsonSerializerOptions));
+            var internalError = new ApplicationServiceException(ServiceErrorDefinitions.General.UnhandledException);
+            await HandleServiceExceptionAsync(context, internalError);
         }
+    }
+
+    private Task HandleServiceExceptionAsync(HttpContext context, ServiceException exception)
+    {
+        var response = ApiErrorResponse.Create(exception.Code, exception.Message, exception.Details);
+
+        return WriteErrorResponseAsync(context, exception.StatusCode, response);
+    }
+
+    private Task WriteErrorResponseAsync(HttpContext context, int statusCode, ApiErrorResponse response)
+    {
+        context.Response.StatusCode = statusCode;
+        context.Response.ContentType = "application/json";
+
+        return context.Response.WriteAsync(JsonSerializer.Serialize(response, _jsonSerializerOptions));
     }
 }

@@ -9,7 +9,7 @@ using RMS.Identity.Service.Domain.Interfaces.Repositories.Outbox;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.VerifyEmail;
 using RMS.Identity.Service.Domain.Interfaces.Security;
-using RMS.Identity.Service.Infrastructure.Cqrs;
+using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 
 namespace RMS.Identity.Service.Application.Commands.SignUp;
 
@@ -93,7 +93,7 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
                 .Select(part => part!.Trim()));
 
     private static Exception UserAlreadyExists() =>
-        new ServiceException(409, "USER_EXISTS", "Email address already exists.");
+        new ApplicationServiceException(ServiceErrorDefinitions.Users.UserExists);
 
     private static string CreateVerificationToken() =>
         Base64UrlEncode(RandomNumberGenerator.GetBytes(32));

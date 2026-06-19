@@ -1,5 +1,5 @@
-using System.Net;
 using System.Text;
+using RMS.Identity.Service.Api.Shared.ErrorHandling;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.Idempotency;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
@@ -98,12 +98,12 @@ public sealed class IdempotencyService : IIdempotencyService
         if (!string.Equals(record.Method, request.Method, StringComparison.OrdinalIgnoreCase)
             || !string.Equals(record.Route, request.Route, StringComparison.Ordinal))
         {
-            throw Conflict("Idempotency key was already used for a different request.");
+            throw Conflict(ApiErrors.Conflict.IdempotencyKeyReusedForDifferentRequest);
         }
 
         if (!string.Equals(record.RequestHash, request.RequestHash, StringComparison.Ordinal))
         {
-            throw Conflict("Idempotency key payload does not match the original request.");
+            throw Conflict(ApiErrors.Conflict.IdempotencyKeyPayloadMismatch);
         }
 
         if (record.ResponseCode is null || string.IsNullOrWhiteSpace(record.ResponseBody))
@@ -171,11 +171,11 @@ public sealed class IdempotencyService : IIdempotencyService
             or StatusCodes.Status205ResetContent
             or StatusCodes.Status304NotModified;
 
-    private static ServiceException Conflict(string message) =>
-        new((int)HttpStatusCode.Conflict, "IDEMPOTENCY_KEY_REUSED", message);
+    private static ServiceException Conflict(ServiceError error) =>
+        new ApplicationServiceException(error);
 
     private static ServiceException InProgress() =>
-        new((int)HttpStatusCode.Conflict, "IDEMPOTENCY_IN_PROGRESS", "Idempotent request is already in progress.");
+        new ApplicationServiceException(ApiErrors.Conflict.IdempotencyRequestInProgress);
 
     private sealed record IdempotencyResponse(
         int StatusCode,

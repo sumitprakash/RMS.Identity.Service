@@ -115,5 +115,5 @@ public sealed class JwtAccessTokenUserResolver : IAccessTokenUserResolver
             .Replace('/', '_');
 
     private static ServiceException Unauthorized(string message) =>
-        new(StatusCodes.Status401Unauthorized, "UNAUTHORIZED", message);
+        new ApplicationServiceException(ServiceStatusErrorCodes.Unauthorized, message);
 }

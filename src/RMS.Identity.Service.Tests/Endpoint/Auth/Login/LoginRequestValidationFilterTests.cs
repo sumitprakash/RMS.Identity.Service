@@ -26,7 +26,7 @@ public sealed class LoginRequestValidationFilterTests
         var result = Assert.IsType<BadRequestObjectResult>(context.Result);
         var body = Assert.IsType<ApiErrorResponse>(result.Value);
         Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
-        Assert.Equal("VALIDATION_ERROR", body.Code);
+        Assert.Equal("400", body.Code);
         Assert.Equal("Username must be a valid email address.", body.Message);
     }
 

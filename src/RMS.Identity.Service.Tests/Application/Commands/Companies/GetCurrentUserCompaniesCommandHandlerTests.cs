@@ -42,13 +42,13 @@ public sealed class GetCurrentUserCompaniesCommandHandlerTests
             new FakeCompanyMembershipReadRepository(new[] { CreateMembership() }),
             new FakeUserAccountReadRepository(CreateUser(isActive: false, isDeleted: false)));
 
-        var exception = await Assert.ThrowsAsync<ServiceException>(() =>
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(
                 new GetCurrentUserCompaniesCommandRequest(UserUuid),
                 CancellationToken.None));
 
         Assert.Equal(StatusCodes.Status403Forbidden, exception.StatusCode);
-        Assert.Equal("USER_NOT_ACTIVE", exception.Code);
+        Assert.Equal("403-2-9", exception.Code);
     }
 
     private static UserCompanyMembership CreateMembership() =>
