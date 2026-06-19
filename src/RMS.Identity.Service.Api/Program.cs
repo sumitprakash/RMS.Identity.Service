@@ -33,8 +33,7 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
                     string.IsNullOrWhiteSpace(error.ErrorMessage) ? "Invalid value." : error.ErrorMessage).ToArray());
 
         return new BadRequestObjectResult(ApiErrorResponse.Create(
-            "VALIDATION_ERROR",
-            "Request validation failed.",
+            ApiErrors.BadRequest.ValidationError,
             details));
     };
 });
