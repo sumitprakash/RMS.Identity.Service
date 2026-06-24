@@ -1,14 +1,16 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using RMS.Identity.Service.Api.Shared.ModelBinding;
 
 namespace RMS.Identity.Service.Api.Endpoint.Companies.CreateCompanyUser;
 
-[ModelBinder(BinderType = typeof(CreateCompanyUserRequestModelBinder))]
+[ModelBinder(BinderType = typeof(ApiRequestModelBinder<CreateCompanyUserRequest>))]
 public sealed class CreateCompanyUserRequest
 {
-    public CreateCompanyUserRequest(CreateCompanyUserRequestBody body)
-    {
-        Body = body;
-    }
+    [FromRoute(Name = "companyUuid")]
+    public Guid CompanyUuid { get; set; }
 
-    public CreateCompanyUserRequestBody Body { get; }
+    [FromBody]
+    [Required]
+    public CreateCompanyUserRequestBody Body { get; set; } = default!;
 }

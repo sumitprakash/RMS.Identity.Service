@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Routing;
 using RMS.Identity.Service.Api.Endpoint.Auth.Login;
 using RMS.Identity.Service.Api.Shared.ErrorHandling;
+using RMS.Identity.Service.Api.Shared.Validation;
 
 namespace RMS.Identity.Service.Tests.Endpoint.Auth.Login;
 
@@ -14,12 +15,15 @@ public sealed class LoginRequestValidationFilterTests
     [Fact]
     public void OnActionExecuting_WithInvalidRequest_ReturnsBadRequest()
     {
-        var filter = new LoginRequestValidationFilter(new LoginRequestValidator());
-        var context = CreateContext(new LoginRequest(new LoginRequestBody
+        var filter = new RequestValidationFilter([new LoginRequestValidator()]);
+        var context = CreateContext(new LoginRequest
         {
-            Username = "not-an-email",
-            Password = "StrongPass@123"
-        }));
+            Body = new LoginRequestBody
+            {
+                Username = "not-an-email",
+                Password = "StrongPass@123"
+            }
+        });
 
         filter.OnActionExecuting(context);
 
@@ -34,12 +38,15 @@ public sealed class LoginRequestValidationFilterTests
     [Fact]
     public void OnActionExecuting_WithValidRequest_AllowsActionToContinue()
     {
-        var filter = new LoginRequestValidationFilter(new LoginRequestValidator());
-        var context = CreateContext(new LoginRequest(new LoginRequestBody
+        var filter = new RequestValidationFilter([new LoginRequestValidator()]);
+        var context = CreateContext(new LoginRequest
         {
-            Username = "alice@example.com",
-            Password = "StrongPass@123"
-        }));
+            Body = new LoginRequestBody
+            {
+                Username = "alice@example.com",
+                Password = "StrongPass@123"
+            }
+        });
 
         filter.OnActionExecuting(context);
 

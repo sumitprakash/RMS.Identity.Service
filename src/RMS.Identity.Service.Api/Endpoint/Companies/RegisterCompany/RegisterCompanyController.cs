@@ -21,7 +21,6 @@ public sealed class RegisterCompanyController : ControllerBase
     }
 
     [HttpPost]
-    [ServiceFilter(typeof(RegisterCompanyRequestValidationFilter))]
     [ProducesResponseType(typeof(RegisterCompanyResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]

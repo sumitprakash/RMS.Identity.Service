@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Routing;
 using RMS.Identity.Service.Api.Endpoint.Companies.RegisterCompany;
 using RMS.Identity.Service.Api.Shared.ErrorHandling;
+using RMS.Identity.Service.Api.Shared.Validation;
 
 namespace RMS.Identity.Service.Tests.Endpoint.Companies;
 
@@ -14,8 +15,11 @@ public sealed class RegisterCompanyRequestValidationFilterTests
     [Fact]
     public void OnActionExecuting_WithValidRequest_AllowsActionToContinue()
     {
-        var filter = new RegisterCompanyRequestValidationFilter(new RegisterCompanyRequestValidator());
-        var context = CreateContext(new RegisterCompanyRequest(CreateValidBody()));
+        var filter = new RequestValidationFilter([new RegisterCompanyRequestValidator()]);
+        var context = CreateContext(new RegisterCompanyRequest
+        {
+            Body = CreateValidBody()
+        });
 
         filter.OnActionExecuting(context);
 
@@ -25,8 +29,11 @@ public sealed class RegisterCompanyRequestValidationFilterTests
     [Fact]
     public void OnActionExecuting_WithInvalidGstin_ReturnsBadRequest()
     {
-        var filter = new RegisterCompanyRequestValidationFilter(new RegisterCompanyRequestValidator());
-        var context = CreateContext(new RegisterCompanyRequest(CreateValidBody("bad-gstin")));
+        var filter = new RequestValidationFilter([new RegisterCompanyRequestValidator()]);
+        var context = CreateContext(new RegisterCompanyRequest
+        {
+            Body = CreateValidBody("bad-gstin")
+        });
 
         filter.OnActionExecuting(context);
 

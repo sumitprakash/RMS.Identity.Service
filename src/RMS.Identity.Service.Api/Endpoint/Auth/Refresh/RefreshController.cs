@@ -16,7 +16,6 @@ public sealed class RefreshController : ControllerBase
     }
 
     [HttpPost]
-    [ServiceFilter(typeof(RefreshRequestValidationFilter))]
     [ProducesResponseType(typeof(RefreshResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]

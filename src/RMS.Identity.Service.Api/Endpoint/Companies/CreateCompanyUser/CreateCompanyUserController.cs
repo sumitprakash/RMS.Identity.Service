@@ -24,26 +24,24 @@ public sealed class CreateCompanyUserController : ControllerBase
     }
 
     [HttpPost]
-    [ServiceFilter(typeof(CreateCompanyUserRequestValidationFilter))]
     [ProducesResponseType(typeof(UserResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(object), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(object), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> PostAsync(
-        Guid companyUuid,
         CreateCompanyUserRequest request,
         CancellationToken cancellationToken)
     {
         var actorUserUuid = _accessTokenUserResolver.ResolveRequiredUserUuid(HttpContext);
         await _companyAccessAuthorizer.AuthorizeRoleAsync(
             actorUserUuid,
-            companyUuid,
+            request.CompanyUuid,
             new[] { "OWNER", "ADMIN" },
             cancellationToken);
 
         var user = await _createCompanyUserCommandHandler.HandleAsync(
-            request.ToCommand(companyUuid),
+            request.ToCommand(),
             cancellationToken);
 
         return StatusCode(StatusCodes.Status201Created, user.ToResponse());

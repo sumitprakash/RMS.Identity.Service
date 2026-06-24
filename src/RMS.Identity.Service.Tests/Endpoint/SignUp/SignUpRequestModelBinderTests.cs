@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using RMS.Identity.Service.Api.Endpoint.SignUp;
+using RMS.Identity.Service.Api.Shared.ModelBinding;
 
 namespace RMS.Identity.Service.Tests.Endpoint.SignUp;
 
@@ -66,13 +67,13 @@ public sealed class SignUpRequestModelBinderTests
         Assert.Contains(nameof(SignUpRequest.Body), bindingContext.ModelState.Keys);
     }
 
-    private static SignUpRequestModelBinder CreateBinder()
+    private static ApiRequestModelBinder<SignUpRequest> CreateBinder()
     {
         var jsonOptions = new JsonOptions();
         jsonOptions.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         jsonOptions.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 
-        return new SignUpRequestModelBinder(Options.Create(jsonOptions));
+        return new ApiRequestModelBinder<SignUpRequest>(Options.Create(jsonOptions));
     }
 
     private static ModelBindingContext CreateBindingContext(string body)
