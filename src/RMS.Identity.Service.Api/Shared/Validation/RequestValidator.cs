@@ -5,7 +5,15 @@ public abstract class RequestValidator<TRequest> : IRequestValidator
 {
     public Type RequestType => typeof(TRequest);
 
-    public abstract void Validate(TRequest request);
+    public void Validate(TRequest request)
+    {
+        DataAnnotationsObjectGraphValidator.Validate(request);
+        ValidateRequest(request);
+    }
+
+    protected virtual void ValidateRequest(TRequest request)
+    {
+    }
 
     void IRequestValidator.Validate(object request)
     {
