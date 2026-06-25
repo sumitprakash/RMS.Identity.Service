@@ -15,7 +15,7 @@ public sealed class RegisterCompanyRequestValidationFilterTests
     [Fact]
     public void OnActionExecuting_WithValidRequest_AllowsActionToContinue()
     {
-        var filter = new RequestValidationFilter([new RegisterCompanyRequestValidator()]);
+        var filter = CreateFilter();
         var context = CreateContext(new RegisterCompanyRequest
         {
             Body = CreateValidBody()
@@ -29,7 +29,7 @@ public sealed class RegisterCompanyRequestValidationFilterTests
     [Fact]
     public void OnActionExecuting_WithInvalidGstin_ReturnsBadRequest()
     {
-        var filter = new RequestValidationFilter([new RegisterCompanyRequestValidator()]);
+        var filter = CreateFilter();
         var context = CreateContext(new RegisterCompanyRequest
         {
             Body = CreateValidBody("bad-gstin")
@@ -74,4 +74,7 @@ public sealed class RegisterCompanyRequestValidationFilterTests
             PostalCode = "560001",
             Country = "IN"
         };
+
+    private static RequestValidationFilter CreateFilter() =>
+        new([new RegisterCompanyRequestValidator()]);
 }

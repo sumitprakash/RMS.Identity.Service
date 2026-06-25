@@ -15,7 +15,7 @@ public sealed class SignUpRequestValidationFilterTests
     [Fact]
     public void OnActionExecuting_WithInvalidRequest_ReturnsBadRequest()
     {
-        var filter = new RequestValidationFilter([new SignUpRequestValidator()]);
+        var filter = CreateFilter();
         var context = CreateContext(new SignUpRequest
         {
             Body = new SignUpRequestBody
@@ -41,7 +41,7 @@ public sealed class SignUpRequestValidationFilterTests
     [Fact]
     public void OnActionExecuting_WithValidRequest_AllowsActionToContinue()
     {
-        var filter = new RequestValidationFilter([new SignUpRequestValidator()]);
+        var filter = CreateFilter();
         var context = CreateContext(new SignUpRequest
         {
             Body = new SignUpRequestBody
@@ -73,4 +73,7 @@ public sealed class SignUpRequestValidationFilterTests
             new Dictionary<string, object?> { ["request"] = request },
             new object());
     }
+
+    private static RequestValidationFilter CreateFilter() =>
+        new([new SignUpRequestValidator()]);
 }

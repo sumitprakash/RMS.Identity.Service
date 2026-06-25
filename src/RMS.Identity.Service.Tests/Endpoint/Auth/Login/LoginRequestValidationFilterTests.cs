@@ -15,7 +15,7 @@ public sealed class LoginRequestValidationFilterTests
     [Fact]
     public void OnActionExecuting_WithInvalidRequest_ReturnsBadRequest()
     {
-        var filter = new RequestValidationFilter([new LoginRequestValidator()]);
+        var filter = CreateFilter();
         var context = CreateContext(new LoginRequest
         {
             Body = new LoginRequestBody
@@ -38,7 +38,7 @@ public sealed class LoginRequestValidationFilterTests
     [Fact]
     public void OnActionExecuting_WithValidRequest_AllowsActionToContinue()
     {
-        var filter = new RequestValidationFilter([new LoginRequestValidator()]);
+        var filter = CreateFilter();
         var context = CreateContext(new LoginRequest
         {
             Body = new LoginRequestBody
@@ -67,4 +67,7 @@ public sealed class LoginRequestValidationFilterTests
             new Dictionary<string, object?> { ["request"] = request },
             new object());
     }
+
+    private static RequestValidationFilter CreateFilter() =>
+        new([new LoginRequestValidator()]);
 }

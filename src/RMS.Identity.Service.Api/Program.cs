@@ -47,12 +47,12 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddIdentityServiceInfrastructure(builder.Configuration);
 builder.Services.AddScoped<IIdempotencyService, IdempotencyService>();
-builder.Services.AddScoped<RequestValidationFilter>();
-builder.Services.AddScoped<IRequestValidator, LoginRequestValidator>();
-builder.Services.AddScoped<IRequestValidator, RefreshRequestValidator>();
-builder.Services.AddScoped<IRequestValidator, SignUpRequestValidator>();
-builder.Services.AddScoped<IRequestValidator, RegisterCompanyRequestValidator>();
-builder.Services.AddScoped<IRequestValidator, CreateCompanyUserRequestValidator>();
+builder.Services.AddSingleton<RequestValidationFilter>();
+builder.Services.AddSingleton<IRequestValidator, LoginRequestValidator>();
+builder.Services.AddSingleton<IRequestValidator, RefreshRequestValidator>();
+builder.Services.AddSingleton<IRequestValidator, SignUpRequestValidator>();
+builder.Services.AddSingleton<IRequestValidator, RegisterCompanyRequestValidator>();
+builder.Services.AddSingleton<IRequestValidator, CreateCompanyUserRequestValidator>();
 builder.Services.AddScoped<IAccessTokenUserResolver, JwtAccessTokenUserResolver>();
 builder.Services.AddScoped<ICompanyAccessAuthorizer, CompanyAccessAuthorizer>();
 builder.Services.AddScoped<IPlatformAdminAuthorizer, PlatformAdminAuthorizer>();

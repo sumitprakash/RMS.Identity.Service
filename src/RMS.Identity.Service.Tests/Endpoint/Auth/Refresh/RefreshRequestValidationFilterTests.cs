@@ -15,7 +15,7 @@ public sealed class RefreshRequestValidationFilterTests
     [Fact]
     public void OnActionExecuting_WithInvalidRequest_ReturnsBadRequest()
     {
-        var filter = new RequestValidationFilter([new RefreshRequestValidator()]);
+        var filter = CreateFilter();
         var context = CreateContext(new RefreshRequest
         {
             Body = new RefreshRequestBody
@@ -37,7 +37,7 @@ public sealed class RefreshRequestValidationFilterTests
     [Fact]
     public void OnActionExecuting_WithValidRequest_AllowsActionToContinue()
     {
-        var filter = new RequestValidationFilter([new RefreshRequestValidator()]);
+        var filter = CreateFilter();
         var context = CreateContext(new RefreshRequest
         {
             Body = new RefreshRequestBody
@@ -65,4 +65,7 @@ public sealed class RefreshRequestValidationFilterTests
             new Dictionary<string, object?> { ["request"] = request },
             new object());
     }
+
+    private static RequestValidationFilter CreateFilter() =>
+        new([new RefreshRequestValidator()]);
 }

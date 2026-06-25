@@ -1,6 +1,7 @@
 namespace RMS.Identity.Service.Api.Shared.Validation;
 
 public abstract class RequestValidator<TRequest> : IRequestValidator
+    where TRequest : IValidatableRequest
 {
     public Type RequestType => typeof(TRequest);
 
@@ -8,9 +9,6 @@ public abstract class RequestValidator<TRequest> : IRequestValidator
 
     void IRequestValidator.Validate(object request)
     {
-        if (request is TRequest typedRequest)
-        {
-            Validate(typedRequest);
-        }
+        Validate((TRequest)request);
     }
 }

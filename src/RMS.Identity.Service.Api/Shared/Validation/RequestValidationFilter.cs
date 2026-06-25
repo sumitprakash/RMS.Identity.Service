@@ -7,36 +7,39 @@ namespace RMS.Identity.Service.Api.Shared.Validation;
 
 public sealed class RequestValidationFilter : IActionFilter
 {
-    private readonly IReadOnlyCollection<IRequestValidator> _validators;
+    private readonly IReadOnlyDictionary<Type, IRequestValidator> _validators;
 
     public RequestValidationFilter(IEnumerable<IRequestValidator> validators)
     {
-        _validators = validators.ToArray();
+        _validators = validators.ToDictionary(validator => validator.RequestType);
     }
 
     public void OnActionExecuting(ActionExecutingContext context)
     {
         foreach (var argument in context.ActionArguments.Values)
         {
-            if (argument is null)
+            if (argument is not IValidatableRequest request)
             {
                 continue;
             }
 
-            foreach (var validator in _validators.Where(validator => validator.RequestType.IsInstanceOfType(argument)))
+            if (!_validators.TryGetValue(request.GetType(), out var validator))
             {
-                try
-                {
-                    validator.Validate(argument);
-                }
-                catch (ServiceException exception) when (exception.StatusCode == StatusCodes.Status400BadRequest)
-                {
-                    context.Result = new BadRequestObjectResult(ApiErrorResponse.Create(
-                        exception.Code,
-                        exception.Message,
-                        exception.Details));
-                    return;
-                }
+                throw new InvalidOperationException(
+                    $"No request validator is registered for request type '{request.GetType().FullName}'.");
+            }
+
+            try
+            {
+                validator.Validate(request);
+            }
+            catch (ServiceException exception) when (exception.StatusCode == StatusCodes.Status400BadRequest)
+            {
+                context.Result = new BadRequestObjectResult(ApiErrorResponse.Create(
+                    exception.Code,
+                    exception.Message,
+                    exception.Details));
+                return;
             }
         }
     }
