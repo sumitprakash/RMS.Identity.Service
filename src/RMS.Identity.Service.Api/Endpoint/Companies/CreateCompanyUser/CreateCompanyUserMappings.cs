@@ -4,11 +4,9 @@ namespace RMS.Identity.Service.Api.Endpoint.Companies.CreateCompanyUser;
 
 public static class CreateCompanyUserMappings
 {
-    public static CreateCompanyUserCommandRequest ToCommand(
-        this CreateCompanyUserRequest request,
-        Guid companyUuid) =>
+    public static CreateCompanyUserCommandRequest ToCommand(this CreateCompanyUserRequest request) =>
         new(
-            companyUuid,
+            request.CompanyUuid,
             request.Body.Username,
             request.Body.DisplayName,
             request.Body.CompanyRole);

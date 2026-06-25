@@ -1,16 +1,14 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using RMS.Identity.Service.Api.Shared.ModelBinding;
+using RMS.Identity.Service.Api.Shared.Validation;
 
 namespace RMS.Identity.Service.Api.Endpoint.SignUp;
 
-[ModelBinder(BinderType = typeof(SignUpRequestModelBinder))]
-public sealed class SignUpRequest
+[ModelBinder(BinderType = typeof(ApiRequestModelBinder<SignUpRequest>))]
+public sealed class SignUpRequest : IValidatableRequest
 {
-    public SignUpRequest(SignUpRequestBody body)
-    {
-        Body = body;
-    }
-
+    [FromBody]
     [Required]
-    public SignUpRequestBody Body { get; }
+    public SignUpRequestBody Body { get; set; } = default!;
 }

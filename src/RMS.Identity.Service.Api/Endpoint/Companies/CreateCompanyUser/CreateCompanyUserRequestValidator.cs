@@ -1,13 +1,14 @@
+using RMS.Identity.Service.Api.Shared.Validation;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
 
 namespace RMS.Identity.Service.Api.Endpoint.Companies.CreateCompanyUser;
 
-public sealed class CreateCompanyUserRequestValidator
+public sealed class CreateCompanyUserRequestValidator : RequestValidator<CreateCompanyUserRequest>
 {
     private static readonly string[] AllowedCompanyRoles = ["OWNER", "ADMIN", "MEMBER"];
 
-    public void Validate(CreateCompanyUserRequest request)
+    public override void Validate(CreateCompanyUserRequest request)
     {
         var body = request.Body;
         if (string.IsNullOrWhiteSpace(body.Username))

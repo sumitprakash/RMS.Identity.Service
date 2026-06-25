@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using RMS.Identity.Service.Api.Endpoint.Auth.Login;
+using RMS.Identity.Service.Api.Shared.ModelBinding;
 
 namespace RMS.Identity.Service.Tests.Endpoint.Auth.Login;
 
@@ -55,13 +56,13 @@ public sealed class LoginRequestModelBinderTests
         Assert.Contains(nameof(LoginRequest.Body), bindingContext.ModelState.Keys);
     }
 
-    private static LoginRequestModelBinder CreateBinder()
+    private static ApiRequestModelBinder<LoginRequest> CreateBinder()
     {
         var jsonOptions = new JsonOptions();
         jsonOptions.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         jsonOptions.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 
-        return new LoginRequestModelBinder(Options.Create(jsonOptions));
+        return new ApiRequestModelBinder<LoginRequest>(Options.Create(jsonOptions));
     }
 
     private static ModelBindingContext CreateBindingContext(string body)

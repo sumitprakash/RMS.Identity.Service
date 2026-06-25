@@ -1,13 +1,14 @@
 using System.ComponentModel.DataAnnotations;
+using RMS.Identity.Service.Api.Shared.Validation;
 using RMS.Identity.Service.Application.Shared.Errors;
 
 namespace RMS.Identity.Service.Api.Endpoint.Auth.Login;
 
-public sealed class LoginRequestValidator
+public sealed class LoginRequestValidator : RequestValidator<LoginRequest>
 {
     private static readonly EmailAddressAttribute EmailAddressValidator = new();
 
-    public void Validate(LoginRequest request)
+    public override void Validate(LoginRequest request)
     {
         var body = request.Body;
 

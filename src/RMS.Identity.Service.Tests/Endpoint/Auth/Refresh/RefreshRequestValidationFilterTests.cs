@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Routing;
 using RMS.Identity.Service.Api.Endpoint.Auth.Refresh;
 using RMS.Identity.Service.Api.Shared.ErrorHandling;
+using RMS.Identity.Service.Api.Shared.Validation;
 
 namespace RMS.Identity.Service.Tests.Endpoint.Auth.Refresh;
 
@@ -14,11 +15,14 @@ public sealed class RefreshRequestValidationFilterTests
     [Fact]
     public void OnActionExecuting_WithInvalidRequest_ReturnsBadRequest()
     {
-        var filter = new RefreshRequestValidationFilter(new RefreshRequestValidator());
-        var context = CreateContext(new RefreshRequest(new RefreshRequestBody
+        var filter = CreateFilter();
+        var context = CreateContext(new RefreshRequest
         {
-            RefreshToken = " "
-        }));
+            Body = new RefreshRequestBody
+            {
+                RefreshToken = " "
+            }
+        });
 
         filter.OnActionExecuting(context);
 
@@ -33,11 +37,14 @@ public sealed class RefreshRequestValidationFilterTests
     [Fact]
     public void OnActionExecuting_WithValidRequest_AllowsActionToContinue()
     {
-        var filter = new RefreshRequestValidationFilter(new RefreshRequestValidator());
-        var context = CreateContext(new RefreshRequest(new RefreshRequestBody
+        var filter = CreateFilter();
+        var context = CreateContext(new RefreshRequest
         {
-            RefreshToken = "refresh-token"
-        }));
+            Body = new RefreshRequestBody
+            {
+                RefreshToken = "refresh-token"
+            }
+        });
 
         filter.OnActionExecuting(context);
 
@@ -58,4 +65,7 @@ public sealed class RefreshRequestValidationFilterTests
             new Dictionary<string, object?> { ["request"] = request },
             new object());
     }
+
+    private static RequestValidationFilter CreateFilter() =>
+        new([new RefreshRequestValidator()]);
 }

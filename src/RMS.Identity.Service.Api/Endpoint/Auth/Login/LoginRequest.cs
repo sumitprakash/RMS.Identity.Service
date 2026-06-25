@@ -1,16 +1,14 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using RMS.Identity.Service.Api.Shared.ModelBinding;
+using RMS.Identity.Service.Api.Shared.Validation;
 
 namespace RMS.Identity.Service.Api.Endpoint.Auth.Login;
 
-[ModelBinder(BinderType = typeof(LoginRequestModelBinder))]
-public sealed class LoginRequest
+[ModelBinder(BinderType = typeof(ApiRequestModelBinder<LoginRequest>))]
+public sealed class LoginRequest : IValidatableRequest
 {
-    public LoginRequest(LoginRequestBody body)
-    {
-        Body = body;
-    }
-
+    [FromBody]
     [Required]
-    public LoginRequestBody Body { get; }
+    public LoginRequestBody Body { get; set; } = default!;
 }

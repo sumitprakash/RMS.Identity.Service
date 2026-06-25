@@ -1,11 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
+using RMS.Identity.Service.Api.Shared.Validation;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
 
 namespace RMS.Identity.Service.Api.Endpoint.Companies.RegisterCompany;
 
-public sealed class RegisterCompanyRequestValidator
+public sealed class RegisterCompanyRequestValidator : RequestValidator<RegisterCompanyRequest>
 {
     private static readonly Regex GstinValidator = new(
         "^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$",
@@ -13,7 +14,7 @@ public sealed class RegisterCompanyRequestValidator
         TimeSpan.FromMilliseconds(100));
     private static readonly PhoneAttribute PhoneValidator = new();
 
-    public void Validate(RegisterCompanyRequest request)
+    public override void Validate(RegisterCompanyRequest request)
     {
         var body = request.Body;
 

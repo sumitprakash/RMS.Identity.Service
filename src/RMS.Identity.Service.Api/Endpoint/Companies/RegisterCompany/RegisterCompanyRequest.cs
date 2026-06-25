@@ -1,16 +1,14 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using RMS.Identity.Service.Api.Shared.ModelBinding;
+using RMS.Identity.Service.Api.Shared.Validation;
 
 namespace RMS.Identity.Service.Api.Endpoint.Companies.RegisterCompany;
 
-[ModelBinder(BinderType = typeof(RegisterCompanyRequestModelBinder))]
-public sealed class RegisterCompanyRequest
+[ModelBinder(BinderType = typeof(ApiRequestModelBinder<RegisterCompanyRequest>))]
+public sealed class RegisterCompanyRequest : IValidatableRequest
 {
-    public RegisterCompanyRequest(RegisterCompanyRequestBody body)
-    {
-        Body = body;
-    }
-
+    [FromBody]
     [Required]
-    public RegisterCompanyRequestBody Body { get; }
+    public RegisterCompanyRequestBody Body { get; set; } = default!;
 }

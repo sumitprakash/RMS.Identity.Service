@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Routing;
 using RMS.Identity.Service.Api.Endpoint.SignUp;
 using RMS.Identity.Service.Api.Shared.ErrorHandling;
+using RMS.Identity.Service.Api.Shared.Validation;
 
 namespace RMS.Identity.Service.Tests.Endpoint.SignUp;
 
@@ -14,15 +15,18 @@ public sealed class SignUpRequestValidationFilterTests
     [Fact]
     public void OnActionExecuting_WithInvalidRequest_ReturnsBadRequest()
     {
-        var filter = new SignUpRequestValidationFilter(new SignUpRequestValidator());
-        var context = CreateContext(new SignUpRequest(new SignUpRequestBody
+        var filter = CreateFilter();
+        var context = CreateContext(new SignUpRequest
         {
-            EmailAddress = "alice@example.com",
-            Password = "StrongPass@123",
-            FirstName = " ",
-            LastName = "Example",
-            PhoneNumber = "+919876543210"
-        }));
+            Body = new SignUpRequestBody
+            {
+                EmailAddress = "alice@example.com",
+                Password = "StrongPass@123",
+                FirstName = " ",
+                LastName = "Example",
+                PhoneNumber = "+919876543210"
+            }
+        });
 
         filter.OnActionExecuting(context);
 
@@ -37,15 +41,18 @@ public sealed class SignUpRequestValidationFilterTests
     [Fact]
     public void OnActionExecuting_WithValidRequest_AllowsActionToContinue()
     {
-        var filter = new SignUpRequestValidationFilter(new SignUpRequestValidator());
-        var context = CreateContext(new SignUpRequest(new SignUpRequestBody
+        var filter = CreateFilter();
+        var context = CreateContext(new SignUpRequest
         {
-            EmailAddress = "alice@example.com",
-            Password = "StrongPass@123",
-            FirstName = "Alice",
-            LastName = "Example",
-            PhoneNumber = "+919876543210"
-        }));
+            Body = new SignUpRequestBody
+            {
+                EmailAddress = "alice@example.com",
+                Password = "StrongPass@123",
+                FirstName = "Alice",
+                LastName = "Example",
+                PhoneNumber = "+919876543210"
+            }
+        });
 
         filter.OnActionExecuting(context);
 
@@ -66,4 +73,7 @@ public sealed class SignUpRequestValidationFilterTests
             new Dictionary<string, object?> { ["request"] = request },
             new object());
     }
+
+    private static RequestValidationFilter CreateFilter() =>
+        new([new SignUpRequestValidator()]);
 }

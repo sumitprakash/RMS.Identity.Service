@@ -9,12 +9,16 @@ using RMS.Identity.Service.Api.Middleware;
 using RMS.Identity.Service.Api.Shared.Auth;
 using RMS.Identity.Service.Api.Shared.ErrorHandling;
 using RMS.Identity.Service.Api.Shared.Idempotency;
+using RMS.Identity.Service.Api.Shared.Validation;
 using RMS.Identity.Service.Infrastructure.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services
-    .AddControllers()
+    .AddControllers(options =>
+    {
+        options.Filters.AddService<RequestValidationFilter>();
+    })
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
@@ -43,16 +47,12 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddIdentityServiceInfrastructure(builder.Configuration);
 builder.Services.AddScoped<IIdempotencyService, IdempotencyService>();
-builder.Services.AddScoped<LoginRequestValidator>();
-builder.Services.AddScoped<LoginRequestValidationFilter>();
-builder.Services.AddScoped<RefreshRequestValidator>();
-builder.Services.AddScoped<RefreshRequestValidationFilter>();
-builder.Services.AddScoped<SignUpRequestValidator>();
-builder.Services.AddScoped<SignUpRequestValidationFilter>();
-builder.Services.AddScoped<RegisterCompanyRequestValidator>();
-builder.Services.AddScoped<RegisterCompanyRequestValidationFilter>();
-builder.Services.AddScoped<CreateCompanyUserRequestValidator>();
-builder.Services.AddScoped<CreateCompanyUserRequestValidationFilter>();
+builder.Services.AddSingleton<RequestValidationFilter>();
+builder.Services.AddSingleton<IRequestValidator, LoginRequestValidator>();
+builder.Services.AddSingleton<IRequestValidator, RefreshRequestValidator>();
+builder.Services.AddSingleton<IRequestValidator, SignUpRequestValidator>();
+builder.Services.AddSingleton<IRequestValidator, RegisterCompanyRequestValidator>();
+builder.Services.AddSingleton<IRequestValidator, CreateCompanyUserRequestValidator>();
 builder.Services.AddScoped<IAccessTokenUserResolver, JwtAccessTokenUserResolver>();
 builder.Services.AddScoped<ICompanyAccessAuthorizer, CompanyAccessAuthorizer>();
 builder.Services.AddScoped<IPlatformAdminAuthorizer, PlatformAdminAuthorizer>();

@@ -16,7 +16,6 @@ public sealed class LoginController : ControllerBase
     }
 
     [HttpPost]
-    [ServiceFilter(typeof(LoginRequestValidationFilter))]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]

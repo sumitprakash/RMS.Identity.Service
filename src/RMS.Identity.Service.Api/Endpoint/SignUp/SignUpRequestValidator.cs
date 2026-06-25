@@ -1,14 +1,15 @@
 using System.ComponentModel.DataAnnotations;
+using RMS.Identity.Service.Api.Shared.Validation;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
 
 namespace RMS.Identity.Service.Api.Endpoint.SignUp;
 
-public sealed class SignUpRequestValidator
+public sealed class SignUpRequestValidator : RequestValidator<SignUpRequest>
 {
     private static readonly PhoneAttribute PhoneValidator = new();
 
-    public void Validate(SignUpRequest request)
+    public override void Validate(SignUpRequest request)
     {
         var body = request.Body;
 

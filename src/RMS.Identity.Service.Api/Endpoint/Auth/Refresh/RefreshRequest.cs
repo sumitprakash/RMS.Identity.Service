@@ -1,16 +1,14 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using RMS.Identity.Service.Api.Shared.ModelBinding;
+using RMS.Identity.Service.Api.Shared.Validation;
 
 namespace RMS.Identity.Service.Api.Endpoint.Auth.Refresh;
 
-[ModelBinder(BinderType = typeof(RefreshRequestModelBinder))]
-public sealed class RefreshRequest
+[ModelBinder(BinderType = typeof(ApiRequestModelBinder<RefreshRequest>))]
+public sealed class RefreshRequest : IValidatableRequest
 {
-    public RefreshRequest(RefreshRequestBody body)
-    {
-        Body = body;
-    }
-
+    [FromBody]
     [Required]
-    public RefreshRequestBody Body { get; }
+    public RefreshRequestBody Body { get; set; } = default!;
 }
