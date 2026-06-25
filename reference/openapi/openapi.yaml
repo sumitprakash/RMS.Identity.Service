@@ -76,10 +76,12 @@ components:
         username:
           type: string
           format: email
+          maxLength: 150
           example: user@example.com
         password:
           type: string
           format: password
+          maxLength: 128
           example: StrongPass@123
       additionalProperties: false
 
@@ -97,6 +99,7 @@ components:
           description: 'User-level JWT with claims: sub=userUuid, username, exp'
         refreshToken:
           type: string
+          maxLength: 256
         expiresIn:
           type: integer
           format: int32
@@ -148,24 +151,30 @@ components:
         emailAddress:
           type: string
           format: email
+          maxLength: 150
           example: user@example.com
         password:
           type: string
           format: password
           minLength: 8
+          maxLength: 128
           example: StrongPass@123
         firstName:
           type: string
+          maxLength: 100
           example: First
         middleName:
           type: string
+          maxLength: 100
           nullable: true
           example: Middle
         lastName:
           type: string
+          maxLength: 100
           example: Last
         phoneNumber:
           type: string
+          maxLength: 32
           example: "+15551234567"
       additionalProperties: false
 
@@ -200,9 +209,11 @@ components:
         username:
           type: string
           format: email
+          maxLength: 150
           example: cashier@example.com
         displayName:
           type: string
+          maxLength: 255
           example: Store User
         companyRole:
           $ref: '#/components/schemas/CompanyRole'
@@ -273,7 +284,15 @@ components:
       properties:
         token:
           type: string
+          maxLength: 256
           example: verif-1234567890
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+          nullable: true
+          description: Required when activating a company-created user; omitted for normal signup verification.
       additionalProperties: false
 
     EmailVerificationResponse:
@@ -306,9 +325,11 @@ components:
       properties:
         legalName:
           type: string
+          maxLength: 255
           example: Example Retail Pvt Ltd
         tradeName:
           type: string
+          maxLength: 255
           nullable: true
           example: Example Retail
         gstin:
@@ -318,28 +339,37 @@ components:
         contactEmailAddress:
           type: string
           format: email
+          maxLength: 150
           example: accounts@example.com
         contactPhoneNumber:
           type: string
+          maxLength: 32
           example: "+919876543211"
         addressLine1:
           type: string
+          maxLength: 255
           example: 1 Main Road
         addressLine2:
           type: string
+          maxLength: 255
           nullable: true
           example: Near Market
         city:
           type: string
+          maxLength: 128
           example: Bengaluru
         state:
           type: string
+          maxLength: 128
           example: Karnataka
         postalCode:
           type: string
+          maxLength: 20
           example: "560001"
         country:
           type: string
+          minLength: 2
+          maxLength: 2
           example: IN
       additionalProperties: false
 
@@ -564,10 +594,18 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
 
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
 paths:
   # ---------- PUBLIC SIGNUP ----------
   /api/v1/signup:
     post:
+      security: []
       summary: Public user signup
       description: Creates only a global user identity. Company registration happens later through authenticated POST /api/v1/companies.
       parameters:
@@ -593,6 +631,7 @@ paths:
   # ---------- EMAIL VERIFICATION ----------
   /api/v1/users/verify-email:
     post:
+      security: []
       summary: Verify user email
       requestBody:
         required: true
@@ -615,6 +654,7 @@ paths:
   # ---------- AUTH ----------
   /api/v1/auth/login:
     post:
+      security: []
       summary: Login and receive JWT + refresh token
       requestBody:
         required: true
@@ -633,9 +673,12 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /api/v1/auth/refresh:
     post:
+      security: []
       summary: Exchange refresh token for new access token
       requestBody:
         required: true
@@ -652,6 +695,8 @@ paths:
                 $ref: '#/components/schemas/RefreshResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   # ---------- COMPANY / ADMIN ----------
   /api/v1/admin/companies/{companyUuid}/status:

@@ -2,6 +2,7 @@ using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.CompanyUsers;
 using RMS.Identity.Service.Domain.Entities.Companies;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.CompanyUsers;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.AuditLog;
 using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 
 namespace RMS.Identity.Service.Application.Commands.Companies;
@@ -13,13 +14,16 @@ public sealed class UpdateCompanyUserCommandHandler : ICommandHandler<UpdateComp
 
     private readonly ICompanyUserReadRepository _companyUserReadRepository;
     private readonly ICompanyUserWriteRepository _companyUserWriteRepository;
+    private readonly IAuditLogWriteRepository _auditLogWriteRepository;
 
     public UpdateCompanyUserCommandHandler(
         ICompanyUserReadRepository companyUserReadRepository,
-        ICompanyUserWriteRepository companyUserWriteRepository)
+        ICompanyUserWriteRepository companyUserWriteRepository,
+        IAuditLogWriteRepository auditLogWriteRepository)
     {
         _companyUserReadRepository = companyUserReadRepository;
         _companyUserWriteRepository = companyUserWriteRepository;
+        _auditLogWriteRepository = auditLogWriteRepository;
     }
 
     public async Task<UpdateCompanyUserCommandResponse> HandleAsync(
@@ -46,6 +50,20 @@ public sealed class UpdateCompanyUserCommandHandler : ICommandHandler<UpdateComp
             cancellationToken);
 
         var updatedUser = await LoadUserAsync(command.CompanyUuid, command.UserUuid, cancellationToken);
+        var action = string.Equals(membershipStatus, "suspended", StringComparison.Ordinal)
+            ? "company_user_suspended"
+            : "company_user_membership_updated";
+        await _auditLogWriteRepository.InsertCompanyUserChangedAsync(
+            action,
+            command.ActorUserUuid,
+            command.CompanyUuid,
+            command.UserUuid,
+            existingUser.CompanyRole,
+            existingUser.MembershipStatus,
+            updatedUser.CompanyRole,
+            updatedUser.MembershipStatus,
+            cancellationToken);
+
         return ToResponse(updatedUser);
     }
 

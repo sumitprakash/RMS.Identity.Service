@@ -41,7 +41,7 @@ public sealed class CreateCompanyUserController : ControllerBase
             cancellationToken);
 
         var user = await _createCompanyUserCommandHandler.HandleAsync(
-            request.ToCommand(),
+            request.ToCommand(actorUserUuid),
             cancellationToken);
 
         return StatusCode(StatusCodes.Status201Created, user.ToResponse());

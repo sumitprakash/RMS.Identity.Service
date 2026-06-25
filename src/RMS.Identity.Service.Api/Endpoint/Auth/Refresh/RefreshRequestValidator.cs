@@ -11,6 +11,11 @@ public sealed class RefreshRequestValidator : RequestValidator<RefreshRequest>
         {
             throw ValidationError("Refresh token is required.");
         }
+
+        if (request.Body.RefreshToken.Length > 256)
+        {
+            throw ValidationError("Refresh token must not exceed 256 characters.");
+        }
     }
 
     private static ServiceException ValidationError(string message) =>

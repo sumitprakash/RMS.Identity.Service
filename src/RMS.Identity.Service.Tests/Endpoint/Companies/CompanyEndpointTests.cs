@@ -580,6 +580,29 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
             Assert.NotNull(membership);
             Assert.Equal("MEMBER", membership.CompanyRole);
             Assert.Equal("active", membership.MembershipStatus);
+
+            Assert.True(await LoadPasswordSetupRequiredAsync(connection, createdUserUuid.Value));
+            var verificationToken = await LoadVerificationTokenAsync(connection, createdUserUuid.Value);
+            Assert.False(string.IsNullOrWhiteSpace(verificationToken));
+
+            using var verificationResponse = await client.PostAsJsonAsync(
+                "/api/v1/users/verify-email",
+                new
+                {
+                    token = verificationToken,
+                    password = "StrongPass@123"
+                });
+            Assert.Equal(HttpStatusCode.OK, verificationResponse.StatusCode);
+            Assert.False(await LoadPasswordSetupRequiredAsync(connection, createdUserUuid.Value));
+
+            using var loginResponse = await client.PostAsJsonAsync(
+                "/api/v1/auth/login",
+                new
+                {
+                    username = newUsername,
+                    password = "StrongPass@123"
+                });
+            Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
         }
         finally
         {
@@ -721,6 +744,29 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
             "SELECT UserID FROM UserAccount WHERE UserUUID = UUID_TO_BIN(@UserUuid);",
             command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString())));
 
+    private static async Task<bool> LoadPasswordSetupRequiredAsync(
+        MySqlConnection connection,
+        Guid userUuid) =>
+        Convert.ToBoolean(await ExecuteScalarAsync(
+            connection,
+            "SELECT PasswordSetupRequired FROM UserAccount WHERE UserUUID = UUID_TO_BIN(@UserUuid);",
+            command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString())));
+
+    private static async Task<string> LoadVerificationTokenAsync(
+        MySqlConnection connection,
+        Guid userUuid) =>
+        Convert.ToString(await ExecuteScalarAsync(
+            connection,
+            """
+            SELECT JSON_UNQUOTE(JSON_EXTRACT(Payload, '$.Token'))
+            FROM Outbox
+            WHERE AggregateUUID = UUID_TO_BIN(@UserUuid)
+              AND EventType = 'email_verification_requested'
+            ORDER BY OutboxID DESC
+            LIMIT 1;
+            """,
+            command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString())))!;
+
     private static async Task<long> LoadCompanyIdAsync(MySqlConnection connection, Guid companyUuid) =>
         Convert.ToInt64(await ExecuteScalarAsync(
             connection,
@@ -784,6 +830,36 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
             INNER JOIN UserAccount ua ON ua.UserID = cu.UserID
             WHERE ua.UserUUID = UUID_TO_BIN(@UserUuid);
             """,
+            command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString()));
+
+        await ExecuteNonQueryAsync(
+            connection,
+            """
+            DELETE rt
+            FROM RefreshToken rt
+            INNER JOIN UserAccount ua ON ua.UserID = rt.UserID
+            WHERE ua.UserUUID = UUID_TO_BIN(@UserUuid);
+            """,
+            command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString()));
+
+        await ExecuteNonQueryAsync(
+            connection,
+            """
+            DELETE ev
+            FROM EmailVerification ev
+            INNER JOIN UserAccount ua ON ua.UserID = ev.UserID
+            WHERE ua.UserUUID = UUID_TO_BIN(@UserUuid);
+            """,
+            command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString()));
+
+        await ExecuteNonQueryAsync(
+            connection,
+            "DELETE FROM Outbox WHERE AggregateUUID = UUID_TO_BIN(@UserUuid);",
+            command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString()));
+
+        await ExecuteNonQueryAsync(
+            connection,
+            "DELETE FROM AuditLog WHERE RecordId = @UserUuid;",
             command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString()));
 
         await ExecuteNonQueryAsync(

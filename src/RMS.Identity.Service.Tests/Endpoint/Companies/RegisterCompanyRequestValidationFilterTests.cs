@@ -45,6 +45,35 @@ public sealed class RegisterCompanyRequestValidationFilterTests
         Assert.Equal("GSTIN must be a valid GSTIN.", body.Message);
     }
 
+    [Fact]
+    public void OnActionExecuting_WithInvalidCountryLength_ReturnsBadRequest()
+    {
+        var body = CreateValidBody();
+        var filter = CreateFilter();
+        var context = CreateContext(new RegisterCompanyRequest
+        {
+            Body = new RegisterCompanyRequestBody
+            {
+                LegalName = body.LegalName,
+                TradeName = body.TradeName,
+                Gstin = body.Gstin,
+                ContactEmailAddress = body.ContactEmailAddress,
+                ContactPhoneNumber = body.ContactPhoneNumber,
+                AddressLine1 = body.AddressLine1,
+                City = body.City,
+                State = body.State,
+                PostalCode = body.PostalCode,
+                Country = "IND"
+            }
+        });
+
+        filter.OnActionExecuting(context);
+
+        var result = Assert.IsType<BadRequestObjectResult>(context.Result);
+        var response = Assert.IsType<ApiErrorResponse>(result.Value);
+        Assert.Equal("Company country must be a two-letter country code.", response.Message);
+    }
+
     private static ActionExecutingContext CreateContext(RegisterCompanyRequest request)
     {
         var actionContext = new ActionContext(

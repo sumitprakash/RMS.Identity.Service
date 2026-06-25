@@ -39,6 +39,7 @@ public sealed class RegisterCompanyCommandHandler : ICommandHandler<RegisterComp
         }
 
         var normalizedGstin = NormalizeGstin(command.Gstin);
+        EnsureSupportedLengths(command);
         if (await _companyReadRepository.ExistsByGstinAsync(normalizedGstin, cancellationToken))
         {
             throw new ApplicationServiceException(ServiceErrorDefinitions.Companies.CompanyExists);
@@ -88,5 +89,25 @@ public sealed class RegisterCompanyCommandHandler : ICommandHandler<RegisterComp
         }
 
         return value.Trim();
+    }
+
+    private static void EnsureSupportedLengths(RegisterCompanyCommandRequest command)
+    {
+        if (command.LegalName.Trim().Length > 255
+            || (command.TradeName?.Trim().Length ?? 0) > 255
+            || command.Gstin.Trim().Length > 32
+            || command.ContactEmailAddress.Trim().Length > 150
+            || command.ContactPhoneNumber.Trim().Length > 32
+            || command.AddressLine1.Trim().Length > 255
+            || (command.AddressLine2?.Trim().Length ?? 0) > 255
+            || command.City.Trim().Length > 128
+            || command.State.Trim().Length > 128
+            || command.PostalCode.Trim().Length > 20
+            || command.Country.Trim().Length != 2)
+        {
+            throw new ApplicationServiceException(
+                ServiceStatusErrorCodes.BadRequest,
+                "One or more company fields exceed the supported length.");
+        }
     }
 }

@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   rms.identity.db:
     image: mysql:8.4

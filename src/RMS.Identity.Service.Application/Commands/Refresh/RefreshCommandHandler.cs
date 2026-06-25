@@ -76,6 +76,11 @@ public sealed class RefreshCommandHandler : ICommandHandler<RefreshCommandReques
         {
             throw InvalidRefreshToken();
         }
+
+        if (user.PasswordSetupRequired)
+        {
+            throw InvalidRefreshToken();
+        }
     }
 
     private static ServiceException InvalidRefreshToken() =>

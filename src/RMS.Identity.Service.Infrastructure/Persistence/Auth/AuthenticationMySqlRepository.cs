@@ -28,6 +28,7 @@ public sealed class AuthenticationMySqlRepository : IAuthenticationRepository
                 ua.{UserAccountTable.Columns.Username},
                 ua.{UserAccountTable.Columns.PasswordHash},
                 ua.{UserAccountTable.Columns.DisplayName},
+                ua.{UserAccountTable.Columns.PasswordSetupRequired},
                 ua.{UserAccountTable.Columns.EmailVerified},
                 ua.{UserAccountTable.Columns.IsActive},
                 ua.{UserAccountTable.Columns.IsDeleted},
@@ -65,10 +66,16 @@ public sealed class AuthenticationMySqlRepository : IAuthenticationRepository
                 ? null
                 : DateTime.SpecifyKind(reader.GetDateTime(reader.GetOrdinal(UserAccountTable.Columns.LockedUntil)), DateTimeKind.Utc),
             reader.GetUtcDateTime(UserAccountTable.Columns.CreatedAt),
-            Array.Empty<string>());
+            Array.Empty<string>())
+        {
+            PasswordSetupRequired = reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.PasswordSetupRequired))
+        };
 
         await reader.CloseAsync();
-        return user with { Roles = await GetRolesAsync(connection, userId, cancellationToken) };
+        return user with
+        {
+            Roles = await GetRolesAsync(connection, userId, cancellationToken)
+        };
     }
 
     public async Task<RefreshTokenSession?> GetRefreshTokenSessionAsync(
@@ -90,6 +97,7 @@ public sealed class AuthenticationMySqlRepository : IAuthenticationRepository
                 ua.{UserAccountTable.Columns.Username},
                 ua.{UserAccountTable.Columns.PasswordHash},
                 ua.{UserAccountTable.Columns.DisplayName},
+                ua.{UserAccountTable.Columns.PasswordSetupRequired},
                 ua.{UserAccountTable.Columns.EmailVerified},
                 ua.{UserAccountTable.Columns.IsActive},
                 ua.{UserAccountTable.Columns.IsDeleted},
@@ -129,7 +137,10 @@ public sealed class AuthenticationMySqlRepository : IAuthenticationRepository
                 ? null
                 : DateTime.SpecifyKind(reader.GetDateTime(reader.GetOrdinal(UserAccountTable.Columns.LockedUntil)), DateTimeKind.Utc),
             reader.GetUtcDateTime(UserAccountTable.Columns.CreatedAt),
-            Array.Empty<string>());
+            Array.Empty<string>())
+        {
+            PasswordSetupRequired = reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.PasswordSetupRequired))
+        };
         var session = new RefreshTokenSession(
             reader.GetInt64(reader.GetOrdinal(RefreshTokenTable.Columns.RefreshTokenId)),
             reader.GetString(RefreshTokenTable.Columns.TokenHash),
@@ -140,7 +151,13 @@ public sealed class AuthenticationMySqlRepository : IAuthenticationRepository
             user);
 
         await reader.CloseAsync();
-        return session with { User = user with { Roles = await GetRolesAsync(connection, userId, cancellationToken) } };
+        return session with
+        {
+            User = user with
+            {
+                Roles = await GetRolesAsync(connection, userId, cancellationToken)
+            }
+        };
     }
 
     public async Task RecordFailedLoginAsync(long userId, CancellationToken cancellationToken)
@@ -150,9 +167,15 @@ public sealed class AuthenticationMySqlRepository : IAuthenticationRepository
         command.CommandText =
             $"""
             UPDATE {UserAccountTable.Name}
-            SET {UserAccountTable.Columns.FailedLoginCount} = {UserAccountTable.Columns.FailedLoginCount} + 1,
+            SET {UserAccountTable.Columns.FailedLoginCount} = CASE
+                    WHEN {UserAccountTable.Columns.LockedUntil} IS NOT NULL
+                         AND {UserAccountTable.Columns.LockedUntil} <= UTC_TIMESTAMP() THEN 1
+                    ELSE {UserAccountTable.Columns.FailedLoginCount} + 1
+                END,
                 {UserAccountTable.Columns.LockedUntil} = CASE
-                    WHEN {UserAccountTable.Columns.FailedLoginCount} + 1 >= 5 THEN DATE_ADD(UTC_TIMESTAMP(), INTERVAL 15 MINUTE)
+                    WHEN {UserAccountTable.Columns.LockedUntil} IS NOT NULL
+                         AND {UserAccountTable.Columns.LockedUntil} <= UTC_TIMESTAMP() THEN NULL
+                    WHEN {UserAccountTable.Columns.FailedLoginCount} = 5 THEN DATE_ADD(UTC_TIMESTAMP(), INTERVAL 15 MINUTE)
                     ELSE {UserAccountTable.Columns.LockedUntil}
                 END,
                 {UserAccountTable.Columns.UpdatedAt} = UTC_TIMESTAMP()

@@ -117,14 +117,17 @@ public sealed class EmailVerificationRequestedOutboxProcessor
             Uri.EscapeDataString(payload.Token),
             StringComparison.Ordinal);
 
+        var instruction = payload.PasswordSetupRequired
+            ? "Open this link to set your password and activate your account:"
+            : "Verify your email address using this link:";
         var body =
             $"""
             Hello,
 
-            Verify your email address using this link:
+            {instruction}
             {verificationUrl}
 
-            This verification link expires at {payload.ExpiresAt:O}.
+            This link expires at {payload.ExpiresAt:O}.
             """;
 
         return new EmailMessage(

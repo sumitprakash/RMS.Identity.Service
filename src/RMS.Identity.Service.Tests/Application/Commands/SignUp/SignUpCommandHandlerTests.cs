@@ -49,11 +49,14 @@ public sealed class SignUpCommandHandlerTests
         Assert.NotNull(outboxRepository.Token);
         Assert.Equal(emailVerificationRepository.CreatedToken.TokenHash, $"hash:{outboxRepository.Token}");
         Assert.Equal(response.UserUuid, outboxRepository.Account?.UserUuid);
+        Assert.Equal("+919876543210", userRepository.CreatedUser?.PhoneNumber);
     }
 
     private sealed class FakeUserAccountRepository : IUserAccountReadRepository, IUserAccountWriteRepository
     {
         private CreateUserAccountCommand? _createdUser;
+
+        public CreateUserAccountCommand? CreatedUser => _createdUser;
 
         public Task<bool> ExistsByUsernameAsync(string username, CancellationToken cancellationToken) =>
             Task.FromResult(false);
@@ -65,6 +68,12 @@ public sealed class SignUpCommandHandlerTests
         }
 
         public Task MarkEmailVerifiedAsync(long userId, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task CompletePasswordSetupAsync(
+            long userId,
+            string passwordHash,
+            CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<UserAccount> GetByIdAsync(long userId, CancellationToken cancellationToken)
@@ -129,6 +138,18 @@ public sealed class SignUpCommandHandlerTests
             Company company,
             string previousStatus,
             long actorUserId,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task InsertCompanyUserChangedAsync(
+            string action,
+            Guid actorUserUuid,
+            Guid companyUuid,
+            Guid targetUserUuid,
+            string? previousCompanyRole,
+            string? previousMembershipStatus,
+            string companyRole,
+            string membershipStatus,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
     }

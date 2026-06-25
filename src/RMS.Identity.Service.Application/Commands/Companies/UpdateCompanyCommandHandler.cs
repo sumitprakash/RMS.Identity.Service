@@ -56,6 +56,7 @@ public sealed class UpdateCompanyCommandHandler : ICommandHandler<UpdateCompanyC
     private static UpdateCompanyCommand Normalize(UpdateCompanyCommandRequest command)
     {
         var legalName = TrimRequired(command.LegalName, "Company legal name is required.");
+        EnsureMaxLength(legalName, 255, "Company legal name");
         var gstin = TrimRequired(command.Gstin, "GSTIN is required.").ToUpperInvariant();
         if (!GstinValidator.IsMatch(gstin))
         {
@@ -63,25 +64,45 @@ public sealed class UpdateCompanyCommandHandler : ICommandHandler<UpdateCompanyC
         }
 
         var contactEmailAddress = EmailAddressValidator.Normalize(command.ContactEmailAddress);
+        EnsureMaxLength(contactEmailAddress, 150, "Company contact email address");
         var contactPhoneNumber = TrimRequired(command.ContactPhoneNumber, "Company contact phone number is required.");
         if (!PhoneValidator.IsValid(contactPhoneNumber))
         {
             throw ValidationError("Company contact phone number must be a valid phone number.");
         }
+        EnsureMaxLength(contactPhoneNumber, 32, "Company contact phone number");
+
+        var tradeName = TrimToNull(command.TradeName);
+        var addressLine1 = TrimRequired(command.AddressLine1, "Company registered address line 1 is required.");
+        var addressLine2 = TrimToNull(command.AddressLine2);
+        var city = TrimRequired(command.City, "Company city is required.");
+        var state = TrimRequired(command.State, "Company state is required.");
+        var postalCode = TrimRequired(command.PostalCode, "Company postal code is required.");
+        var country = TrimRequired(command.Country, "Company country is required.").ToUpperInvariant();
+        EnsureMaxLength(tradeName, 255, "Company trade name");
+        EnsureMaxLength(addressLine1, 255, "Company registered address line 1");
+        EnsureMaxLength(addressLine2, 255, "Company registered address line 2");
+        EnsureMaxLength(city, 128, "Company city");
+        EnsureMaxLength(state, 128, "Company state");
+        EnsureMaxLength(postalCode, 20, "Company postal code");
+        if (country.Length != 2)
+        {
+            throw ValidationError("Company country must be a two-letter country code.");
+        }
 
         return new UpdateCompanyCommand(
             command.CompanyUuid,
             legalName,
-            TrimToNull(command.TradeName),
+            tradeName,
             gstin,
             contactEmailAddress,
             contactPhoneNumber,
-            TrimRequired(command.AddressLine1, "Company registered address line 1 is required."),
-            TrimToNull(command.AddressLine2),
-            TrimRequired(command.City, "Company city is required."),
-            TrimRequired(command.State, "Company state is required."),
-            TrimRequired(command.PostalCode, "Company postal code is required."),
-            TrimRequired(command.Country, "Company country is required.").ToUpperInvariant());
+            addressLine1,
+            addressLine2,
+            city,
+            state,
+            postalCode,
+            country);
     }
 
     private static string TrimRequired(string value, string message)
@@ -96,6 +117,14 @@ public sealed class UpdateCompanyCommandHandler : ICommandHandler<UpdateCompanyC
 
     private static string? TrimToNull(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static void EnsureMaxLength(string? value, int maxLength, string fieldName)
+    {
+        if ((value?.Length ?? 0) > maxLength)
+        {
+            throw ValidationError($"{fieldName} must not exceed {maxLength} characters.");
+        }
+    }
 
     private static ServiceException ValidationError(string message) =>
         new ApplicationServiceException(ServiceStatusErrorCodes.BadRequest, message);

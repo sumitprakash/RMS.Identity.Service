@@ -140,6 +140,18 @@ public sealed class UpdateCompanyStatusCommandHandlerTests
             ActorUserId = actorUserId;
             return Task.CompletedTask;
         }
+
+        public Task InsertCompanyUserChangedAsync(
+            string action,
+            Guid actorUserUuid,
+            Guid companyUuid,
+            Guid targetUserUuid,
+            string? previousCompanyRole,
+            string? previousMembershipStatus,
+            string companyRole,
+            string membershipStatus,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 
     private sealed class FakeUserAccountReadRepository : IUserAccountReadRepository

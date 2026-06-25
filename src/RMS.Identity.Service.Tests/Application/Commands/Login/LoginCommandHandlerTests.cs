@@ -75,6 +75,46 @@ public sealed class LoginCommandHandlerTests
         Assert.Equal("403-2-5", exception.Code);
     }
 
+    [Fact]
+    public async Task HandleAsync_WithUnknownUsername_PerformsPasswordHashAndThrowsUnauthorized()
+    {
+        var repository = new FakeAuthenticationRepository(null);
+        var passwordHasher = new FakePasswordHasher(validPassword: "StrongPass@123");
+        var handler = new LoginCommandHandler(
+            repository,
+            passwordHasher,
+            new FakeAuthTokenGenerator(),
+            new FakeTextHasher());
+
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
+            handler.HandleAsync(
+                new LoginCommandRequest("missing@example.com", "StrongPass@123"),
+                CancellationToken.None));
+
+        Assert.Equal((int)HttpStatusCode.Unauthorized, exception.StatusCode);
+        Assert.Equal("StrongPass@123", passwordHasher.LastHashedValue);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WithPasswordSetupRequired_ThrowsForbidden()
+    {
+        var repository = new FakeAuthenticationRepository(
+            CreateUser() with { PasswordSetupRequired = true });
+        var handler = new LoginCommandHandler(
+            repository,
+            new FakePasswordHasher(validPassword: "StrongPass@123"),
+            new FakeAuthTokenGenerator(),
+            new FakeTextHasher());
+
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
+            handler.HandleAsync(
+                new LoginCommandRequest("alice@example.com", "StrongPass@123"),
+                CancellationToken.None));
+
+        Assert.Equal((int)HttpStatusCode.Forbidden, exception.StatusCode);
+        Assert.Equal("403-2-10", exception.Code);
+    }
+
     private static AuthenticatedUser CreateUser(bool emailVerified = true) =>
         new(
             10,
@@ -153,7 +193,13 @@ public sealed class LoginCommandHandlerTests
             _validPassword = validPassword;
         }
 
-        public string Hash(string value) => "hash";
+        public string? LastHashedValue { get; private set; }
+
+        public string Hash(string value)
+        {
+            LastHashedValue = value;
+            return "hash";
+        }
 
         public bool Verify(string value, string hash) => value == _validPassword;
     }

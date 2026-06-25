@@ -48,5 +48,10 @@ public static partial class ServiceErrorDefinitions
             ServiceStatusErrorCodes.Forbidden,
             new ServiceErrorCode(2, 9),
             "User is not active.");
+
+        public static readonly ServiceError PasswordSetupRequired = new(
+            ServiceStatusErrorCodes.Forbidden,
+            new ServiceErrorCode(2, 10),
+            "User must complete password setup before signing in.");
     }
 }

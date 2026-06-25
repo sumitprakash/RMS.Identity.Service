@@ -14,6 +14,8 @@ public sealed record AuthenticatedUser(
     DateTime CreatedAt,
     IReadOnlyCollection<string> Roles)
 {
+    public bool PasswordSetupRequired { get; init; }
+
     public string Status
     {
         get

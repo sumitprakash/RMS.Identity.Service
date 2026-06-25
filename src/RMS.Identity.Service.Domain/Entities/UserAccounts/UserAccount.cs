@@ -8,4 +8,9 @@ public sealed record UserAccount(
     bool EmailVerified,
     bool IsActive,
     bool IsDeleted,
-    DateTime CreatedAt);
+    DateTime CreatedAt)
+{
+    public string? PhoneNumber { get; init; }
+
+    public bool PasswordSetupRequired { get; init; }
+}

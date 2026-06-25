@@ -4,4 +4,6 @@ public sealed record CreateUserAccountCommand(
     Guid UserUuid,
     string Username,
     string PasswordHash,
-    string? DisplayName);
+    string? DisplayName,
+    string? PhoneNumber = null,
+    bool PasswordSetupRequired = false);

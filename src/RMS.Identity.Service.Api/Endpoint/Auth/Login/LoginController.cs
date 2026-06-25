@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RMS.Identity.Service.Domain.Contracts.Login;
 using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 
@@ -16,6 +17,7 @@ public sealed class LoginController : ControllerBase
     }
 
     [HttpPost]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]

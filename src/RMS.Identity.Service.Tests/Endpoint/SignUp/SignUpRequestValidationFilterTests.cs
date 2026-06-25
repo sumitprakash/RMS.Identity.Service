@@ -59,6 +59,29 @@ public sealed class SignUpRequestValidationFilterTests
         Assert.Null(context.Result);
     }
 
+    [Fact]
+    public void OnActionExecuting_WithOversizedEmail_ReturnsBadRequest()
+    {
+        var filter = CreateFilter();
+        var context = CreateContext(new SignUpRequest
+        {
+            Body = new SignUpRequestBody
+            {
+                EmailAddress = $"{new string('a', 140)}@example.com",
+                Password = "StrongPass@123",
+                FirstName = "Alice",
+                LastName = "Example",
+                PhoneNumber = "+919876543210"
+            }
+        });
+
+        filter.OnActionExecuting(context);
+
+        var result = Assert.IsType<BadRequestObjectResult>(context.Result);
+        var body = Assert.IsType<ApiErrorResponse>(result.Value);
+        Assert.Equal("Email address must not exceed 150 characters.", body.Message);
+    }
+
     private static ActionExecutingContext CreateContext(SignUpRequest request)
     {
         var actionContext = new ActionContext(

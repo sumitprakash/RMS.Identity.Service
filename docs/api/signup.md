@@ -73,6 +73,7 @@ Email verification or other account activation flows are outside the scope of th
 ### Meaning
 
 - User is created as a global identity.
+- The validated phone number is stored on the user account.
 - `UserAccount.CompanyID` remains `NULL`; it is not the source of company membership.
 - No company or `CompanyUser` membership is created during signup.
 - User remains `pending` until a future account activation flow updates it.
@@ -118,8 +119,9 @@ On successful signup, the system must complete the following in one database tra
 2. Normalize user email.
 3. Check duplicate user email.
 4. Create `UserAccount` with `CompanyID = NULL`.
-5. Record the signup audit entry.
-6. Return `201 Created`.
+5. Persist the normalized phone number.
+6. Record the signup audit entry.
+7. Return `201 Created`.
 
 ## 7. Idempotency Rules
 

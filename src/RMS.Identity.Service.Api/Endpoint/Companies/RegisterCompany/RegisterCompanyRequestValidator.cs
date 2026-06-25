@@ -23,6 +23,9 @@ public sealed class RegisterCompanyRequestValidator : RequestValidator<RegisterC
             throw ValidationError("Company legal name is required.");
         }
 
+        EnsureMaxLength(body.LegalName, 255, "Company legal name");
+        EnsureMaxLength(body.TradeName, 255, "Company trade name");
+
         if (string.IsNullOrWhiteSpace(body.Gstin))
         {
             throw ValidationError("GSTIN is required.");
@@ -38,6 +41,8 @@ public sealed class RegisterCompanyRequestValidator : RequestValidator<RegisterC
             throw ValidationError("Company contact email address must be a valid email address.");
         }
 
+        EnsureMaxLength(body.ContactEmailAddress, 150, "Company contact email address");
+
         if (string.IsNullOrWhiteSpace(body.ContactPhoneNumber))
         {
             throw ValidationError("Company contact phone number is required.");
@@ -47,6 +52,8 @@ public sealed class RegisterCompanyRequestValidator : RequestValidator<RegisterC
         {
             throw ValidationError("Company contact phone number must be a valid phone number.");
         }
+
+        EnsureMaxLength(body.ContactPhoneNumber, 32, "Company contact phone number");
 
         if (string.IsNullOrWhiteSpace(body.AddressLine1))
         {
@@ -71,6 +78,24 @@ public sealed class RegisterCompanyRequestValidator : RequestValidator<RegisterC
         if (string.IsNullOrWhiteSpace(body.Country))
         {
             throw ValidationError("Company country is required.");
+        }
+
+        EnsureMaxLength(body.AddressLine1, 255, "Company registered address line 1");
+        EnsureMaxLength(body.AddressLine2, 255, "Company registered address line 2");
+        EnsureMaxLength(body.City, 128, "Company city");
+        EnsureMaxLength(body.State, 128, "Company state");
+        EnsureMaxLength(body.PostalCode, 20, "Company postal code");
+        if (body.Country.Trim().Length != 2)
+        {
+            throw ValidationError("Company country must be a two-letter country code.");
+        }
+    }
+
+    private static void EnsureMaxLength(string? value, int maxLength, string fieldName)
+    {
+        if ((value?.Trim().Length ?? 0) > maxLength)
+        {
+            throw ValidationError($"{fieldName} must not exceed {maxLength} characters.");
         }
     }
 

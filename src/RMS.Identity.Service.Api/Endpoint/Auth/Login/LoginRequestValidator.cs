@@ -22,9 +22,19 @@ public sealed class LoginRequestValidator : RequestValidator<LoginRequest>
             throw ValidationError("Username must be a valid email address.");
         }
 
+        if (body.Username.Length > 150)
+        {
+            throw ValidationError("Username must not exceed 150 characters.");
+        }
+
         if (string.IsNullOrWhiteSpace(body.Password))
         {
             throw ValidationError("Password is required.");
+        }
+
+        if (body.Password.Length > 128)
+        {
+            throw ValidationError("Password must not exceed 128 characters.");
         }
     }
 

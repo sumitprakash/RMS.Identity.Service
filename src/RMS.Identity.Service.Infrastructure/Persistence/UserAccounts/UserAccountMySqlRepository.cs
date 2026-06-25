@@ -55,6 +55,8 @@ public sealed class UserAccountMySqlRepository :
                 {UserAccountTable.Columns.Username},
                 {UserAccountTable.Columns.PasswordHash},
                 {UserAccountTable.Columns.DisplayName},
+                {UserAccountTable.Columns.PhoneNumber},
+                {UserAccountTable.Columns.PasswordSetupRequired},
                 {UserAccountTable.Columns.EmailVerified},
                 {UserAccountTable.Columns.IsActive},
                 {UserAccountTable.Columns.IsDeleted},
@@ -65,6 +67,8 @@ public sealed class UserAccountMySqlRepository :
                 @Username,
                 @PasswordHash,
                 @DisplayName,
+                @PhoneNumber,
+                @PasswordSetupRequired,
                 0,
                 1,
                 0,
@@ -74,6 +78,8 @@ public sealed class UserAccountMySqlRepository :
         insertCommand.Parameters.AddWithValue("@Username", command.Username);
         insertCommand.Parameters.AddWithValue("@PasswordHash", command.PasswordHash);
         insertCommand.Parameters.AddWithValue("@DisplayName", (object?)command.DisplayName ?? DBNull.Value);
+        insertCommand.Parameters.AddWithValue("@PhoneNumber", (object?)command.PhoneNumber ?? DBNull.Value);
+        insertCommand.Parameters.AddWithValue("@PasswordSetupRequired", command.PasswordSetupRequired);
 
         try
         {
@@ -104,6 +110,33 @@ public sealed class UserAccountMySqlRepository :
         await updateCommand.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    public async Task CompletePasswordSetupAsync(
+        long userId,
+        string passwordHash,
+        CancellationToken cancellationToken)
+    {
+        var databaseTransaction = CurrentTransaction();
+        var updateCommand = databaseTransaction.Connection.CreateCommand();
+        updateCommand.Transaction = databaseTransaction.Transaction;
+        updateCommand.CommandText =
+            $"""
+            UPDATE {UserAccountTable.Name}
+            SET {UserAccountTable.Columns.PasswordHash} = @PasswordHash,
+                {UserAccountTable.Columns.PasswordSetupRequired} = 0,
+                {UserAccountTable.Columns.EmailVerified} = 1,
+                {UserAccountTable.Columns.UpdatedAt} = UTC_TIMESTAMP()
+            WHERE {UserAccountTable.Columns.UserId} = @UserId
+              AND {UserAccountTable.Columns.IsDeleted} = 0;
+            """;
+        updateCommand.Parameters.AddWithValue("@UserId", userId);
+        updateCommand.Parameters.AddWithValue("@PasswordHash", passwordHash);
+
+        if (await updateCommand.ExecuteNonQueryAsync(cancellationToken) != 1)
+        {
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Users.UserNotFound);
+        }
+    }
+
     public async Task<UserAccount> GetByIdAsync(
         long userId,
         CancellationToken cancellationToken)
@@ -117,6 +150,8 @@ public sealed class UserAccountMySqlRepository :
                 BIN_TO_UUID({UserAccountTable.Columns.UserUuid}) AS UserUuid,
                 {UserAccountTable.Columns.Username},
                 {UserAccountTable.Columns.DisplayName},
+                {UserAccountTable.Columns.PhoneNumber},
+                {UserAccountTable.Columns.PasswordSetupRequired},
                 {UserAccountTable.Columns.EmailVerified},
                 {UserAccountTable.Columns.IsActive},
                 {UserAccountTable.Columns.IsDeleted},
@@ -141,7 +176,11 @@ public sealed class UserAccountMySqlRepository :
             reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.EmailVerified)),
             reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.IsActive)),
             reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.IsDeleted)),
-            reader.GetUtcDateTime(UserAccountTable.Columns.CreatedAt));
+            reader.GetUtcDateTime(UserAccountTable.Columns.CreatedAt))
+        {
+            PhoneNumber = reader.GetNullableString(UserAccountTable.Columns.PhoneNumber),
+            PasswordSetupRequired = reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.PasswordSetupRequired))
+        };
     }
 
     public async Task<UserAccount> GetByUuidAsync(
@@ -158,6 +197,8 @@ public sealed class UserAccountMySqlRepository :
                 BIN_TO_UUID({UserAccountTable.Columns.UserUuid}) AS UserUuid,
                 {UserAccountTable.Columns.Username},
                 {UserAccountTable.Columns.DisplayName},
+                {UserAccountTable.Columns.PhoneNumber},
+                {UserAccountTable.Columns.PasswordSetupRequired},
                 {UserAccountTable.Columns.EmailVerified},
                 {UserAccountTable.Columns.IsActive},
                 {UserAccountTable.Columns.IsDeleted},
@@ -182,7 +223,11 @@ public sealed class UserAccountMySqlRepository :
             reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.EmailVerified)),
             reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.IsActive)),
             reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.IsDeleted)),
-            reader.GetUtcDateTime(UserAccountTable.Columns.CreatedAt));
+            reader.GetUtcDateTime(UserAccountTable.Columns.CreatedAt))
+        {
+            PhoneNumber = reader.GetNullableString(UserAccountTable.Columns.PhoneNumber),
+            PasswordSetupRequired = reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.PasswordSetupRequired))
+        };
     }
 
     private MySqlDatabaseTransaction CurrentTransaction() =>

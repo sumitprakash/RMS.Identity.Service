@@ -34,6 +34,13 @@ public sealed class JwtAccessTokenUserResolver : IAccessTokenUserResolver
 
         try
         {
+            using var header = JsonDocument.Parse(Base64UrlDecode(parts[0]));
+            if (!StringClaimEquals(header.RootElement, "alg", "HS256")
+                || !StringClaimEquals(header.RootElement, "typ", "JWT"))
+            {
+                throw Unauthorized("Authorization bearer token is invalid.");
+            }
+
             var unsignedToken = $"{parts[0]}.{parts[1]}";
             if (!CryptographicOperations.FixedTimeEquals(
                     Encoding.ASCII.GetBytes(Sign(unsignedToken)),
