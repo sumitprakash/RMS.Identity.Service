@@ -50,7 +50,7 @@ public sealed class UpdateCompanyStatusController : ControllerBase
                     new UpdateCompanyStatusCommandRequest(
                         actorUserUuid,
                         companyUuid,
-                        body.Status!.Value),
+                        body.Status),
                     transactionCancellationToken);
             },
             cancellationToken);

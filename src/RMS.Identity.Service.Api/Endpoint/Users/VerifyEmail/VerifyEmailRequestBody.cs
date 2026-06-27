@@ -9,7 +9,7 @@ public sealed class VerifyEmailRequestBody
     [Required]
     [MinLength(32)]
     [MaxLength(256)]
-    public string Token { get; init; } = string.Empty;
+    public required string Token { get; init; }
 
     [MinLength(8)]
     [MaxLength(128)]

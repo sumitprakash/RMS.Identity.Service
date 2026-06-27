@@ -9,5 +9,5 @@ public sealed class UpdateCompanyStatusRequestBody
 {
     [Required]
     [EnumDataType(typeof(CompanyStatusUpdate))]
-    public CompanyStatusUpdate? Status { get; init; }
+    public required CompanyStatusUpdate Status { get; init; }
 }

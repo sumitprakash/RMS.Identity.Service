@@ -10,7 +10,7 @@ public sealed class CreateCompanyUserRequestBody
     [Required]
     [StringLength(32, MinimumLength = 8)]
     [RegularExpression("^[A-Za-z0-9]+$")]
-    public string Username { get; init; } = string.Empty;
+    public required string Username { get; init; }
 
     [MinLength(2)]
     [MaxLength(64)]
@@ -18,5 +18,5 @@ public sealed class CreateCompanyUserRequestBody
 
     [Required]
     [EnumDataType(typeof(CompanyRole))]
-    public CompanyRole? CompanyRole { get; init; }
+    public required CompanyRole CompanyRole { get; init; }
 }

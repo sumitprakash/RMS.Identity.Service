@@ -9,9 +9,9 @@ public sealed class UpdateCompanyUserRequestBody
 {
     [Required]
     [EnumDataType(typeof(CompanyRole))]
-    public CompanyRole? CompanyRole { get; init; }
+    public required CompanyRole CompanyRole { get; init; }
 
     [Required]
     [EnumDataType(typeof(CompanyMembershipStatus))]
-    public CompanyMembershipStatus? MembershipStatus { get; init; }
+    public required CompanyMembershipStatus MembershipStatus { get; init; }
 }

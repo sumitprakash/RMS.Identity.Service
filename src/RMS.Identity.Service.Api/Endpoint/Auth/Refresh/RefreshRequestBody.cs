@@ -9,5 +9,5 @@ public sealed class RefreshRequestBody
     [Required]
     [MinLength(64)]
     [MaxLength(256)]
-    public string RefreshToken { get; init; } = string.Empty;
+    public required string RefreshToken { get; init; }
 }
