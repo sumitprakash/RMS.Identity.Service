@@ -36,7 +36,7 @@ public sealed class SignUpCommandHandlerTests
                 "Alice",
                 null,
                 "Example",
-                "+919876543210"),
+                "9876543210"),
             CancellationToken.None);
 
         Assert.Equal("alice@example.com", response.Username);
@@ -49,7 +49,7 @@ public sealed class SignUpCommandHandlerTests
         Assert.NotNull(outboxRepository.Token);
         Assert.Equal(emailVerificationRepository.CreatedToken.TokenHash, $"hash:{outboxRepository.Token}");
         Assert.Equal(response.UserUuid, outboxRepository.Account?.UserUuid);
-        Assert.Equal("+919876543210", userRepository.CreatedUser?.PhoneNumber);
+        Assert.Equal("9876543210", userRepository.CreatedUser?.PhoneNumber);
     }
 
     private sealed class FakeUserAccountRepository : IUserAccountReadRepository, IUserAccountWriteRepository

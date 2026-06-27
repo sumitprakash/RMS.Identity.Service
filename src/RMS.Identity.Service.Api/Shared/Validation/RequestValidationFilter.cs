@@ -1,6 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using RMS.Identity.Service.Api.Shared.ErrorHandling;
 using RMS.Identity.Service.Application.Shared.Errors;
 
 namespace RMS.Identity.Service.Api.Shared.Validation;
@@ -16,29 +14,32 @@ public sealed class RequestValidationFilter : IActionFilter
 
     public void OnActionExecuting(ActionExecutingContext context)
     {
+        if (!context.ModelState.IsValid)
+        {
+            context.Result = ValidationErrorResponseFactory.Create(context.ModelState);
+            return;
+        }
+
         foreach (var argument in context.ActionArguments.Values)
         {
-            if (argument is not IValidatableRequest request)
+            if (argument is null)
             {
                 continue;
             }
 
-            if (!_validators.TryGetValue(request.GetType(), out var validator))
+            if (!_validators.TryGetValue(argument.GetType(), out var validator))
             {
-                throw new InvalidOperationException(
-                    $"No request validator is registered for request type '{request.GetType().FullName}'.");
+                continue;
             }
 
             try
             {
-                validator.Validate(request);
+                validator.Validate(argument);
             }
             catch (ServiceException exception) when (exception.StatusCode == StatusCodes.Status400BadRequest)
             {
-                context.Result = new BadRequestObjectResult(ApiErrorResponse.Create(
-                    exception.Code,
-                    exception.Message,
-                    exception.Details));
+                context.ModelState.AddModelError(string.Empty, exception.Message);
+                context.Result = ValidationErrorResponseFactory.Create(context.ModelState);
                 return;
             }
         }

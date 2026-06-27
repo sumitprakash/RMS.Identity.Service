@@ -9,7 +9,7 @@ public static class CreateCompanyUserMappings
             request.CompanyUuid,
             request.Body.Username,
             request.Body.DisplayName,
-            request.Body.CompanyRole,
+            request.Body.CompanyRole!.Value,
             actorUserUuid);
 
     public static UserResponse ToResponse(this CreateCompanyUserCommandResponse response) =>

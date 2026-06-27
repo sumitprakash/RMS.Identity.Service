@@ -90,7 +90,7 @@ public sealed class GetCompanyControllerTests
                 "Example Retail",
                 "29ABCDE1234F1Z5",
                 "accounts@example.com",
-                "+919876543211",
+                "9876543211",
                 "1 Main Road",
                 AddressLine2: null,
                 "Bengaluru",

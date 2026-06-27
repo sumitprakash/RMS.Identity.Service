@@ -23,7 +23,12 @@ public sealed class UpdateCompanyUserCommandHandlerTests
         var handler = new UpdateCompanyUserCommandHandler(repository, repository, auditRepository);
 
         var response = await handler.HandleAsync(
-            new UpdateCompanyUserCommandRequest(ActorUserUuid, CompanyUuid, UserUuid, "admin", "active"),
+            new UpdateCompanyUserCommandRequest(
+                ActorUserUuid,
+                CompanyUuid,
+                UserUuid,
+                CompanyRole.Admin,
+                CompanyMembershipStatus.Active),
             CancellationToken.None);
 
         Assert.Equal("ADMIN", response.CompanyRole);
@@ -46,7 +51,12 @@ public sealed class UpdateCompanyUserCommandHandlerTests
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(
-                new UpdateCompanyUserCommandRequest(ActorUserUuid, CompanyUuid, UserUuid, "OWNER", "suspended"),
+                new UpdateCompanyUserCommandRequest(
+                    ActorUserUuid,
+                    CompanyUuid,
+                    UserUuid,
+                    CompanyRole.Owner,
+                    CompanyMembershipStatus.Suspended),
                 CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Conflict, exception.StatusCode);

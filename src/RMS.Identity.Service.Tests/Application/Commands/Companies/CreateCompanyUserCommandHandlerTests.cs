@@ -46,7 +46,7 @@ public sealed class CreateCompanyUserCommandHandlerTests
                 CompanyUuid,
                 " Cashier@Example.com ",
                 " Store Cashier ",
-                "member",
+                CompanyRole.Member,
                 ActorUserUuid),
             CancellationToken.None);
 
@@ -86,7 +86,7 @@ public sealed class CreateCompanyUserCommandHandlerTests
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(
-                new CreateCompanyUserCommandRequest(CompanyUuid, "cashier@example.com", null, "MEMBER"),
+                new CreateCompanyUserCommandRequest(CompanyUuid, "cashier@example.com", null, CompanyRole.Member),
                 CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Conflict, exception.StatusCode);
@@ -112,7 +112,7 @@ public sealed class CreateCompanyUserCommandHandlerTests
                 "Example Retail",
                 "29ABCDE1234F1Z5",
                 "accounts@example.com",
-                "+919876543211",
+                "9876543211",
                 "1 Main Road",
                 null,
                 "Bengaluru",

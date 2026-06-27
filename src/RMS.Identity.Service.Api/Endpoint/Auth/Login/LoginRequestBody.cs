@@ -1,20 +1,19 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-using RMS.Identity.Service.Api.Shared.Validation;
 
 namespace RMS.Identity.Service.Api.Endpoint.Auth.Login;
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed class LoginRequestBody
 {
-    [Required(ErrorMessage = "Username is required.")]
-    [NotWhiteSpace(ErrorMessage = "Username is required.")]
-    [EmailAddress(ErrorMessage = "Username must be a valid email address.")]
-    [MaxLength(150, ErrorMessage = "Username must not exceed 150 characters.")]
+    [Required]
+    [StringLength(32, MinimumLength = 8)]
+    [RegularExpression("^[A-Za-z0-9]+$")]
     public string Username { get; init; } = string.Empty;
 
-    [Required(ErrorMessage = "Password is required.")]
-    [NotWhiteSpace(ErrorMessage = "Password is required.")]
-    [MaxLength(128, ErrorMessage = "Password must not exceed 128 characters.")]
+    [Required]
+    [MinLength(8)]
+    [MaxLength(128)]
+    [RegularExpression(@"^(?=.*[A-Z])(?=.*\d)(?=.*[@#$&=]).+$")]
     public string Password { get; init; } = string.Empty;
 }

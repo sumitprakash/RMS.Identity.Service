@@ -1,12 +1,9 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
-using RMS.Identity.Service.Api.Endpoint.Auth.Refresh;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.OpenApi;
-using RMS.Identity.Service.Api.Endpoint.Auth.Login;
-using RMS.Identity.Service.Api.Endpoint.Companies.CreateCompanyUser;
-using RMS.Identity.Service.Api.Endpoint.Companies.RegisterCompany;
 using RMS.Identity.Service.Api.Endpoint.SignUp;
 using RMS.Identity.Service.Api.Middleware;
 using RMS.Identity.Service.Api.Shared.Auth;
@@ -30,23 +27,15 @@ builder.Services
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(
+            namingPolicy: null,
+            allowIntegerValues: false));
     });
 
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.InvalidModelStateResponseFactory = context =>
-    {
-        var details = context.ModelState
-            .Where(entry => entry.Value?.Errors.Count > 0)
-            .ToDictionary(
-                entry => entry.Key,
-                entry => entry.Value!.Errors.Select(error =>
-                    string.IsNullOrWhiteSpace(error.ErrorMessage) ? "Invalid value." : error.ErrorMessage).ToArray());
-
-        return new BadRequestObjectResult(ApiErrorResponse.Create(
-            ApiErrors.BadRequest.ValidationError,
-            details));
-    };
+        ValidationErrorResponseFactory.Create(context.ModelState);
 });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -86,11 +75,7 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddIdentityServiceInfrastructure(builder.Configuration);
 builder.Services.AddScoped<IIdempotencyService, IdempotencyService>();
 builder.Services.AddSingleton<RequestValidationFilter>();
-builder.Services.AddSingleton<IRequestValidator, LoginRequestValidator>();
-builder.Services.AddSingleton<IRequestValidator, RefreshRequestValidator>();
 builder.Services.AddSingleton<IRequestValidator, SignUpRequestValidator>();
-builder.Services.AddSingleton<IRequestValidator, RegisterCompanyRequestValidator>();
-builder.Services.AddSingleton<IRequestValidator, CreateCompanyUserRequestValidator>();
 builder.Services.AddScoped<IAccessTokenUserResolver, JwtAccessTokenUserResolver>();
 builder.Services.AddScoped<ICompanyAccessAuthorizer, CompanyAccessAuthorizer>();
 builder.Services.AddScoped<IPlatformAdminAuthorizer, PlatformAdminAuthorizer>();

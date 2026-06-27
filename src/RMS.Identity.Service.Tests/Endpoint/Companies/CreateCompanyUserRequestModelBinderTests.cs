@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using RMS.Identity.Service.Api.Endpoint.Companies.CreateCompanyUser;
 using RMS.Identity.Service.Api.Shared.ModelBinding;
+using RMS.Identity.Service.Domain.Contracts.CompanyUsers;
 
 namespace RMS.Identity.Service.Tests.Endpoint.Companies;
 
@@ -38,7 +39,7 @@ public sealed class CreateCompanyUserRequestModelBinderTests
         Assert.Equal(companyUuid, request.CompanyUuid);
         Assert.Equal("alice@example.com", request.Body.Username);
         Assert.Equal("Alice Example", request.Body.DisplayName);
-        Assert.Equal("ADMIN", request.Body.CompanyRole);
+        Assert.Equal(CompanyRole.Admin, request.Body.CompanyRole);
     }
 
     private static ApiRequestModelBinder<CreateCompanyUserRequest> CreateBinder()
@@ -46,6 +47,9 @@ public sealed class CreateCompanyUserRequestModelBinderTests
         var jsonOptions = new JsonOptions();
         jsonOptions.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         jsonOptions.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        jsonOptions.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(
+            namingPolicy: null,
+            allowIntegerValues: false));
 
         return new ApiRequestModelBinder<CreateCompanyUserRequest>(Options.Create(jsonOptions));
     }

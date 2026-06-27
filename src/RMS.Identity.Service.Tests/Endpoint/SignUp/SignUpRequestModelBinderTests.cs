@@ -26,7 +26,7 @@ public sealed class SignUpRequestModelBinderTests
               "firstName": "Alice",
               "middleName": null,
               "lastName": "Example",
-              "phoneNumber": "+919876543210"
+              "phoneNumber": "9876543210"
             }
             """);
         var binder = CreateBinder();
@@ -41,7 +41,7 @@ public sealed class SignUpRequestModelBinderTests
         Assert.Equal("Alice", request.Body.FirstName);
         Assert.Null(request.Body.MiddleName);
         Assert.Equal("Example", request.Body.LastName);
-        Assert.Equal("+919876543210", request.Body.PhoneNumber);
+        Assert.Equal("9876543210", request.Body.PhoneNumber);
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public sealed class SignUpRequestModelBinderTests
               "password": "StrongPass@123",
               "firstName": "Alice",
               "lastName": "Example",
-              "phoneNumber": "+919876543210",
+              "phoneNumber": "9876543210",
               "unexpected": "value"
             }
             """);

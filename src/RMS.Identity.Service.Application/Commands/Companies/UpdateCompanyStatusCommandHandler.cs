@@ -38,7 +38,7 @@ public sealed class UpdateCompanyStatusCommandHandler : ICommandHandler<UpdateCo
         UpdateCompanyStatusCommandRequest command,
         CancellationToken cancellationToken)
     {
-        var targetStatus = NormalizeStatus(command.Status);
+        var targetStatus = command.Status.ToStorageValue();
         var company = await _companyReadRepository.GetByUuidAsync(command.CompanyUuid, cancellationToken);
         EnsureValidTransition(company.Status, targetStatus);
 
@@ -55,23 +55,6 @@ public sealed class UpdateCompanyStatusCommandHandler : ICommandHandler<UpdateCo
             cancellationToken);
 
         return ToResponse(updatedCompany);
-    }
-
-    private static string NormalizeStatus(string status)
-    {
-        if (string.IsNullOrWhiteSpace(status))
-        {
-            throw ValidationError("Company status is required.");
-        }
-
-        var normalized = status.Trim().ToLowerInvariant();
-        if (!AllowedTransitions.ContainsKey(normalized)
-            && !AllowedTransitions.Values.Any(targets => targets.Contains(normalized, StringComparer.Ordinal)))
-        {
-            throw ValidationError("Company status must be verified, rejected, or suspended.");
-        }
-
-        return normalized;
     }
 
     private static void EnsureValidTransition(string currentStatus, string targetStatus)
@@ -100,6 +83,4 @@ public sealed class UpdateCompanyStatusCommandHandler : ICommandHandler<UpdateCo
             company.Country,
             company.Status);
 
-    private static ServiceException ValidationError(string message) =>
-        new ApplicationServiceException(ServiceStatusErrorCodes.BadRequest, message);
 }

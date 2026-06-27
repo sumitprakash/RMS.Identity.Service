@@ -9,9 +9,6 @@ namespace RMS.Identity.Service.Application.Commands.Companies;
 
 public sealed class UpdateCompanyUserCommandHandler : ICommandHandler<UpdateCompanyUserCommandRequest, UpdateCompanyUserCommandResponse>
 {
-    private static readonly string[] AllowedCompanyRoles = ["OWNER", "ADMIN", "MEMBER"];
-    private static readonly string[] AllowedMembershipStatuses = ["active", "invited", "suspended"];
-
     private readonly ICompanyUserReadRepository _companyUserReadRepository;
     private readonly ICompanyUserWriteRepository _companyUserWriteRepository;
     private readonly IAuditLogWriteRepository _auditLogWriteRepository;
@@ -30,8 +27,8 @@ public sealed class UpdateCompanyUserCommandHandler : ICommandHandler<UpdateComp
         UpdateCompanyUserCommandRequest command,
         CancellationToken cancellationToken)
     {
-        var companyRole = NormalizeCompanyRole(command.CompanyRole);
-        var membershipStatus = NormalizeMembershipStatus(command.MembershipStatus);
+        var companyRole = command.CompanyRole.ToStorageValue();
+        var membershipStatus = command.MembershipStatus.ToStorageValue();
         var existingUser = await LoadUserAsync(command.CompanyUuid, command.UserUuid, cancellationToken);
 
         await PreventRemovingLastActiveOwnerAsync(
@@ -103,28 +100,6 @@ public sealed class UpdateCompanyUserCommandHandler : ICommandHandler<UpdateComp
         && string.Equals(user.MembershipStatus, "active", StringComparison.OrdinalIgnoreCase)
         && user.IsActive;
 
-    private static string NormalizeCompanyRole(string companyRole)
-    {
-        var normalized = companyRole.Trim().ToUpperInvariant();
-        if (!AllowedCompanyRoles.Contains(normalized, StringComparer.Ordinal))
-        {
-            throw ValidationError("Company role must be OWNER, ADMIN, or MEMBER.");
-        }
-
-        return normalized;
-    }
-
-    private static string NormalizeMembershipStatus(string membershipStatus)
-    {
-        var normalized = membershipStatus.Trim().ToLowerInvariant();
-        if (!AllowedMembershipStatuses.Contains(normalized, StringComparer.Ordinal))
-        {
-            throw ValidationError("Membership status must be active, invited, or suspended.");
-        }
-
-        return normalized;
-    }
-
     private static UpdateCompanyUserCommandResponse ToResponse(CompanyUserAccount user) =>
         new(
             user.UserUuid,
@@ -135,6 +110,4 @@ public sealed class UpdateCompanyUserCommandHandler : ICommandHandler<UpdateComp
             CompanyUserStatusResolver.Resolve(user),
             user.CreatedAt);
 
-    private static ServiceException ValidationError(string message) =>
-        new ApplicationServiceException(ServiceStatusErrorCodes.BadRequest, message);
 }

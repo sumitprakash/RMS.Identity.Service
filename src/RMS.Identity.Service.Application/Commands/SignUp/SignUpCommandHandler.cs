@@ -51,11 +51,11 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
         if (normalizedUsername.Length > 150
             || command.Password.Length is < 8 or > 128
             || displayName.Length > 255
-            || command.PhoneNumber.Trim().Length > 32)
+            || !IsTenDigitPhoneNumber(command.PhoneNumber))
         {
             throw new ApplicationServiceException(
                 ServiceStatusErrorCodes.BadRequest,
-                "One or more signup fields exceed the supported length.");
+                "One or more signup fields are invalid or exceed the supported length.");
         }
 
         if (await _userAccountReadRepository.ExistsByUsernameAsync(normalizedUsername, cancellationToken))
@@ -101,6 +101,12 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
             new[] { firstName, middleName, lastName }
                 .Where(part => !string.IsNullOrWhiteSpace(part))
                 .Select(part => part!.Trim()));
+
+    private static bool IsTenDigitPhoneNumber(string value)
+    {
+        var trimmed = value.Trim();
+        return trimmed.Length == 10 && trimmed.All(char.IsDigit);
+    }
 
     private static Exception UserAlreadyExists() =>
         new ApplicationServiceException(ServiceErrorDefinitions.Users.UserExists);

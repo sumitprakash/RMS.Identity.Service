@@ -53,8 +53,8 @@ public sealed class UpdateCompanyUserController : ControllerBase
                 actorUserUuid,
                 companyUuid,
                 userUuid,
-                body.CompanyRole,
-                body.MembershipStatus),
+                body.CompanyRole!.Value,
+                body.MembershipStatus!.Value),
             cancellationToken);
 
         return Ok(response.ToResponse());

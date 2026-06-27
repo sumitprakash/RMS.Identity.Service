@@ -19,7 +19,6 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
 {
     private const string EmailVerificationPurpose = "email_verification";
     private static readonly TimeSpan EmailVerificationTokenLifetime = TimeSpan.FromHours(24);
-    private static readonly string[] AllowedCompanyRoles = ["OWNER", "ADMIN", "MEMBER"];
 
     private readonly ICompanyReadRepository _companyReadRepository;
     private readonly IUserAccountReadRepository _userAccountReadRepository;
@@ -70,7 +69,7 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
             throw new ApplicationServiceException(ServiceErrorDefinitions.Users.UserExists);
         }
 
-        var companyRole = NormalizeCompanyRole(command.CompanyRole);
+        var companyRole = command.CompanyRole.ToStorageValue();
         var company = await _companyReadRepository.GetByUuidAsync(command.CompanyUuid, cancellationToken);
         if (company.IsDeleted)
         {
@@ -129,17 +128,6 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
             companyRole,
             "pending",
             user.CreatedAt);
-    }
-
-    private static string NormalizeCompanyRole(string companyRole)
-    {
-        var normalized = companyRole.Trim().ToUpperInvariant();
-        if (!AllowedCompanyRoles.Contains(normalized, StringComparer.Ordinal))
-        {
-            throw new ApplicationServiceException(ServiceStatusErrorCodes.BadRequest, "Company role must be OWNER, ADMIN, or MEMBER.");
-        }
-
-        return normalized;
     }
 
     private static string CreateTemporaryPassword() =>

@@ -97,17 +97,29 @@ public sealed class RegisterCompanyCommandHandler : ICommandHandler<RegisterComp
             || (command.TradeName?.Trim().Length ?? 0) > 255
             || command.Gstin.Trim().Length > 32
             || command.ContactEmailAddress.Trim().Length > 150
-            || command.ContactPhoneNumber.Trim().Length > 32
+            || !IsTenDigitPhoneNumber(command.ContactPhoneNumber)
             || command.AddressLine1.Trim().Length > 255
             || (command.AddressLine2?.Trim().Length ?? 0) > 255
             || command.City.Trim().Length > 128
             || command.State.Trim().Length > 128
-            || command.PostalCode.Trim().Length > 20
+            || !IsSixDigitPostalCode(command.PostalCode)
             || command.Country.Trim().Length != 2)
         {
             throw new ApplicationServiceException(
                 ServiceStatusErrorCodes.BadRequest,
-                "One or more company fields exceed the supported length.");
+                "One or more company fields are invalid or exceed the supported length.");
         }
+    }
+
+    private static bool IsTenDigitPhoneNumber(string value)
+    {
+        var trimmed = value.Trim();
+        return trimmed.Length == 10 && trimmed.All(char.IsDigit);
+    }
+
+    private static bool IsSixDigitPostalCode(string value)
+    {
+        var trimmed = value.Trim();
+        return trimmed.Length == 6 && trimmed.All(char.IsDigit);
     }
 }

@@ -47,7 +47,10 @@ public sealed class UpdateCompanyStatusController : ControllerBase
                 await _platformAdminAuthorizer.AuthorizeAsync(actorUserUuid, transactionCancellationToken);
 
                 return await _updateCompanyStatusCommandHandler.HandleAsync(
-                    new UpdateCompanyStatusCommandRequest(actorUserUuid, companyUuid, body.Status),
+                    new UpdateCompanyStatusCommandRequest(
+                        actorUserUuid,
+                        companyUuid,
+                        body.Status!.Value),
                     transactionCancellationToken);
             },
             cancellationToken);

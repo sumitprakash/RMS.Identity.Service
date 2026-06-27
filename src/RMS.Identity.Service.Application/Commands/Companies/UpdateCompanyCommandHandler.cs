@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
@@ -14,8 +13,6 @@ public sealed class UpdateCompanyCommandHandler : ICommandHandler<UpdateCompanyC
         "^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase,
         TimeSpan.FromMilliseconds(100));
-    private static readonly PhoneAttribute PhoneValidator = new();
-
     private readonly ICompanyReadRepository _companyReadRepository;
     private readonly ICompanyWriteRepository _companyWriteRepository;
 
@@ -66,11 +63,10 @@ public sealed class UpdateCompanyCommandHandler : ICommandHandler<UpdateCompanyC
         var contactEmailAddress = EmailAddressValidator.Normalize(command.ContactEmailAddress);
         EnsureMaxLength(contactEmailAddress, 150, "Company contact email address");
         var contactPhoneNumber = TrimRequired(command.ContactPhoneNumber, "Company contact phone number is required.");
-        if (!PhoneValidator.IsValid(contactPhoneNumber))
+        if (!IsTenDigitPhoneNumber(contactPhoneNumber))
         {
-            throw ValidationError("Company contact phone number must be a valid phone number.");
+            throw ValidationError("Company contact phone number must be exactly 10 digits.");
         }
-        EnsureMaxLength(contactPhoneNumber, 32, "Company contact phone number");
 
         var tradeName = TrimToNull(command.TradeName);
         var addressLine1 = TrimRequired(command.AddressLine1, "Company registered address line 1 is required.");
@@ -84,7 +80,11 @@ public sealed class UpdateCompanyCommandHandler : ICommandHandler<UpdateCompanyC
         EnsureMaxLength(addressLine2, 255, "Company registered address line 2");
         EnsureMaxLength(city, 128, "Company city");
         EnsureMaxLength(state, 128, "Company state");
-        EnsureMaxLength(postalCode, 20, "Company postal code");
+        if (!IsSixDigitPostalCode(postalCode))
+        {
+            throw ValidationError("Company postal code must be exactly 6 digits.");
+        }
+
         if (country.Length != 2)
         {
             throw ValidationError("Company country must be a two-letter country code.");
@@ -125,6 +125,12 @@ public sealed class UpdateCompanyCommandHandler : ICommandHandler<UpdateCompanyC
             throw ValidationError($"{fieldName} must not exceed {maxLength} characters.");
         }
     }
+
+    private static bool IsTenDigitPhoneNumber(string value) =>
+        value.Length == 10 && value.All(char.IsDigit);
+
+    private static bool IsSixDigitPostalCode(string value) =>
+        value.Length == 6 && value.All(char.IsDigit);
 
     private static ServiceException ValidationError(string message) =>
         new ApplicationServiceException(ServiceStatusErrorCodes.BadRequest, message);

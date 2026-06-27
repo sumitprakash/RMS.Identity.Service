@@ -5,7 +5,7 @@ namespace RMS.Identity.Service.Api.Endpoint.SignUp;
 
 public sealed class SignUpRequestValidator : RequestValidator<SignUpRequest>
 {
-    protected override void ValidateRequest(SignUpRequest request)
+    public override void Validate(SignUpRequest request)
     {
         var body = request.Body;
 
