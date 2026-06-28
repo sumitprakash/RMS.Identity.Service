@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -16,6 +17,34 @@ namespace RMS.Identity.Service.Tests.Endpoint.Companies;
 
 public sealed class CreateCompanyUserRequestModelBinderTests
 {
+    [Fact]
+    public void Validate_WithEmailUsername_IsValid()
+    {
+        var body = new CreateCompanyUserRequestBody
+        {
+            Username = "cashier@example.com",
+            CompanyRole = CompanyRole.Member
+        };
+
+        var errors = Validate(body);
+
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void Validate_WithAlphanumericUsername_IsInvalid()
+    {
+        var body = new CreateCompanyUserRequestBody
+        {
+            Username = "cashier1",
+            CompanyRole = CompanyRole.Member
+        };
+
+        var errors = Validate(body);
+
+        Assert.Contains(errors, error => error.MemberNames.Contains(nameof(CreateCompanyUserRequestBody.Username)));
+    }
+
     [Fact]
     public async Task BindModelAsync_WithRouteAndFlatJsonBody_CreatesCreateCompanyUserRequest()
     {
@@ -52,6 +81,18 @@ public sealed class CreateCompanyUserRequestModelBinderTests
             allowIntegerValues: false));
 
         return new ApiRequestModelBinder<CreateCompanyUserRequest>(Options.Create(jsonOptions));
+    }
+
+    private static IReadOnlyCollection<ValidationResult> Validate(object instance)
+    {
+        var validationResults = new List<ValidationResult>();
+        Validator.TryValidateObject(
+            instance,
+            new ValidationContext(instance),
+            validationResults,
+            validateAllProperties: true);
+
+        return validationResults;
     }
 
     private static ModelBindingContext CreateBindingContext(Guid companyUuid, string body)

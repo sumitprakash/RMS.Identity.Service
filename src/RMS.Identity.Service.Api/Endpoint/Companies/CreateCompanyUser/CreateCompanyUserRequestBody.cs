@@ -8,8 +8,9 @@ namespace RMS.Identity.Service.Api.Endpoint.Companies.CreateCompanyUser;
 public sealed class CreateCompanyUserRequestBody
 {
     [Required]
-    [StringLength(32, MinimumLength = 8)]
-    [RegularExpression("^[A-Za-z0-9]+$")]
+    [MinLength(10)]
+    [EmailAddress]
+    [MaxLength(64)]
     public required string Username { get; init; }
 
     [MinLength(2)]

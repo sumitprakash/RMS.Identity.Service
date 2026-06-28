@@ -76,12 +76,15 @@ components:
         username:
           type: string
           format: email
-          maxLength: 150
+          minLength: 10
+          maxLength: 64
           example: user@example.com
         password:
           type: string
           format: password
+          minLength: 8
           maxLength: 128
+          pattern: '^(?=.*[A-Z])(?=.*\d)(?=.*[@#$&=]).+$'
           example: StrongPass@123
       additionalProperties: false
 
@@ -151,31 +154,38 @@ components:
         emailAddress:
           type: string
           format: email
-          maxLength: 150
+          minLength: 10
+          maxLength: 64
           example: user@example.com
         password:
           type: string
           format: password
           minLength: 8
           maxLength: 128
+          pattern: '^(?=.*[A-Z])(?=.*\d)(?=.*[@#$&=]).+$'
           example: StrongPass@123
         firstName:
           type: string
-          maxLength: 100
+          minLength: 2
+          maxLength: 32
           example: First
         middleName:
           type: string
-          maxLength: 100
+          minLength: 2
+          maxLength: 64
           nullable: true
           example: Middle
         lastName:
           type: string
-          maxLength: 100
+          minLength: 2
+          maxLength: 32
           example: Last
         phoneNumber:
           type: string
-          maxLength: 32
-          example: "+15551234567"
+          minLength: 10
+          maxLength: 10
+          pattern: '^[0-9]{10}$'
+          example: "9876543210"
       additionalProperties: false
 
     SignupResponse:
@@ -209,11 +219,13 @@ components:
         username:
           type: string
           format: email
-          maxLength: 150
+          minLength: 10
+          maxLength: 64
           example: cashier@example.com
         displayName:
           type: string
-          maxLength: 255
+          minLength: 2
+          maxLength: 64
           example: Store User
         companyRole:
           $ref: '#/components/schemas/CompanyRole'
@@ -291,6 +303,7 @@ components:
           format: password
           minLength: 8
           maxLength: 128
+          pattern: '^(?=.*[A-Z])(?=.*\d)(?=.*[@#$&=]).+$'
           nullable: true
           description: Required when activating a company-created user; omitted for normal signup verification.
       additionalProperties: false
@@ -321,56 +334,64 @@ components:
         - city
         - state
         - postalCode
-        - country
       properties:
         legalName:
           type: string
-          maxLength: 255
+          minLength: 2
+          maxLength: 256
           example: Example Retail Pvt Ltd
         tradeName:
           type: string
-          maxLength: 255
+          minLength: 2
+          maxLength: 160
           nullable: true
           example: Example Retail
         gstin:
           type: string
+          minLength: 15
+          maxLength: 15
+          pattern: '^[0-9]{2}[A-Za-z]{5}[0-9]{4}[A-Za-z][1-9A-Za-z]Z[0-9A-Za-z]$'
           description: Mandatory unique Indian GSTIN
           example: 29ABCDE1234F1Z5
         contactEmailAddress:
           type: string
           format: email
-          maxLength: 150
+          minLength: 10
+          maxLength: 64
           example: accounts@example.com
         contactPhoneNumber:
           type: string
-          maxLength: 32
-          example: "+919876543211"
+          minLength: 10
+          maxLength: 10
+          pattern: '^[0-9]{10}$'
+          example: "9876543211"
         addressLine1:
           type: string
-          maxLength: 255
+          minLength: 5
+          maxLength: 160
           example: 1 Main Road
         addressLine2:
           type: string
-          maxLength: 255
+          minLength: 2
+          maxLength: 256
           nullable: true
           example: Near Market
         city:
           type: string
-          maxLength: 128
+          minLength: 2
+          maxLength: 32
           example: Bengaluru
         state:
           type: string
-          maxLength: 128
+          minLength: 2
+          maxLength: 32
           example: Karnataka
         postalCode:
           type: string
-          maxLength: 20
+          minLength: 6
+          maxLength: 6
+          pattern: '^[0-9]{6}$'
           example: "560001"
-        country:
-          type: string
-          minLength: 2
-          maxLength: 2
-          example: IN
       additionalProperties: false
 
     RegisterCompanyResponse:

@@ -7,8 +7,9 @@ namespace RMS.Identity.Service.Api.Endpoint.Auth.Login;
 public sealed class LoginRequestBody
 {
     [Required]
-    [StringLength(32, MinimumLength = 8)]
-    [RegularExpression("^[A-Za-z0-9]+$")]
+    [MinLength(10)]
+    [EmailAddress]
+    [MaxLength(64)]
     public required string Username { get; init; }
 
     [Required]
