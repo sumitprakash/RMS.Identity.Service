@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
 
 namespace RMS.Identity.Service.Infrastructure.Data;
@@ -6,13 +7,16 @@ public sealed class MySqlDatabaseTransactionExecutor : IDatabaseTransactionExecu
 {
     private readonly IMySqlConnectionFactory _connectionFactory;
     private readonly IDatabaseTransactionAccessor _transactionAccessor;
+    private readonly ILogger<MySqlDatabaseTransactionExecutor> _logger;
 
     public MySqlDatabaseTransactionExecutor(
         IMySqlConnectionFactory connectionFactory,
-        IDatabaseTransactionAccessor transactionAccessor)
+        IDatabaseTransactionAccessor transactionAccessor,
+        ILogger<MySqlDatabaseTransactionExecutor> logger)
     {
         _connectionFactory = connectionFactory;
         _transactionAccessor = transactionAccessor;
+        _logger = logger;
     }
 
     public async Task<TResult> ExecuteAsync<TResult>(
@@ -36,9 +40,19 @@ public sealed class MySqlDatabaseTransactionExecutor : IDatabaseTransactionExecu
             await transaction.CommitAsync(cancellationToken);
             return result;
         }
-        catch
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            try
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+            catch (Exception rollbackException)
+            {
+                _logger.LogError(
+                    rollbackException,
+                    "Failed to roll back MySQL transaction after operation failure.");
+            }
+
             throw;
         }
         finally

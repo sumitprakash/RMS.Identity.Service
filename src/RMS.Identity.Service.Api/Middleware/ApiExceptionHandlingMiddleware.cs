@@ -32,7 +32,11 @@ public sealed class ApiExceptionHandlingMiddleware
         {
             if (context.Response.HasStarted)
             {
-                _logger.LogWarning(exception, "Unable to write service error response because the response has already started.");
+                _logger.LogWarning(
+                    exception,
+                    "Unable to write service error response for {Method} {Path} because the response has already started.",
+                    context.Request.Method,
+                    context.Request.Path.Value);
                 throw;
             }
 
@@ -40,7 +44,11 @@ public sealed class ApiExceptionHandlingMiddleware
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "Unhandled exception while processing request.");
+            _logger.LogError(
+                exception,
+                "Unhandled exception while processing {Method} {Path}.",
+                context.Request.Method,
+                context.Request.Path.Value);
 
             if (context.Response.HasStarted)
             {
