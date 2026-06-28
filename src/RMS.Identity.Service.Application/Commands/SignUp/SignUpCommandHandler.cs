@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Microsoft.Extensions.Logging;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
 using RMS.Identity.Service.Domain.Contracts.SignUp;
@@ -25,6 +26,7 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
     private readonly IOutboxWriteRepository _outboxWriteRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ITextHasher _textHasher;
+    private readonly ILogger<SignUpCommandHandler> _logger;
 
     public SignUpCommandHandler(
         IUserAccountReadRepository userAccountReadRepository,
@@ -33,7 +35,8 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
         IEmailVerificationWriteRepository emailVerificationWriteRepository,
         IOutboxWriteRepository outboxWriteRepository,
         IPasswordHasher passwordHasher,
-        ITextHasher textHasher)
+        ITextHasher textHasher,
+        ILogger<SignUpCommandHandler> logger)
     {
         _userAccountReadRepository = userAccountReadRepository;
         _userAccountWriteRepository = userAccountWriteRepository;
@@ -42,6 +45,7 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
         _outboxWriteRepository = outboxWriteRepository;
         _passwordHasher = passwordHasher;
         _textHasher = textHasher;
+        _logger = logger;
     }
 
     public async Task<SignUpCommandResponse> HandleAsync(SignUpCommandRequest command, CancellationToken cancellationToken)
@@ -60,6 +64,7 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
 
         if (await _userAccountReadRepository.ExistsByUsernameAsync(normalizedUsername, cancellationToken))
         {
+            _logger.LogWarning("Signup rejected because username already exists for {Username}.", normalizedUsername);
             throw UserAlreadyExists();
         }
 
@@ -86,6 +91,9 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
             verificationExpiresAt,
             cancellationToken);
         await _auditLogWriteRepository.InsertSignUpCreatedAsync(account, cancellationToken);
+        _logger.LogInformation(
+            "Signup created user {UserUuid} with email verification pending.",
+            account.UserUuid);
 
         return new SignUpCommandResponse(
             account.UserUuid,

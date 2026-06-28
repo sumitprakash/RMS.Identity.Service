@@ -26,6 +26,7 @@ public sealed class EmailVerificationOutboxWorker : BackgroundService
     {
         if (!_options.Enabled && !_options.AutoVerifyByEndpoint)
         {
+            using var disabledScope = BeginCorrelationScope("email-verification-outbox-disabled");
             _logger.LogInformation("Email verification outbox worker is disabled.");
             return;
         }
@@ -40,10 +41,11 @@ public sealed class EmailVerificationOutboxWorker : BackgroundService
 
     private async Task ProcessBatchAsync(CancellationToken cancellationToken)
     {
+        using var scope = BeginCorrelationScope($"email-verification-outbox-{Guid.NewGuid():N}");
         try
         {
-            using var scope = _scopeFactory.CreateScope();
-            var processor = scope.ServiceProvider.GetRequiredService<EmailVerificationRequestedOutboxProcessor>();
+            using var serviceScope = _scopeFactory.CreateScope();
+            var processor = serviceScope.ServiceProvider.GetRequiredService<EmailVerificationRequestedOutboxProcessor>();
             await processor.ProcessBatchAsync(cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -54,4 +56,10 @@ public sealed class EmailVerificationOutboxWorker : BackgroundService
             _logger.LogError(exception, "Email verification outbox worker failed while processing a batch.");
         }
     }
+
+    private IDisposable? BeginCorrelationScope(string correlationTraceId) =>
+        _logger.BeginScope(new Dictionary<string, object?>
+        {
+            ["CorrelationTraceId"] = correlationTraceId
+        });
 }

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using RMS.Identity.Service.Api.Shared.Correlation;
 using RMS.Identity.Service.Api.Shared.ErrorHandling;
 using RMS.Identity.Service.Application.Shared.Errors;
 using System.Text.Json;
@@ -62,7 +63,12 @@ public sealed class ApiExceptionHandlingMiddleware
 
     private Task HandleServiceExceptionAsync(HttpContext context, ServiceException exception)
     {
-        var response = ApiErrorResponse.Create(exception.Code, exception.Message, exception.Details);
+        var correlationTraceId = CorrelationTraceContext.GetCorrelationTraceId(context);
+        var response = ApiErrorResponse.Create(
+            exception.Code,
+            exception.Message,
+            exception.Details,
+            correlationTraceId);
 
         return WriteErrorResponseAsync(context, exception.StatusCode, response);
     }

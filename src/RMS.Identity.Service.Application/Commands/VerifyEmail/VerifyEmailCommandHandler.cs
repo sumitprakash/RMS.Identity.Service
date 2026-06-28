@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.VerifyEmail;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
@@ -17,6 +18,7 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
     private readonly ITextHasher _textHasher;
     private readonly IUserAccountReadRepository _userAccountReadRepository;
     private readonly IUserAccountWriteRepository _userAccountWriteRepository;
+    private readonly ILogger<VerifyEmailCommandHandler> _logger;
 
     public VerifyEmailCommandHandler(
         IEmailVerificationReadRepository emailVerificationReadRepository,
@@ -24,7 +26,8 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
         IPasswordHasher passwordHasher,
         ITextHasher textHasher,
         IUserAccountReadRepository userAccountReadRepository,
-        IUserAccountWriteRepository userAccountWriteRepository)
+        IUserAccountWriteRepository userAccountWriteRepository,
+        ILogger<VerifyEmailCommandHandler> logger)
     {
         _emailVerificationReadRepository = emailVerificationReadRepository;
         _emailVerificationWriteRepository = emailVerificationWriteRepository;
@@ -32,6 +35,7 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
         _textHasher = textHasher;
         _userAccountReadRepository = userAccountReadRepository;
         _userAccountWriteRepository = userAccountWriteRepository;
+        _logger = logger;
     }
 
     public async Task<VerifyEmailCommandResponse> HandleAsync(
@@ -61,22 +65,26 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
 
         if (token is null)
         {
+            _logger.LogWarning("Email verification rejected because the token was not found.");
             throw new ApplicationServiceException(ServiceErrorDefinitions.EmailVerification.EmailVerificationNotFound);
         }
 
         if (token.Consumed)
         {
+            _logger.LogWarning("Email verification rejected because token {EmailVerificationId} was already consumed.", token.EmailVerificationId);
             throw new ApplicationServiceException(ServiceErrorDefinitions.EmailVerification.EmailVerificationAlreadyUsed);
         }
 
         if (token.ExpiresAt <= DateTime.UtcNow)
         {
+            _logger.LogWarning("Email verification rejected because token {EmailVerificationId} expired.", token.EmailVerificationId);
             throw new ApplicationServiceException(ServiceErrorDefinitions.EmailVerification.EmailVerificationExpired);
         }
 
         var user = await _userAccountReadRepository.GetByIdAsync(token.UserId, cancellationToken);
         if (!user.IsActive || user.IsDeleted)
         {
+            _logger.LogWarning("Email verification rejected because user {UserUuid} is inactive.", user.UserUuid);
             throw new ApplicationServiceException(ServiceErrorDefinitions.Auth.UserNotActive);
         }
 
@@ -91,6 +99,7 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
             cancellationToken);
         if (!consumed)
         {
+            _logger.LogWarning("Email verification token {EmailVerificationId} was already consumed during verification.", token.EmailVerificationId);
             throw new ApplicationServiceException(ServiceErrorDefinitions.EmailVerification.EmailVerificationAlreadyUsed);
         }
 
@@ -105,6 +114,7 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
         {
             await _userAccountWriteRepository.MarkEmailVerifiedAsync(user.UserId, cancellationToken);
         }
+        _logger.LogInformation("Email verified for user {UserUuid}.", user.UserUuid);
 
         return new VerifyEmailCommandResponse(true, "Email verified successfully");
     }

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using RMS.Identity.Service.Application.Commands.Companies;
 using RMS.Identity.Service.Domain.Contracts.Companies;
 using RMS.Identity.Service.Domain.Entities.Companies;
@@ -17,7 +18,10 @@ public sealed class UpdateCompanyCommandHandlerTests
             "Existing Retail",
             "29ABCDE1234F1Z5",
             "accounts@example.com"));
-        var handler = new UpdateCompanyCommandHandler(repository, repository);
+        var handler = new UpdateCompanyCommandHandler(
+            repository,
+            repository,
+            NullLogger<UpdateCompanyCommandHandler>.Instance);
 
         var response = await handler.HandleAsync(
             new UpdateCompanyCommandRequest(

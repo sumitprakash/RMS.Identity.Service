@@ -16,7 +16,7 @@ public sealed class ErrorFileLogger : ILogger
 
     public IDisposable? BeginScope<TState>(TState state)
         where TState : notnull =>
-        null;
+        _provider.ScopeProvider.Push(state);
 
     public bool IsEnabled(LogLevel logLevel) => _provider.IsEnabled(logLevel);
 
@@ -43,6 +43,6 @@ public sealed class ErrorFileLogger : ILogger
         _provider.Enqueue(
             string.Create(
                 CultureInfo.InvariantCulture,
-                $"{DateTimeOffset.UtcNow:O} [{logLevel}] {_categoryName} [{eventId.Id}] {message}{Environment.NewLine}{exception}{Environment.NewLine}"));
+                $"{DateTimeOffset.UtcNow:O} [{logLevel}] {_categoryName} [{eventId.Id}]{_provider.GetScopeText()} {message}{Environment.NewLine}{exception}{Environment.NewLine}"));
     }
 }

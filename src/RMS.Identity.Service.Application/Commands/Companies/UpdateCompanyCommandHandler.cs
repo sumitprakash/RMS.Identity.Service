@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
 using RMS.Identity.Service.Domain.Contracts.Companies;
@@ -15,13 +16,16 @@ public sealed class UpdateCompanyCommandHandler : ICommandHandler<UpdateCompanyC
         TimeSpan.FromMilliseconds(100));
     private readonly ICompanyReadRepository _companyReadRepository;
     private readonly ICompanyWriteRepository _companyWriteRepository;
+    private readonly ILogger<UpdateCompanyCommandHandler> _logger;
 
     public UpdateCompanyCommandHandler(
         ICompanyReadRepository companyReadRepository,
-        ICompanyWriteRepository companyWriteRepository)
+        ICompanyWriteRepository companyWriteRepository,
+        ILogger<UpdateCompanyCommandHandler> logger)
     {
         _companyReadRepository = companyReadRepository;
         _companyWriteRepository = companyWriteRepository;
+        _logger = logger;
     }
 
     public async Task<UpdateCompanyCommandResponse> HandleAsync(
@@ -33,6 +37,7 @@ public sealed class UpdateCompanyCommandHandler : ICommandHandler<UpdateCompanyC
         await _companyWriteRepository.UpdateAsync(updateCommand, cancellationToken);
 
         var company = await _companyReadRepository.GetByUuidAsync(command.CompanyUuid, cancellationToken);
+        _logger.LogInformation("Updated company {CompanyUuid}.", company.CompanyUuid);
         return new UpdateCompanyCommandResponse(
             company.CompanyUuid,
             CompanyCode: null,

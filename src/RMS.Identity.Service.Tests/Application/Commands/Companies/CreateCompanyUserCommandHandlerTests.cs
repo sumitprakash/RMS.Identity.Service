@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.Logging.Abstractions;
 using RMS.Identity.Service.Application.Commands.Companies;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.Companies;
@@ -39,7 +40,8 @@ public sealed class CreateCompanyUserCommandHandlerTests
             outboxRepository,
             new FakePasswordHasher(),
             new FakeTextHasher(),
-            auditRepository);
+            auditRepository,
+            NullLogger<CreateCompanyUserCommandHandler>.Instance);
 
         var response = await handler.HandleAsync(
             new CreateCompanyUserCommandRequest(
@@ -82,7 +84,8 @@ public sealed class CreateCompanyUserCommandHandlerTests
             new FakeOutboxWriteRepository(),
             new FakePasswordHasher(),
             new FakeTextHasher(),
-            new FakeAuditLogWriteRepository());
+            new FakeAuditLogWriteRepository(),
+            NullLogger<CreateCompanyUserCommandHandler>.Instance);
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(

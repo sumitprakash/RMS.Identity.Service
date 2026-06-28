@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
 using RMS.Identity.Service.Domain.Contracts.Companies;
@@ -15,17 +16,20 @@ public sealed class RegisterCompanyCommandHandler : ICommandHandler<RegisterComp
     private readonly ICompanyReadRepository _companyReadRepository;
     private readonly ICompanyWriteRepository _companyWriteRepository;
     private readonly ICompanyUserWriteRepository _companyUserWriteRepository;
+    private readonly ILogger<RegisterCompanyCommandHandler> _logger;
 
     public RegisterCompanyCommandHandler(
         IUserAccountReadRepository userAccountReadRepository,
         ICompanyReadRepository companyReadRepository,
         ICompanyWriteRepository companyWriteRepository,
-        ICompanyUserWriteRepository companyUserWriteRepository)
+        ICompanyUserWriteRepository companyUserWriteRepository,
+        ILogger<RegisterCompanyCommandHandler> logger)
     {
         _userAccountReadRepository = userAccountReadRepository;
         _companyReadRepository = companyReadRepository;
         _companyWriteRepository = companyWriteRepository;
         _companyUserWriteRepository = companyUserWriteRepository;
+        _logger = logger;
     }
 
     public async Task<RegisterCompanyCommandResponse> HandleAsync(
@@ -35,6 +39,7 @@ public sealed class RegisterCompanyCommandHandler : ICommandHandler<RegisterComp
         var owner = await _userAccountReadRepository.GetByUuidAsync(command.OwnerUserUuid, cancellationToken);
         if (!owner.IsActive || owner.IsDeleted)
         {
+            _logger.LogWarning("Company registration rejected because owner user {OwnerUserUuid} is inactive.", command.OwnerUserUuid);
             throw new ApplicationServiceException(ServiceErrorDefinitions.Auth.UserNotActive);
         }
 
@@ -42,6 +47,7 @@ public sealed class RegisterCompanyCommandHandler : ICommandHandler<RegisterComp
         EnsureSupportedLengths(command);
         if (await _companyReadRepository.ExistsByGstinAsync(normalizedGstin, cancellationToken))
         {
+            _logger.LogWarning("Company registration rejected because GSTIN already exists.");
             throw new ApplicationServiceException(ServiceErrorDefinitions.Companies.CompanyExists);
         }
 
@@ -66,6 +72,10 @@ public sealed class RegisterCompanyCommandHandler : ICommandHandler<RegisterComp
             cancellationToken);
 
         var company = await _companyReadRepository.GetByIdAsync(companyId, cancellationToken);
+        _logger.LogInformation(
+            "Registered company {CompanyUuid} for owner user {OwnerUserUuid}.",
+            company.CompanyUuid,
+            command.OwnerUserUuid);
         return new RegisterCompanyCommandResponse(
             company.CompanyUuid,
             company.LegalName,

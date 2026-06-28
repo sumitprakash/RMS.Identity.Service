@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.Companies;
 using RMS.Identity.Service.Domain.Entities.Companies;
@@ -21,17 +22,20 @@ public sealed class UpdateCompanyStatusCommandHandler : ICommandHandler<UpdateCo
     private readonly ICompanyReadRepository _companyReadRepository;
     private readonly ICompanyWriteRepository _companyWriteRepository;
     private readonly IUserAccountReadRepository _userAccountReadRepository;
+    private readonly ILogger<UpdateCompanyStatusCommandHandler> _logger;
 
     public UpdateCompanyStatusCommandHandler(
         IAuditLogWriteRepository auditLogWriteRepository,
         ICompanyReadRepository companyReadRepository,
         ICompanyWriteRepository companyWriteRepository,
-        IUserAccountReadRepository userAccountReadRepository)
+        IUserAccountReadRepository userAccountReadRepository,
+        ILogger<UpdateCompanyStatusCommandHandler> logger)
     {
         _auditLogWriteRepository = auditLogWriteRepository;
         _companyReadRepository = companyReadRepository;
         _companyWriteRepository = companyWriteRepository;
         _userAccountReadRepository = userAccountReadRepository;
+        _logger = logger;
     }
 
     public async Task<UpdateCompanyStatusCommandResponse> HandleAsync(
@@ -53,6 +57,11 @@ public sealed class UpdateCompanyStatusCommandHandler : ICommandHandler<UpdateCo
             company.Status,
             actor.UserId,
             cancellationToken);
+        _logger.LogInformation(
+            "Updated company {CompanyUuid} status from {PreviousStatus} to {CurrentStatus}.",
+            updatedCompany.CompanyUuid,
+            company.Status,
+            updatedCompany.Status);
 
         return ToResponse(updatedCompany);
     }
