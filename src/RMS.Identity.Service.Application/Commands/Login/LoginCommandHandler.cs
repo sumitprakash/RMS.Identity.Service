@@ -34,6 +34,7 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommandRequest, L
 
         if (user is null)
         {
+            _ = _passwordHasher.Hash(command.Password);
             throw InvalidCredentials();
         }
 
@@ -71,6 +72,11 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommandRequest, L
         if (user.IsDeleted || !user.IsActive)
         {
             throw Forbidden(ServiceErrorDefinitions.Auth.AccountInactive);
+        }
+
+        if (user.PasswordSetupRequired)
+        {
+            throw Forbidden(ServiceErrorDefinitions.Auth.PasswordSetupRequired);
         }
 
         if (user.LockedUntil is not null && user.LockedUntil > DateTime.UtcNow)

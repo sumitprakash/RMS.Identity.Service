@@ -11,4 +11,9 @@ public interface IUserAccountWriteRepository
     Task MarkEmailVerifiedAsync(
         long userId,
         CancellationToken cancellationToken);
+
+    Task CompletePasswordSetupAsync(
+        long userId,
+        string passwordHash,
+        CancellationToken cancellationToken);
 }

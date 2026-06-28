@@ -15,6 +15,7 @@ using RMS.Identity.Service.Infrastructure.Persistence.VerifyEmail;
 using RMS.Identity.Service.Infrastructure.Notifications;
 using RMS.Identity.Service.Infrastructure.Outbox;
 using RMS.Identity.Service.Infrastructure.Security;
+using RMS.Identity.Service.Infrastructure.Maintenance;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
 using RMS.Identity.Service.Domain.Interfaces.Notifications;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Auth;
@@ -96,6 +97,17 @@ public static class InfrastructureServiceCollectionExtensions
             .Validate(options => options.AccessTokenLifetimeSeconds > 0, "JWT access token lifetime must be greater than zero.")
             .Validate(options => options.RefreshTokenLifetimeDays > 0, "JWT refresh token lifetime must be greater than zero.")
             .ValidateOnStart();
+        services.AddOptions<DataRetentionOptions>()
+            .Bind(configuration.GetSection(DataRetentionOptions.SectionName))
+            .Validate(options => options.RunIntervalHours > 0, "Data retention run interval must be greater than zero.")
+            .Validate(options => options.RefreshTokenRetentionDays > 0, "Refresh token retention must be greater than zero.")
+            .Validate(options => options.VerificationTokenRetentionDays > 0, "Verification token retention must be greater than zero.")
+            .Validate(options => options.IdempotencyRetentionDays > 0, "Idempotency retention must be greater than zero.")
+            .Validate(options => options.OutboxRetentionDays > 0, "Outbox retention must be greater than zero.")
+            .Validate(options => options.BatchSize > 0, "Data retention batch size must be greater than zero.")
+            .ValidateOnStart();
+        services.AddScoped<DataRetentionRepository>();
+        services.AddHostedService<DataRetentionWorker>();
         services.AddScoped<IAuthenticationRepository, AuthenticationMySqlRepository>();
         services.AddScoped<IdempotencyMySqlRepository>();
         services.AddScoped<IIdempotencyReadRepository>(

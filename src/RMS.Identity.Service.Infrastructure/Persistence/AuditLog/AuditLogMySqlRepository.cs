@@ -85,4 +85,61 @@ public sealed class AuditLogMySqlRepository : IAuditLogWriteRepository
             }));
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
+
+    public async Task InsertCompanyUserChangedAsync(
+        string action,
+        Guid actorUserUuid,
+        Guid companyUuid,
+        Guid targetUserUuid,
+        string? previousCompanyRole,
+        string? previousMembershipStatus,
+        string companyRole,
+        string membershipStatus,
+        CancellationToken cancellationToken)
+    {
+        var databaseTransaction = _transactionAccessor.GetCurrent().AsMySql();
+        var command = databaseTransaction.Connection.CreateCommand();
+        command.Transaction = databaseTransaction.Transaction;
+        command.CommandText =
+            $"""
+            INSERT INTO {AuditLogTable.Name} (
+                {AuditLogTable.Columns.TableName},
+                {AuditLogTable.Columns.RecordId},
+                {AuditLogTable.Columns.Action},
+                {AuditLogTable.Columns.ActorUserId},
+                {AuditLogTable.Columns.Payload},
+                {AuditLogTable.Columns.CreatedAt})
+            SELECT
+                @TableName,
+                @RecordId,
+                @Action,
+                ua.{UserAccountTable.Columns.UserId},
+                CAST(@Payload AS JSON),
+                UTC_TIMESTAMP()
+            FROM {UserAccountTable.Name} ua
+            WHERE ua.{UserAccountTable.Columns.UserUuid} = UUID_TO_BIN(@ActorUserUuid)
+              AND ua.{UserAccountTable.Columns.IsDeleted} = 0
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("@TableName", CompanyUserTable.Name);
+        command.Parameters.AddWithValue("@RecordId", targetUserUuid.ToString());
+        command.Parameters.AddWithValue("@Action", action);
+        command.Parameters.AddWithValue("@ActorUserUuid", actorUserUuid.ToString());
+        command.Parameters.AddWithValue(
+            "@Payload",
+            JsonSerializer.Serialize(new
+            {
+                CompanyUuid = companyUuid,
+                UserUuid = targetUserUuid,
+                PreviousCompanyRole = previousCompanyRole,
+                PreviousMembershipStatus = previousMembershipStatus,
+                CompanyRole = companyRole,
+                MembershipStatus = membershipStatus
+            }));
+
+        if (await command.ExecuteNonQueryAsync(cancellationToken) != 1)
+        {
+            throw new InvalidOperationException("Company-user audit actor could not be resolved.");
+        }
+    }
 }

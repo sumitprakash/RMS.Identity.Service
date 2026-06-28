@@ -7,6 +7,7 @@ using RMS.Identity.Service.Domain.Contracts.UserAccounts;
 using RMS.Identity.Service.Domain.Contracts.VerifyEmail;
 using RMS.Identity.Service.Domain.Entities.Companies;
 using RMS.Identity.Service.Domain.Entities.UserAccounts;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.AuditLog;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Companies;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.CompanyUsers;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Outbox;
@@ -18,6 +19,7 @@ namespace RMS.Identity.Service.Tests.Application.Commands.Companies;
 
 public sealed class CreateCompanyUserCommandHandlerTests
 {
+    private static readonly Guid ActorUserUuid = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     private static readonly Guid CompanyUuid = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 
     [Fact]
@@ -27,6 +29,7 @@ public sealed class CreateCompanyUserCommandHandlerTests
         var companyUserRepository = new FakeCompanyUserWriteRepository();
         var emailVerificationRepository = new FakeEmailVerificationWriteRepository();
         var outboxRepository = new FakeOutboxWriteRepository();
+        var auditRepository = new FakeAuditLogWriteRepository();
         var handler = new CreateCompanyUserCommandHandler(
             new FakeCompanyReadRepository(),
             userRepository,
@@ -35,10 +38,16 @@ public sealed class CreateCompanyUserCommandHandlerTests
             emailVerificationRepository,
             outboxRepository,
             new FakePasswordHasher(),
-            new FakeTextHasher());
+            new FakeTextHasher(),
+            auditRepository);
 
         var response = await handler.HandleAsync(
-            new CreateCompanyUserCommandRequest(CompanyUuid, " Cashier@Example.com ", " Store Cashier ", "member"),
+            new CreateCompanyUserCommandRequest(
+                CompanyUuid,
+                " Cashier@Example.com ",
+                " Store Cashier ",
+                CompanyRole.Member,
+                ActorUserUuid),
             CancellationToken.None);
 
         Assert.Equal("cashier@example.com", response.Username);
@@ -55,6 +64,9 @@ public sealed class CreateCompanyUserCommandHandlerTests
         Assert.NotNull(outboxRepository.EmailVerificationAccount);
         Assert.Equal(response.UserUuid, outboxRepository.EmailVerificationAccount.UserUuid);
         Assert.Equal($"hashed-text:{outboxRepository.EmailVerificationToken}", emailVerificationRepository.CreatedVerification.TokenHash);
+        Assert.True(userRepository.CreatedUser?.PasswordSetupRequired);
+        Assert.Equal("company_user_created", auditRepository.Action);
+        Assert.Equal(ActorUserUuid, auditRepository.ActorUserUuid);
     }
 
     [Fact]
@@ -69,11 +81,12 @@ public sealed class CreateCompanyUserCommandHandlerTests
             new FakeEmailVerificationWriteRepository(),
             new FakeOutboxWriteRepository(),
             new FakePasswordHasher(),
-            new FakeTextHasher());
+            new FakeTextHasher(),
+            new FakeAuditLogWriteRepository());
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(
-                new CreateCompanyUserCommandRequest(CompanyUuid, "cashier@example.com", null, "MEMBER"),
+                new CreateCompanyUserCommandRequest(CompanyUuid, "cashier@example.com", null, CompanyRole.Member),
                 CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Conflict, exception.StatusCode);
@@ -99,7 +112,7 @@ public sealed class CreateCompanyUserCommandHandlerTests
                 "Example Retail",
                 "29ABCDE1234F1Z5",
                 "accounts@example.com",
-                "+919876543211",
+                "9876543211",
                 "1 Main Road",
                 null,
                 "Bengaluru",
@@ -116,6 +129,8 @@ public sealed class CreateCompanyUserCommandHandlerTests
         private readonly bool _usernameExists;
         private CreateUserAccountCommand? _createdUser;
 
+        public CreateUserAccountCommand? CreatedUser => _createdUser;
+
         public FakeUserAccountRepository(bool usernameExists = false)
         {
             _usernameExists = usernameExists;
@@ -131,6 +146,12 @@ public sealed class CreateCompanyUserCommandHandlerTests
         }
 
         public Task MarkEmailVerifiedAsync(long userId, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task CompletePasswordSetupAsync(
+            long userId,
+            string passwordHash,
+            CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<UserAccount> GetByIdAsync(long userId, CancellationToken cancellationToken)
@@ -211,5 +232,38 @@ public sealed class CreateCompanyUserCommandHandlerTests
     private sealed class FakeTextHasher : ITextHasher
     {
         public string Hash(string value) => $"hashed-text:{value}";
+    }
+
+    private sealed class FakeAuditLogWriteRepository : IAuditLogWriteRepository
+    {
+        public string? Action { get; private set; }
+
+        public Guid? ActorUserUuid { get; private set; }
+
+        public Task InsertSignUpCreatedAsync(UserAccount account, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task InsertCompanyStatusChangedAsync(
+            Company company,
+            string previousStatus,
+            long actorUserId,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task InsertCompanyUserChangedAsync(
+            string action,
+            Guid actorUserUuid,
+            Guid companyUuid,
+            Guid targetUserUuid,
+            string? previousCompanyRole,
+            string? previousMembershipStatus,
+            string companyRole,
+            string membershipStatus,
+            CancellationToken cancellationToken)
+        {
+            Action = action;
+            ActorUserUuid = actorUserUuid;
+            return Task.CompletedTask;
+        }
     }
 }

@@ -12,6 +12,8 @@ internal static class UserAccountTable
         public const string Username = "Username";
         public const string PasswordHash = "PasswordHash";
         public const string DisplayName = "DisplayName";
+        public const string PhoneNumber = "PhoneNumber";
+        public const string PasswordSetupRequired = "PasswordSetupRequired";
         public const string EmailVerified = "EmailVerified";
         public const string IsActive = "IsActive";
         public const string IsDeleted = "IsDeleted";

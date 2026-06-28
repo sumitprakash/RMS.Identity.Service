@@ -25,7 +25,7 @@ public sealed class GetCompanyCommandHandlerTests
         Assert.Equal("Example Retail", response.TradeName);
         Assert.Equal("29ABCDE1234F1Z5", response.Gstin);
         Assert.Equal("accounts@example.com", response.ContactEmailAddress);
-        Assert.Equal("+919876543211", response.ContactPhoneNumber);
+        Assert.Equal("9876543211", response.ContactPhoneNumber);
         Assert.Equal("1 Main Road", response.AddressLine1);
         Assert.Equal("Near Market", response.AddressLine2);
         Assert.Equal("Bengaluru", response.City);
@@ -54,7 +54,7 @@ public sealed class GetCompanyCommandHandlerTests
                 "Example Retail",
                 "29ABCDE1234F1Z5",
                 "accounts@example.com",
-                "+919876543211",
+                "9876543211",
                 "1 Main Road",
                 "Near Market",
                 "Bengaluru",

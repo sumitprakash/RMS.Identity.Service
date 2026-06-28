@@ -4,10 +4,12 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using MySqlConnector;
 using RMS.Identity.Service.Api.Endpoint.Companies.CreateCompanyUser;
 using RMS.Identity.Service.Api.Endpoint.Companies.GetCompany;
 using RMS.Identity.Service.Api.Endpoint.Companies.RegisterCompany;
+using RMS.Identity.Service.Domain.Contracts.CompanyUsers;
 using RMS.Identity.Service.Tests.Shared;
 
 namespace RMS.Identity.Service.Tests.Endpoint.Companies;
@@ -20,6 +22,7 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
 
     private readonly TestDatabaseWebApplicationFactory _factory;
     private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions RequestJsonOptions = CreateRequestJsonOptions();
 
     public CompanyEndpointTests(TestDatabaseWebApplicationFactory factory)
     {
@@ -48,7 +51,7 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
                 TradeName = "Example Retail",
                 Gstin = gstin,
                 ContactEmailAddress = "accounts@example.com",
-                ContactPhoneNumber = "+919876543211",
+                ContactPhoneNumber = "9876543211",
                 AddressLine1 = "1 Main Road",
                 City = "Bengaluru",
                 State = "Karnataka",
@@ -111,7 +114,7 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
                 LegalName = "Duplicate Retail Pvt Ltd",
                 Gstin = gstin,
                 ContactEmailAddress = "accounts@example.com",
-                ContactPhoneNumber = "+919876543211",
+                ContactPhoneNumber = "9876543211",
                 AddressLine1 = "1 Main Road",
                 City = "Bengaluru",
                 State = "Karnataka",
@@ -162,7 +165,7 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
             Assert.Equal("Existing Retail", body.TradeName);
             Assert.Equal(gstin, body.Gstin);
             Assert.Equal("accounts@example.com", body.ContactEmailAddress);
-            Assert.Equal("+919876543211", body.ContactPhoneNumber);
+            Assert.Equal("9876543211", body.ContactPhoneNumber);
             Assert.Equal("1 Main Road", body.RegisteredAddress.AddressLine1);
             Assert.Null(body.RegisteredAddress.AddressLine2);
             Assert.Equal("Bengaluru", body.RegisteredAddress.City);
@@ -410,8 +413,8 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
                 $"/api/v1/companies/{companyUuid}/users/{memberUserUuid}",
                 new RMS.Identity.Service.Api.Endpoint.Companies.UpdateCompanyUser.UpdateCompanyUserRequestBody
                 {
-                    CompanyRole = "ADMIN",
-                    MembershipStatus = "active"
+                    CompanyRole = CompanyRole.Admin,
+                    MembershipStatus = CompanyMembershipStatus.Active
                 },
                 idempotencyKey);
 
@@ -507,7 +510,7 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
                     TradeName = "Updated Retail",
                     Gstin = updatedGstin,
                     ContactEmailAddress = "billing@example.com",
-                    ContactPhoneNumber = "+919876543211",
+                    ContactPhoneNumber = "9876543211",
                     AddressLine1 = "2 Main Road",
                     AddressLine2 = "Near Market",
                     City = "Bengaluru",
@@ -561,7 +564,7 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
             {
                 Username = newUsername,
                 DisplayName = "Store Cashier",
-                CompanyRole = "MEMBER"
+                CompanyRole = CompanyRole.Member
             }, idempotencyKey);
 
             using var response = await client.SendAsync(request);
@@ -580,6 +583,29 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
             Assert.NotNull(membership);
             Assert.Equal("MEMBER", membership.CompanyRole);
             Assert.Equal("active", membership.MembershipStatus);
+
+            Assert.True(await LoadPasswordSetupRequiredAsync(connection, createdUserUuid.Value));
+            var verificationToken = await LoadVerificationTokenAsync(connection, createdUserUuid.Value);
+            Assert.False(string.IsNullOrWhiteSpace(verificationToken));
+
+            using var verificationResponse = await client.PostAsJsonAsync(
+                "/api/v1/users/verify-email",
+                new
+                {
+                    token = verificationToken,
+                    password = "StrongPass@123"
+                });
+            Assert.Equal(HttpStatusCode.OK, verificationResponse.StatusCode);
+            Assert.False(await LoadPasswordSetupRequiredAsync(connection, createdUserUuid.Value));
+
+            using var loginResponse = await client.PostAsJsonAsync(
+                "/api/v1/auth/login",
+                new
+                {
+                    username = newUsername,
+                    password = "StrongPass@123"
+                });
+            Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
         }
         finally
         {
@@ -615,11 +641,20 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
         var request = new HttpRequestMessage(method, path);
         if (body is not null)
         {
-            request.Content = JsonContent.Create(body);
+            request.Content = JsonContent.Create(body, options: RequestJsonOptions);
         }
 
         request.Headers.Add("Idempotency-Key", idempotencyKey);
         return request;
+    }
+
+    private static JsonSerializerOptions CreateRequestJsonOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        options.Converters.Add(new JsonStringEnumConverter(
+            namingPolicy: null,
+            allowIntegerValues: false));
+        return options;
     }
 
     private static string CreateJwt(Guid userUuid)
@@ -683,7 +718,7 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
                 CompanyUUID, LegalName, TradeName, CompanyGSTIN, ContactEmailAddress, ContactPhoneNumber,
                 AddressLine1, City, State, PostalCode, Country, CompanyStatus, IsDeleted, CreatedAt)
             VALUES (
-                UUID_TO_BIN(@CompanyUuid), 'Existing Retail Pvt Ltd', 'Existing Retail', @Gstin, 'accounts@example.com', '+919876543211',
+                UUID_TO_BIN(@CompanyUuid), 'Existing Retail Pvt Ltd', 'Existing Retail', @Gstin, 'accounts@example.com', '9876543211',
                 '1 Main Road', 'Bengaluru', 'Karnataka', '560001', 'IN', 'pending_verification', 0, UTC_TIMESTAMP());
             """,
             command =>
@@ -720,6 +755,29 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
             connection,
             "SELECT UserID FROM UserAccount WHERE UserUUID = UUID_TO_BIN(@UserUuid);",
             command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString())));
+
+    private static async Task<bool> LoadPasswordSetupRequiredAsync(
+        MySqlConnection connection,
+        Guid userUuid) =>
+        Convert.ToBoolean(await ExecuteScalarAsync(
+            connection,
+            "SELECT PasswordSetupRequired FROM UserAccount WHERE UserUUID = UUID_TO_BIN(@UserUuid);",
+            command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString())));
+
+    private static async Task<string> LoadVerificationTokenAsync(
+        MySqlConnection connection,
+        Guid userUuid) =>
+        Convert.ToString(await ExecuteScalarAsync(
+            connection,
+            """
+            SELECT JSON_UNQUOTE(JSON_EXTRACT(Payload, '$.Token'))
+            FROM Outbox
+            WHERE AggregateUUID = UUID_TO_BIN(@UserUuid)
+              AND EventType = 'email_verification_requested'
+            ORDER BY OutboxID DESC
+            LIMIT 1;
+            """,
+            command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString())))!;
 
     private static async Task<long> LoadCompanyIdAsync(MySqlConnection connection, Guid companyUuid) =>
         Convert.ToInt64(await ExecuteScalarAsync(
@@ -784,6 +842,36 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
             INNER JOIN UserAccount ua ON ua.UserID = cu.UserID
             WHERE ua.UserUUID = UUID_TO_BIN(@UserUuid);
             """,
+            command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString()));
+
+        await ExecuteNonQueryAsync(
+            connection,
+            """
+            DELETE rt
+            FROM RefreshToken rt
+            INNER JOIN UserAccount ua ON ua.UserID = rt.UserID
+            WHERE ua.UserUUID = UUID_TO_BIN(@UserUuid);
+            """,
+            command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString()));
+
+        await ExecuteNonQueryAsync(
+            connection,
+            """
+            DELETE ev
+            FROM EmailVerification ev
+            INNER JOIN UserAccount ua ON ua.UserID = ev.UserID
+            WHERE ua.UserUUID = UUID_TO_BIN(@UserUuid);
+            """,
+            command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString()));
+
+        await ExecuteNonQueryAsync(
+            connection,
+            "DELETE FROM Outbox WHERE AggregateUUID = UUID_TO_BIN(@UserUuid);",
+            command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString()));
+
+        await ExecuteNonQueryAsync(
+            connection,
+            "DELETE FROM AuditLog WHERE RecordId = @UserUuid;",
             command => command.Parameters.AddWithValue("@UserUuid", userUuid.ToString()));
 
         await ExecuteNonQueryAsync(

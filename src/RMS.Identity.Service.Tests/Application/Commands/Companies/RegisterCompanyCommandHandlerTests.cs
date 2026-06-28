@@ -89,7 +89,7 @@ public sealed class RegisterCompanyCommandHandlerTests
             " Example Retail ",
             "29abcde1234f1z5",
             " Accounts@Example.com ",
-            " +919876543211 ",
+            " 9876543211 ",
             " 1 Main Road ",
             null,
             " Bengaluru ",

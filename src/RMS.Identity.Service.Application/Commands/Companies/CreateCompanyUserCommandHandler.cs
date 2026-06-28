@@ -5,6 +5,7 @@ using RMS.Identity.Service.Domain.Contracts.CompanyUsers;
 using RMS.Identity.Service.Domain.Contracts.UserAccounts;
 using RMS.Identity.Service.Domain.Contracts.VerifyEmail;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Companies;
+using RMS.Identity.Service.Domain.Interfaces.Repositories.AuditLog;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.CompanyUsers;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.Outbox;
 using RMS.Identity.Service.Domain.Interfaces.Repositories.UserAccounts;
@@ -18,7 +19,6 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
 {
     private const string EmailVerificationPurpose = "email_verification";
     private static readonly TimeSpan EmailVerificationTokenLifetime = TimeSpan.FromHours(24);
-    private static readonly string[] AllowedCompanyRoles = ["OWNER", "ADMIN", "MEMBER"];
 
     private readonly ICompanyReadRepository _companyReadRepository;
     private readonly IUserAccountReadRepository _userAccountReadRepository;
@@ -28,6 +28,7 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
     private readonly IOutboxWriteRepository _outboxWriteRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ITextHasher _textHasher;
+    private readonly IAuditLogWriteRepository _auditLogWriteRepository;
 
     public CreateCompanyUserCommandHandler(
         ICompanyReadRepository companyReadRepository,
@@ -37,7 +38,8 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
         IEmailVerificationWriteRepository emailVerificationWriteRepository,
         IOutboxWriteRepository outboxWriteRepository,
         IPasswordHasher passwordHasher,
-        ITextHasher textHasher)
+        ITextHasher textHasher,
+        IAuditLogWriteRepository auditLogWriteRepository)
     {
         _companyReadRepository = companyReadRepository;
         _userAccountReadRepository = userAccountReadRepository;
@@ -47,6 +49,7 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
         _outboxWriteRepository = outboxWriteRepository;
         _passwordHasher = passwordHasher;
         _textHasher = textHasher;
+        _auditLogWriteRepository = auditLogWriteRepository;
     }
 
     public async Task<CreateCompanyUserCommandResponse> HandleAsync(
@@ -54,12 +57,19 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
         CancellationToken cancellationToken)
     {
         var normalizedUsername = EmailAddressValidator.Normalize(command.Username);
+        if (normalizedUsername.Length > 150 || (command.DisplayName?.Trim().Length ?? 0) > 255)
+        {
+            throw new ApplicationServiceException(
+                ServiceStatusErrorCodes.BadRequest,
+                "Username or display name exceeds the supported length.");
+        }
+
         if (await _userAccountReadRepository.ExistsByUsernameAsync(normalizedUsername, cancellationToken))
         {
             throw new ApplicationServiceException(ServiceErrorDefinitions.Users.UserExists);
         }
 
-        var companyRole = NormalizeCompanyRole(command.CompanyRole);
+        var companyRole = command.CompanyRole.ToStorageValue();
         var company = await _companyReadRepository.GetByUuidAsync(command.CompanyUuid, cancellationToken);
         if (company.IsDeleted)
         {
@@ -71,7 +81,9 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
                 Guid.NewGuid(),
                 normalizedUsername,
                 _passwordHasher.Hash(CreateTemporaryPassword()),
-                TrimToNull(command.DisplayName)),
+                TrimToNull(command.DisplayName),
+                PhoneNumber: null,
+                PasswordSetupRequired: true),
             cancellationToken);
         var user = await _userAccountReadRepository.GetByIdAsync(userId, cancellationToken);
         var verificationToken = CreateVerificationToken();
@@ -94,6 +106,20 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
             new CreateCompanyUserCommand(company.CompanyId, user.UserId, companyRole, "active"),
             cancellationToken);
 
+        if (command.ActorUserUuid != Guid.Empty)
+        {
+            await _auditLogWriteRepository.InsertCompanyUserChangedAsync(
+                "company_user_created",
+                command.ActorUserUuid,
+                command.CompanyUuid,
+                user.UserUuid,
+                previousCompanyRole: null,
+                previousMembershipStatus: null,
+                companyRole,
+                "active",
+                cancellationToken);
+        }
+
         return new CreateCompanyUserCommandResponse(
             user.UserUuid,
             user.Username,
@@ -102,17 +128,6 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
             companyRole,
             "pending",
             user.CreatedAt);
-    }
-
-    private static string NormalizeCompanyRole(string companyRole)
-    {
-        var normalized = companyRole.Trim().ToUpperInvariant();
-        if (!AllowedCompanyRoles.Contains(normalized, StringComparer.Ordinal))
-        {
-            throw new ApplicationServiceException(ServiceStatusErrorCodes.BadRequest, "Company role must be OWNER, ADMIN, or MEMBER.");
-        }
-
-        return normalized;
     }
 
     private static string CreateTemporaryPassword() =>

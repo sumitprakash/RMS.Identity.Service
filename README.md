@@ -221,6 +221,10 @@ The OpenAPI contract is the source of truth for request and response shapes. Mai
 6. Client calls `POST /api/v1/users/verify-email` with the token.
 7. The token is consumed and the user email is marked verified.
 
+Company-created users use the same endpoint but must also submit an 8-128
+character password. Password setup and email verification are committed
+atomically before the account can log in.
+
 ### Login and Refresh
 
 1. Client calls `POST /api/v1/auth/login`.
@@ -328,6 +332,8 @@ Common examples:
 - Company access is not trusted from JWT claims. It is checked against the database.
 - Platform-admin authorization checks `UserRole` membership for `PLATFORM_ADMIN`.
 - Request DTOs reject unexpected JSON fields where the OpenAPI schema is closed.
+- Login and refresh endpoints are rate limited per client IP.
+- Unknown-user login attempts perform a BCrypt operation to reduce username timing differences.
 
 ## Configuration
 
@@ -378,6 +384,13 @@ Important options:
 - `MaxRetries`
 - `RetryDelaySeconds`
 - `ProcessingTimeoutSeconds`
+
+### Data Retention
+
+`DataRetention` controls periodic deletion of expired/revoked refresh tokens,
+consumed or expired verification records, expired idempotency records, and old
+published/failed outbox messages. The worker runs in bounded batches and waits
+for the configured interval before its first purge.
 
 Environment overrides:
 
@@ -479,6 +492,7 @@ The OpenAPI file is the machine-readable contract. The docs files explain specif
 - Use `ConnectionStrings__Default` for production database configuration.
 - Use `JWT_SIGNING_KEY` for production JWT signing key material.
 - Keep production secrets out of committed JSON files.
+- Apply `reference/db/migrations/20260625_review_fixes.sql` once when upgrading an existing database.
 - Use a canonical schema database for integration tests.
 - Mutating endpoint handlers should either run under idempotency middleware or explicitly open a transaction.
 - Any repository that calls `IDatabaseTransactionAccessor.GetCurrent()` requires an active `IDatabaseTransactionExecutor` scope.
@@ -494,17 +508,18 @@ Currently out of scope for this service:
 - Inventory management.
 - Billing and invoices.
 - Retail operational permissions beyond placeholder operational roles.
-- Password reset endpoint implementation, despite schema support for password reset token purpose.
+- General forgotten-password reset, despite schema support for password reset token purpose.
 - Full API key issuance and validation workflow.
 
 ## Current Validation Baseline
 
-During this documentation update, the following passed on the current codebase:
+The review-fix branch was validated with:
 
 ```text
-dotnet build src\RMS.Identity.Service.sln -v minimal
+dotnet build src\RMS.Identity.Service.sln --configuration Release --no-restore -v minimal
+dotnet test src\RMS.Identity.Service.Tests\RMS.Identity.Service.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName!~SignUpEndpointTests&FullyQualifiedName!~CompanyEndpointTests" -v minimal
 ```
 
-A full test run with `dotnet test src\RMS.Identity.Service.sln -v minimal` compiled the solution and ran the test assembly, but the configured local MySQL database was not on the canonical company schema. The result was `77/90` passing, with all 13 failures stopped by `TestDatabaseWebApplicationFactory.EnsureCompanySchemaAsync` before exercising company endpoint behavior.
-
-Re-run the full suite against an isolated database initialized from `reference/db/sql_schema.sql` before treating DB-backed endpoint tests as validated.
+The release build passes with zero warnings, all 85 non-database tests pass,
+and all 108 tests pass against an isolated MySQL 8.4 database initialized from
+the updated `reference/db/sql_schema.sql`.

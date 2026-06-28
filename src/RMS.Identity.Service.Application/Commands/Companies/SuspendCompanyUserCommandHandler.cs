@@ -31,8 +31,8 @@ public sealed class SuspendCompanyUserCommandHandler : ICommandHandler<SuspendCo
                 command.ActorUserUuid,
                 command.CompanyUuid,
                 command.UserUuid,
-                user?.CompanyRole ?? "MEMBER",
-                "suspended"),
+                user is null ? CompanyRole.Member : CompanyRoleExtensions.FromStorageValue(user.CompanyRole),
+                CompanyMembershipStatus.Suspended),
             cancellationToken);
 
         return new SuspendCompanyUserCommandResponse();

@@ -48,6 +48,15 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
     {
         var normalizedUsername = EmailAddressValidator.Normalize(command.EmailAddress);
         var displayName = BuildDisplayName(command.FirstName, command.MiddleName, command.LastName);
+        if (normalizedUsername.Length > 150
+            || command.Password.Length is < 8 or > 128
+            || displayName.Length > 255
+            || !IsTenDigitPhoneNumber(command.PhoneNumber))
+        {
+            throw new ApplicationServiceException(
+                ServiceStatusErrorCodes.BadRequest,
+                "One or more signup fields are invalid or exceed the supported length.");
+        }
 
         if (await _userAccountReadRepository.ExistsByUsernameAsync(normalizedUsername, cancellationToken))
         {
@@ -58,7 +67,8 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
             Guid.NewGuid(),
             normalizedUsername,
             _passwordHasher.Hash(command.Password),
-            displayName);
+            displayName,
+            command.PhoneNumber.Trim());
         var userId = await _userAccountWriteRepository.CreateAsync(createUserCommand, cancellationToken);
         var account = await _userAccountReadRepository.GetByIdAsync(userId, cancellationToken);
         var verificationToken = CreateVerificationToken();
@@ -91,6 +101,12 @@ public sealed class SignUpCommandHandler : ICommandHandler<SignUpCommandRequest,
             new[] { firstName, middleName, lastName }
                 .Where(part => !string.IsNullOrWhiteSpace(part))
                 .Select(part => part!.Trim()));
+
+    private static bool IsTenDigitPhoneNumber(string value)
+    {
+        var trimmed = value.Trim();
+        return trimmed.Length == 10 && trimmed.All(char.IsDigit);
+    }
 
     private static Exception UserAlreadyExists() =>
         new ApplicationServiceException(ServiceErrorDefinitions.Users.UserExists);

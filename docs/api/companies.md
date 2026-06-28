@@ -179,12 +179,35 @@ If membership creation fails after company creation, the transaction must roll b
 ## 9. Out of Scope
 
 - GSTIN ownership verification workflow.
-- Email verification or other account activation workflow.
-- Admin-created users and invitations.
+- General forgotten-password reset.
 - Operational/job permissions such as cashier, inventory, billing, and reporting.
 - Company approval/rejection implementation beyond initial `pending_verification` status.
 
-## 10. Relation to OpenAPI
+## 10. Company-created User Activation
+
+`POST /api/v1/companies/{companyUuid}/users` creates an invited user with
+`PasswordSetupRequired = true` and sends the normal verification link.
+
+The client completes activation through:
+
+```http
+POST /api/v1/users/verify-email
+Content-Type: application/json
+```
+
+```json
+{
+  "token": "verification-token",
+  "password": "StrongPass@123"
+}
+```
+
+For company-created users, `password` is required and must contain 8-128
+characters. The operation consumes the token, stores the BCrypt password hash,
+marks the email verified, and clears `PasswordSetupRequired` in one transaction.
+Normal self-signup verification may omit `password`.
+
+## 11. Relation to OpenAPI
 
 Mapped to:
 
@@ -199,7 +222,7 @@ Mapped to:
 - `components.schemas.ErrorResponse`
 - `components.parameters.IdempotencyKey`
 
-## 11. Versioning
+## 12. Versioning
 
 - API Version: v1
 - Document Version: 1.0

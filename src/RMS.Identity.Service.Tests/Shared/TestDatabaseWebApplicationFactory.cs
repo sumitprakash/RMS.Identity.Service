@@ -44,7 +44,9 @@ public class TestDatabaseWebApplicationFactory : WebApplicationFactory<Program>
         await using var connection = await OpenDatabaseConnectionAsync(cancellationToken);
         var hasCompanySchema = await HasTableAsync(connection, "CompanyUser", cancellationToken)
             && await HasColumnAsync(connection, "Company", "LegalName", cancellationToken)
-            && await HasColumnAsync(connection, "Company", "CompanyGSTIN", cancellationToken);
+            && await HasColumnAsync(connection, "Company", "CompanyGSTIN", cancellationToken)
+            && await HasColumnAsync(connection, "UserAccount", "PhoneNumber", cancellationToken)
+            && await HasColumnAsync(connection, "UserAccount", "PasswordSetupRequired", cancellationToken);
 
         if (!hasCompanySchema)
         {

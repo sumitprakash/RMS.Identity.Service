@@ -7,9 +7,14 @@ namespace RMS.Identity.Service.Api.Endpoint.Auth.Login;
 public sealed class LoginRequestBody
 {
     [Required]
+    [MinLength(10)]
     [EmailAddress]
-    public string Username { get; init; } = string.Empty;
+    [MaxLength(64)]
+    public required string Username { get; init; }
 
     [Required]
-    public string Password { get; init; } = string.Empty;
+    [MinLength(8)]
+    [MaxLength(128)]
+    [RegularExpression(@"^(?=.*[A-Z])(?=.*\d)(?=.*[@#$&=]).+$")]
+    public required string Password { get; init; }
 }

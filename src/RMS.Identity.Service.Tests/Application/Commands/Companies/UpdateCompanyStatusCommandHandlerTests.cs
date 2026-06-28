@@ -16,13 +16,14 @@ public sealed class UpdateCompanyStatusCommandHandlerTests
     private static readonly Guid CompanyUuid = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 
     [Theory]
-    [InlineData("pending_verification", "verified")]
-    [InlineData("pending_verification", "rejected")]
-    [InlineData("verified", "suspended")]
-    [InlineData("suspended", "verified")]
+    [InlineData("pending_verification", CompanyStatusUpdate.Verified, "verified")]
+    [InlineData("pending_verification", CompanyStatusUpdate.Rejected, "rejected")]
+    [InlineData("verified", CompanyStatusUpdate.Suspended, "suspended")]
+    [InlineData("suspended", CompanyStatusUpdate.Verified, "verified")]
     public async Task HandleAsync_WithValidTransition_UpdatesStatusAndAudits(
         string currentStatus,
-        string targetStatus)
+        CompanyStatusUpdate targetStatus,
+        string expectedStatus)
     {
         var companyRepository = new FakeCompanyRepository(CreateCompany(currentStatus));
         var auditRepository = new FakeAuditLogWriteRepository();
@@ -36,10 +37,10 @@ public sealed class UpdateCompanyStatusCommandHandlerTests
             new UpdateCompanyStatusCommandRequest(ActorUserUuid, CompanyUuid, targetStatus),
             CancellationToken.None);
 
-        Assert.Equal(targetStatus, response.Status);
-        Assert.Equal(targetStatus, companyRepository.UpdatedStatus?.Status);
+        Assert.Equal(expectedStatus, response.Status);
+        Assert.Equal(expectedStatus, companyRepository.UpdatedStatus?.Status);
         Assert.Equal(currentStatus, auditRepository.PreviousStatus);
-        Assert.Equal(targetStatus, auditRepository.Company?.Status);
+        Assert.Equal(expectedStatus, auditRepository.Company?.Status);
         Assert.Equal(10, auditRepository.ActorUserId);
     }
 
@@ -56,7 +57,7 @@ public sealed class UpdateCompanyStatusCommandHandlerTests
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(
-                new UpdateCompanyStatusCommandRequest(ActorUserUuid, CompanyUuid, "verified"),
+                new UpdateCompanyStatusCommandRequest(ActorUserUuid, CompanyUuid, CompanyStatusUpdate.Verified),
                 CancellationToken.None));
 
         Assert.Equal((int)HttpStatusCode.Conflict, exception.StatusCode);
@@ -73,7 +74,7 @@ public sealed class UpdateCompanyStatusCommandHandlerTests
             "Example Retail",
             "29ABCDE1234F1Z5",
             "accounts@example.com",
-            "+919876543211",
+            "9876543211",
             "1 Main Road",
             null,
             "Bengaluru",
@@ -140,6 +141,18 @@ public sealed class UpdateCompanyStatusCommandHandlerTests
             ActorUserId = actorUserId;
             return Task.CompletedTask;
         }
+
+        public Task InsertCompanyUserChangedAsync(
+            string action,
+            Guid actorUserUuid,
+            Guid companyUuid,
+            Guid targetUserUuid,
+            string? previousCompanyRole,
+            string? previousMembershipStatus,
+            string companyRole,
+            string membershipStatus,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 
     private sealed class FakeUserAccountReadRepository : IUserAccountReadRepository

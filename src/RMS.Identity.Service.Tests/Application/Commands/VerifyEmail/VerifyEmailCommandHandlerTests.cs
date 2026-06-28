@@ -21,6 +21,7 @@ public sealed class VerifyEmailCommandHandlerTests
         var handler = new VerifyEmailCommandHandler(
             emailVerificationRepository,
             emailVerificationRepository,
+            new FakePasswordHasher(),
             new FakeTextHasher(),
             userRepository,
             userRepository);
@@ -45,6 +46,7 @@ public sealed class VerifyEmailCommandHandlerTests
         var handler = new VerifyEmailCommandHandler(
             emailVerificationRepository,
             emailVerificationRepository,
+            new FakePasswordHasher(),
             new FakeTextHasher(),
             userRepository,
             userRepository);
@@ -65,6 +67,7 @@ public sealed class VerifyEmailCommandHandlerTests
         var handler = new VerifyEmailCommandHandler(
             repository,
             repository,
+            new FakePasswordHasher(),
             new FakeTextHasher(),
             new FakeUserAccountRepository(),
             new FakeUserAccountRepository());
@@ -83,6 +86,7 @@ public sealed class VerifyEmailCommandHandlerTests
         var handler = new VerifyEmailCommandHandler(
             repository,
             repository,
+            new FakePasswordHasher(),
             new FakeTextHasher(),
             new FakeUserAccountRepository(),
             new FakeUserAccountRepository());
@@ -101,6 +105,7 @@ public sealed class VerifyEmailCommandHandlerTests
         var handler = new VerifyEmailCommandHandler(
             repository,
             repository,
+            new FakePasswordHasher(),
             new FakeTextHasher(),
             new FakeUserAccountRepository(),
             new FakeUserAccountRepository());
@@ -110,6 +115,49 @@ public sealed class VerifyEmailCommandHandlerTests
 
         Assert.Equal((int)HttpStatusCode.BadRequest, exception.StatusCode);
         Assert.Equal("400-6-3", exception.Code);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ForInvitedUser_WithPassword_CompletesPasswordSetup()
+    {
+        var userRepository = new FakeUserAccountRepository(passwordSetupRequired: true);
+        var emailVerificationRepository = new FakeEmailVerificationRepository(CreateToken());
+        var handler = new VerifyEmailCommandHandler(
+            emailVerificationRepository,
+            emailVerificationRepository,
+            new FakePasswordHasher(),
+            new FakeTextHasher(),
+            userRepository,
+            userRepository);
+
+        var response = await handler.HandleAsync(
+            new VerifyEmailCommandRequest("valid-token", "StrongPass@123"),
+            CancellationToken.None);
+
+        Assert.True(response.Success);
+        Assert.Equal(10, userRepository.PasswordSetupUserId);
+        Assert.Equal("hash:StrongPass@123", userRepository.PasswordHash);
+        Assert.Null(userRepository.VerifiedUserId);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ForInvitedUser_WithoutPassword_ThrowsBadRequest()
+    {
+        var userRepository = new FakeUserAccountRepository(passwordSetupRequired: true);
+        var emailVerificationRepository = new FakeEmailVerificationRepository(CreateToken());
+        var handler = new VerifyEmailCommandHandler(
+            emailVerificationRepository,
+            emailVerificationRepository,
+            new FakePasswordHasher(),
+            new FakeTextHasher(),
+            userRepository,
+            userRepository);
+
+        var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
+            handler.HandleAsync(new VerifyEmailCommandRequest("valid-token"), CancellationToken.None));
+
+        Assert.Equal((int)HttpStatusCode.BadRequest, exception.StatusCode);
+        Assert.Null(emailVerificationRepository.ConsumedEmailVerificationId);
     }
 
     private static EmailVerificationToken CreateToken(
@@ -156,7 +204,18 @@ public sealed class VerifyEmailCommandHandlerTests
 
     private sealed class FakeUserAccountRepository : IUserAccountReadRepository, IUserAccountWriteRepository
     {
+        private readonly bool _passwordSetupRequired;
+
+        public FakeUserAccountRepository(bool passwordSetupRequired = false)
+        {
+            _passwordSetupRequired = passwordSetupRequired;
+        }
+
         public long? VerifiedUserId { get; private set; }
+
+        public long? PasswordSetupUserId { get; private set; }
+
+        public string? PasswordHash { get; private set; }
 
         public Task<bool> ExistsByUsernameAsync(string username, CancellationToken cancellationToken) =>
             Task.FromResult(false);
@@ -170,6 +229,16 @@ public sealed class VerifyEmailCommandHandlerTests
             return Task.CompletedTask;
         }
 
+        public Task CompletePasswordSetupAsync(
+            long userId,
+            string passwordHash,
+            CancellationToken cancellationToken)
+        {
+            PasswordSetupUserId = userId;
+            PasswordHash = passwordHash;
+            return Task.CompletedTask;
+        }
+
         public Task<UserAccount> GetByIdAsync(long userId, CancellationToken cancellationToken) =>
             Task.FromResult(new UserAccount(
                 userId,
@@ -179,7 +248,10 @@ public sealed class VerifyEmailCommandHandlerTests
                 EmailVerified: false,
                 IsActive: true,
                 IsDeleted: false,
-                DateTime.UtcNow));
+                DateTime.UtcNow)
+            {
+                PasswordSetupRequired = _passwordSetupRequired
+            });
 
         public Task<UserAccount> GetByUuidAsync(Guid userUuid, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
@@ -188,5 +260,12 @@ public sealed class VerifyEmailCommandHandlerTests
     private sealed class FakeTextHasher : ITextHasher
     {
         public string Hash(string value) => $"hash:{value}";
+    }
+
+    private sealed class FakePasswordHasher : IPasswordHasher
+    {
+        public string Hash(string value) => $"hash:{value}";
+
+        public bool Verify(string value, string hash) => hash == Hash(value);
     }
 }

@@ -48,6 +48,8 @@ CREATE TABLE UserAccount (
   Username VARCHAR(150) NOT NULL,        -- email
   PasswordHash VARCHAR(512) NOT NULL,
   DisplayName VARCHAR(255),
+  PhoneNumber VARCHAR(32) NULL,
+  PasswordSetupRequired TINYINT(1) NOT NULL DEFAULT 0,
   EmailVerified TINYINT(1) NOT NULL DEFAULT 0,
   IsActive TINYINT(1) NOT NULL DEFAULT 1,
   IsDeleted TINYINT(1) NOT NULL DEFAULT 0,
@@ -124,7 +126,8 @@ CREATE TABLE RefreshToken (
   RevokedAt TIMESTAMP NULL DEFAULT NULL,
   ReplacedByTokenHash VARCHAR(512) NULL,
   UNIQUE KEY ux_refresh_token_hash (TokenHash),
-  KEY ix_refresh_userid (UserID)
+  KEY ix_refresh_userid (UserID),
+  KEY ix_refresh_expiry (ExpiresAt)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =========================================================
@@ -139,7 +142,8 @@ CREATE TABLE EmailVerification (
   CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   Consumed TINYINT(1) NOT NULL DEFAULT 0,
   KEY ix_ev_userid (UserID),
-  KEY ix_ev_tokenhash (TokenHash)
+  KEY ix_ev_tokenhash (TokenHash),
+  KEY ix_ev_created (CreatedAt)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =========================================================
@@ -155,7 +159,8 @@ CREATE TABLE IdempotencyKey (
   ResponseBody JSON NULL,
   CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY ux_idempotency_key (KeyValue),
-  KEY ix_idempotency_route (Route)
+  KEY ix_idempotency_route (Route),
+  KEY ix_idempotency_created (CreatedAt)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =========================================================
@@ -172,7 +177,8 @@ CREATE TABLE Outbox (
   CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   AvailableAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY ix_outbox_status (Status),
-  KEY ix_outbox_available (AvailableAt)
+  KEY ix_outbox_available (AvailableAt),
+  KEY ix_outbox_status_created (Status, CreatedAt)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =========================================================

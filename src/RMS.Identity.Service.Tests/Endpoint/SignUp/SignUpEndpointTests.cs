@@ -41,7 +41,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
                 Password = password,
                 FirstName = " Alice ",
                 LastName = " Example ",
-                PhoneNumber = "+919876543210"
+                PhoneNumber = "9876543210"
             }, idempotencyKey);
             using var response = await client.SendAsync(request);
 
@@ -62,6 +62,8 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             Assert.Equal("Alice Example", persisted.DisplayName);
             Assert.NotEqual(password, persisted.PasswordHash);
             Assert.StartsWith("$2", persisted.PasswordHash);
+            Assert.Equal("9876543210", persisted.PhoneNumber);
+            Assert.False(persisted.PasswordSetupRequired);
             Assert.False(persisted.EmailVerified);
             Assert.True(persisted.IsActive);
             Assert.False(persisted.IsDeleted);
@@ -146,7 +148,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
                 firstName = "Retry",
                 middleName = (string?)null,
                 lastName = "Example",
-                phoneNumber = "+919876543210"
+                phoneNumber = "9876543210"
             }, _jsonOptions);
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/signup")
             {
@@ -239,7 +241,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             firstName = "Race",
             middleName = (string?)null,
             lastName = "Example",
-            phoneNumber = "+919876543210"
+            phoneNumber = "9876543210"
         }, _jsonOptions);
         var requestHash = ComputeIdempotencyRequestHash(requestBody);
         var committed = false;
@@ -352,7 +354,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
               "password": "StrongPass@123",
               "firstName": "Alice",
               "lastName": "Example",
-              "phoneNumber": "+919876543210",
+              "phoneNumber": "9876543210",
               "unexpected": "value"
             }
             """,
@@ -466,7 +468,7 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             FirstName = "Alice",
             MiddleName = null,
             LastName = "Example",
-            PhoneNumber = "+919876543210"
+            PhoneNumber = "9876543210"
         };
 
     private static HttpRequestMessage CreateSignUpRequest(object body, string? idempotencyKey = null)
@@ -491,6 +493,8 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
                 ua.Username,
                 ua.PasswordHash,
                 ua.DisplayName,
+                ua.PhoneNumber,
+                ua.PasswordSetupRequired,
                 ua.EmailVerified,
                 ua.IsActive,
                 ua.IsDeleted,
@@ -510,6 +514,8 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
                 ua.Username,
                 ua.PasswordHash,
                 ua.DisplayName,
+                ua.PhoneNumber,
+                ua.PasswordSetupRequired,
                 ua.EmailVerified,
                 ua.IsActive,
                 ua.IsDeleted,
@@ -531,6 +537,8 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
             reader.GetString(reader.GetOrdinal("Username")),
             reader.GetString(reader.GetOrdinal("PasswordHash")),
             reader.IsDBNull(reader.GetOrdinal("DisplayName")) ? null : reader.GetString(reader.GetOrdinal("DisplayName")),
+            reader.IsDBNull(reader.GetOrdinal("PhoneNumber")) ? null : reader.GetString(reader.GetOrdinal("PhoneNumber")),
+            reader.GetBoolean(reader.GetOrdinal("PasswordSetupRequired")),
             reader.GetBoolean(reader.GetOrdinal("EmailVerified")),
             reader.GetBoolean(reader.GetOrdinal("IsActive")),
             reader.GetBoolean(reader.GetOrdinal("IsDeleted")),
@@ -722,6 +730,8 @@ public sealed class SignUpEndpointTests : IClassFixture<SignUpWebApplicationFact
         string Username,
         string PasswordHash,
         string? DisplayName,
+        string? PhoneNumber,
+        bool PasswordSetupRequired,
         bool EmailVerified,
         bool IsActive,
         bool IsDeleted,

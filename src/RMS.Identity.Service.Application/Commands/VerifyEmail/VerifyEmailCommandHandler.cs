@@ -13,6 +13,7 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
 
     private readonly IEmailVerificationReadRepository _emailVerificationReadRepository;
     private readonly IEmailVerificationWriteRepository _emailVerificationWriteRepository;
+    private readonly IPasswordHasher _passwordHasher;
     private readonly ITextHasher _textHasher;
     private readonly IUserAccountReadRepository _userAccountReadRepository;
     private readonly IUserAccountWriteRepository _userAccountWriteRepository;
@@ -20,12 +21,14 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
     public VerifyEmailCommandHandler(
         IEmailVerificationReadRepository emailVerificationReadRepository,
         IEmailVerificationWriteRepository emailVerificationWriteRepository,
+        IPasswordHasher passwordHasher,
         ITextHasher textHasher,
         IUserAccountReadRepository userAccountReadRepository,
         IUserAccountWriteRepository userAccountWriteRepository)
     {
         _emailVerificationReadRepository = emailVerificationReadRepository;
         _emailVerificationWriteRepository = emailVerificationWriteRepository;
+        _passwordHasher = passwordHasher;
         _textHasher = textHasher;
         _userAccountReadRepository = userAccountReadRepository;
         _userAccountWriteRepository = userAccountWriteRepository;
@@ -38,6 +41,16 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
         if (string.IsNullOrWhiteSpace(command.Token))
         {
             throw ValidationError("Verification token is required.");
+        }
+
+        if (command.Token.Length > 256)
+        {
+            throw ValidationError("Verification token must not exceed 256 characters.");
+        }
+
+        if ((command.Password?.Length ?? 0) > 128)
+        {
+            throw ValidationError("Password must not exceed 128 characters.");
         }
 
         var tokenHash = _textHasher.Hash(command.Token.Trim());
@@ -67,6 +80,12 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
             throw new ApplicationServiceException(ServiceErrorDefinitions.Auth.UserNotActive);
         }
 
+        if (user.PasswordSetupRequired
+            && (string.IsNullOrWhiteSpace(command.Password) || command.Password.Length < 8))
+        {
+            throw ValidationError("Password must be at least 8 characters long to activate this account.");
+        }
+
         var consumed = await _emailVerificationWriteRepository.TryConsumeAsync(
             token.EmailVerificationId,
             cancellationToken);
@@ -75,7 +94,17 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
             throw new ApplicationServiceException(ServiceErrorDefinitions.EmailVerification.EmailVerificationAlreadyUsed);
         }
 
-        await _userAccountWriteRepository.MarkEmailVerifiedAsync(user.UserId, cancellationToken);
+        if (user.PasswordSetupRequired)
+        {
+            await _userAccountWriteRepository.CompletePasswordSetupAsync(
+                user.UserId,
+                _passwordHasher.Hash(command.Password!),
+                cancellationToken);
+        }
+        else
+        {
+            await _userAccountWriteRepository.MarkEmailVerifiedAsync(user.UserId, cancellationToken);
+        }
 
         return new VerifyEmailCommandResponse(true, "Email verified successfully");
     }

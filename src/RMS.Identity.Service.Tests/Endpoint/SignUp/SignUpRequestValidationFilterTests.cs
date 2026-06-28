@@ -13,7 +13,7 @@ namespace RMS.Identity.Service.Tests.Endpoint.SignUp;
 public sealed class SignUpRequestValidationFilterTests
 {
     [Fact]
-    public void OnActionExecuting_WithInvalidRequest_ReturnsBadRequest()
+    public void OnActionExecuting_WithOversizedDisplayName_ReturnsBadRequest()
     {
         var filter = CreateFilter();
         var context = CreateContext(new SignUpRequest
@@ -22,9 +22,10 @@ public sealed class SignUpRequestValidationFilterTests
             {
                 EmailAddress = "alice@example.com",
                 Password = "StrongPass@123",
-                FirstName = " ",
-                LastName = "Example",
-                PhoneNumber = "+919876543210"
+                FirstName = new string('A', 100),
+                MiddleName = new string('B', 100),
+                LastName = new string('C', 100),
+                PhoneNumber = "9876543210"
             }
         });
 
@@ -34,8 +35,10 @@ public sealed class SignUpRequestValidationFilterTests
         var body = Assert.IsType<ApiErrorResponse>(result.Value);
         Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
         Assert.Equal(ServiceIdentity.Code, body.ServiceCode);
-        Assert.Equal("400", body.Code);
-        Assert.Equal("First name is required.", body.Message);
+        Assert.Equal("400-1-3", body.Code);
+        Assert.Equal("Request validation failed.", body.Message);
+        var details = Assert.IsType<Dictionary<string, string[]>>(body.Details);
+        Assert.Equal(["Display name must not exceed 255 characters."], details[string.Empty]);
     }
 
     [Fact]
@@ -50,7 +53,7 @@ public sealed class SignUpRequestValidationFilterTests
                 Password = "StrongPass@123",
                 FirstName = "Alice",
                 LastName = "Example",
-                PhoneNumber = "+919876543210"
+                PhoneNumber = "9876543210"
             }
         });
 

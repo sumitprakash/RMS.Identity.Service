@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   mysql:
     image: mysql:8.0
@@ -10,7 +9,7 @@ services:
       MYSQL_PASSWORD: rms_pass
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./RMS.Identity.Service/reference/db/sql_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ../../reference/db/sql_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
     ports:
       - "3306:3306"
     healthcheck:
@@ -21,7 +20,7 @@ services:
 
   identity:
     build:
-      context: ../..   # adjust depending on how you run compose
+      context: ../..
       dockerfile: tools/docker/Dockerfile
     image: rms/identity:dev
     container_name: rms_identity_api

@@ -6,5 +6,5 @@ public sealed record UpdateCompanyUserCommandRequest(
     Guid ActorUserUuid,
     Guid CompanyUuid,
     Guid UserUuid,
-    string CompanyRole,
-    string MembershipStatus) : ICommand<UpdateCompanyUserCommandResponse>;
+    CompanyRole CompanyRole,
+    CompanyMembershipStatus MembershipStatus) : ICommand<UpdateCompanyUserCommandResponse>;

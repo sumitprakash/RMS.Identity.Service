@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -10,11 +11,40 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using RMS.Identity.Service.Api.Endpoint.Companies.CreateCompanyUser;
 using RMS.Identity.Service.Api.Shared.ModelBinding;
+using RMS.Identity.Service.Domain.Contracts.CompanyUsers;
 
 namespace RMS.Identity.Service.Tests.Endpoint.Companies;
 
 public sealed class CreateCompanyUserRequestModelBinderTests
 {
+    [Fact]
+    public void Validate_WithEmailUsername_IsValid()
+    {
+        var body = new CreateCompanyUserRequestBody
+        {
+            Username = "cashier@example.com",
+            CompanyRole = CompanyRole.Member
+        };
+
+        var errors = Validate(body);
+
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void Validate_WithAlphanumericUsername_IsInvalid()
+    {
+        var body = new CreateCompanyUserRequestBody
+        {
+            Username = "cashier1",
+            CompanyRole = CompanyRole.Member
+        };
+
+        var errors = Validate(body);
+
+        Assert.Contains(errors, error => error.MemberNames.Contains(nameof(CreateCompanyUserRequestBody.Username)));
+    }
+
     [Fact]
     public async Task BindModelAsync_WithRouteAndFlatJsonBody_CreatesCreateCompanyUserRequest()
     {
@@ -38,7 +68,7 @@ public sealed class CreateCompanyUserRequestModelBinderTests
         Assert.Equal(companyUuid, request.CompanyUuid);
         Assert.Equal("alice@example.com", request.Body.Username);
         Assert.Equal("Alice Example", request.Body.DisplayName);
-        Assert.Equal("ADMIN", request.Body.CompanyRole);
+        Assert.Equal(CompanyRole.Admin, request.Body.CompanyRole);
     }
 
     private static ApiRequestModelBinder<CreateCompanyUserRequest> CreateBinder()
@@ -46,8 +76,23 @@ public sealed class CreateCompanyUserRequestModelBinderTests
         var jsonOptions = new JsonOptions();
         jsonOptions.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         jsonOptions.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        jsonOptions.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(
+            namingPolicy: null,
+            allowIntegerValues: false));
 
         return new ApiRequestModelBinder<CreateCompanyUserRequest>(Options.Create(jsonOptions));
+    }
+
+    private static IReadOnlyCollection<ValidationResult> Validate(object instance)
+    {
+        var validationResults = new List<ValidationResult>();
+        Validator.TryValidateObject(
+            instance,
+            new ValidationContext(instance),
+            validationResults,
+            validateAllProperties: true);
+
+        return validationResults;
     }
 
     private static ModelBindingContext CreateBindingContext(Guid companyUuid, string body)

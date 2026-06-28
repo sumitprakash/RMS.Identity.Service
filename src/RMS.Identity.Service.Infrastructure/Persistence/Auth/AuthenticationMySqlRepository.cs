@@ -8,6 +8,9 @@ namespace RMS.Identity.Service.Infrastructure.Persistence.Auth;
 
 public sealed class AuthenticationMySqlRepository : IAuthenticationRepository
 {
+    private const int MaxFailedLoginAttempts = 5;
+    private const int LockoutMinutes = 15;
+
     private readonly IMySqlConnectionFactory _connectionFactory;
 
     public AuthenticationMySqlRepository(IMySqlConnectionFactory connectionFactory)
@@ -28,6 +31,7 @@ public sealed class AuthenticationMySqlRepository : IAuthenticationRepository
                 ua.{UserAccountTable.Columns.Username},
                 ua.{UserAccountTable.Columns.PasswordHash},
                 ua.{UserAccountTable.Columns.DisplayName},
+                ua.{UserAccountTable.Columns.PasswordSetupRequired},
                 ua.{UserAccountTable.Columns.EmailVerified},
                 ua.{UserAccountTable.Columns.IsActive},
                 ua.{UserAccountTable.Columns.IsDeleted},
@@ -65,10 +69,16 @@ public sealed class AuthenticationMySqlRepository : IAuthenticationRepository
                 ? null
                 : DateTime.SpecifyKind(reader.GetDateTime(reader.GetOrdinal(UserAccountTable.Columns.LockedUntil)), DateTimeKind.Utc),
             reader.GetUtcDateTime(UserAccountTable.Columns.CreatedAt),
-            Array.Empty<string>());
+            Array.Empty<string>())
+        {
+            PasswordSetupRequired = reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.PasswordSetupRequired))
+        };
 
         await reader.CloseAsync();
-        return user with { Roles = await GetRolesAsync(connection, userId, cancellationToken) };
+        return user with
+        {
+            Roles = await GetRolesAsync(connection, userId, cancellationToken)
+        };
     }
 
     public async Task<RefreshTokenSession?> GetRefreshTokenSessionAsync(
@@ -90,6 +100,7 @@ public sealed class AuthenticationMySqlRepository : IAuthenticationRepository
                 ua.{UserAccountTable.Columns.Username},
                 ua.{UserAccountTable.Columns.PasswordHash},
                 ua.{UserAccountTable.Columns.DisplayName},
+                ua.{UserAccountTable.Columns.PasswordSetupRequired},
                 ua.{UserAccountTable.Columns.EmailVerified},
                 ua.{UserAccountTable.Columns.IsActive},
                 ua.{UserAccountTable.Columns.IsDeleted},
@@ -129,7 +140,10 @@ public sealed class AuthenticationMySqlRepository : IAuthenticationRepository
                 ? null
                 : DateTime.SpecifyKind(reader.GetDateTime(reader.GetOrdinal(UserAccountTable.Columns.LockedUntil)), DateTimeKind.Utc),
             reader.GetUtcDateTime(UserAccountTable.Columns.CreatedAt),
-            Array.Empty<string>());
+            Array.Empty<string>())
+        {
+            PasswordSetupRequired = reader.GetBoolean(reader.GetOrdinal(UserAccountTable.Columns.PasswordSetupRequired))
+        };
         var session = new RefreshTokenSession(
             reader.GetInt64(reader.GetOrdinal(RefreshTokenTable.Columns.RefreshTokenId)),
             reader.GetString(RefreshTokenTable.Columns.TokenHash),
@@ -140,26 +154,91 @@ public sealed class AuthenticationMySqlRepository : IAuthenticationRepository
             user);
 
         await reader.CloseAsync();
-        return session with { User = user with { Roles = await GetRolesAsync(connection, userId, cancellationToken) } };
+        return session with
+        {
+            User = user with
+            {
+                Roles = await GetRolesAsync(connection, userId, cancellationToken)
+            }
+        };
     }
 
     public async Task RecordFailedLoginAsync(long userId, CancellationToken cancellationToken)
     {
         await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
-        await using var command = connection.CreateCommand();
-        command.CommandText =
-            $"""
-            UPDATE {UserAccountTable.Name}
-            SET {UserAccountTable.Columns.FailedLoginCount} = {UserAccountTable.Columns.FailedLoginCount} + 1,
-                {UserAccountTable.Columns.LockedUntil} = CASE
-                    WHEN {UserAccountTable.Columns.FailedLoginCount} + 1 >= 5 THEN DATE_ADD(UTC_TIMESTAMP(), INTERVAL 15 MINUTE)
-                    ELSE {UserAccountTable.Columns.LockedUntil}
-                END,
-                {UserAccountTable.Columns.UpdatedAt} = UTC_TIMESTAMP()
-            WHERE {UserAccountTable.Columns.UserId} = @UserId;
-            """;
-        command.Parameters.AddWithValue("@UserId", userId);
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            var failedLoginCount = 0;
+            DateTime? lockedUntil = null;
+            var databaseUtcNow = default(DateTime);
+            var userExists = false;
+
+            await using (var selectCommand = connection.CreateCommand())
+            {
+                selectCommand.Transaction = transaction;
+                selectCommand.CommandText =
+                    $"""
+                    SELECT
+                        {UserAccountTable.Columns.FailedLoginCount},
+                        {UserAccountTable.Columns.LockedUntil},
+                        UTC_TIMESTAMP() AS DatabaseUtcNow
+                    FROM {UserAccountTable.Name}
+                    WHERE {UserAccountTable.Columns.UserId} = @UserId
+                    FOR UPDATE;
+                    """;
+                selectCommand.Parameters.AddWithValue("@UserId", userId);
+
+                await using var reader = await selectCommand.ExecuteReaderAsync(cancellationToken);
+                if (await reader.ReadAsync(cancellationToken))
+                {
+                    userExists = true;
+                    failedLoginCount = reader.GetInt32(reader.GetOrdinal(UserAccountTable.Columns.FailedLoginCount));
+                    lockedUntil = reader.IsDBNull(reader.GetOrdinal(UserAccountTable.Columns.LockedUntil))
+                        ? null
+                        : DateTime.SpecifyKind(reader.GetDateTime(reader.GetOrdinal(UserAccountTable.Columns.LockedUntil)), DateTimeKind.Utc);
+                    databaseUtcNow = DateTime.SpecifyKind(reader.GetDateTime(reader.GetOrdinal("DatabaseUtcNow")), DateTimeKind.Utc);
+                }
+            }
+
+            if (!userExists)
+            {
+                await transaction.CommitAsync(cancellationToken);
+                return;
+            }
+
+            var lockExpired = lockedUntil is not null && lockedUntil <= databaseUtcNow;
+            var nextFailedLoginCount = lockExpired ? 1 : failedLoginCount + 1;
+            var shouldLock = !lockExpired && nextFailedLoginCount >= MaxFailedLoginAttempts;
+            var nextLockedUntil = lockExpired ? null : lockedUntil;
+
+            await using var updateCommand = connection.CreateCommand();
+            updateCommand.Transaction = transaction;
+            updateCommand.CommandText =
+                $"""
+                UPDATE {UserAccountTable.Name}
+                SET {UserAccountTable.Columns.FailedLoginCount} = @FailedLoginCount,
+                    {UserAccountTable.Columns.LockedUntil} = CASE
+                        WHEN @ShouldLock = 1 THEN DATE_ADD(UTC_TIMESTAMP(), INTERVAL {LockoutMinutes} MINUTE)
+                        ELSE @LockedUntil
+                    END,
+                    {UserAccountTable.Columns.UpdatedAt} = UTC_TIMESTAMP()
+                WHERE {UserAccountTable.Columns.UserId} = @UserId;
+                """;
+            updateCommand.Parameters.AddWithValue("@FailedLoginCount", nextFailedLoginCount);
+            updateCommand.Parameters.AddWithValue("@ShouldLock", shouldLock ? 1 : 0);
+            updateCommand.Parameters.AddWithValue("@LockedUntil", (object?)nextLockedUntil ?? DBNull.Value);
+            updateCommand.Parameters.AddWithValue("@UserId", userId);
+            await updateCommand.ExecuteNonQueryAsync(cancellationToken);
+
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 
     public async Task RecordSuccessfulLoginAsync(

@@ -14,4 +14,15 @@ public interface IAuditLogWriteRepository
         string previousStatus,
         long actorUserId,
         CancellationToken cancellationToken);
+
+    Task InsertCompanyUserChangedAsync(
+        string action,
+        Guid actorUserUuid,
+        Guid companyUuid,
+        Guid targetUserUuid,
+        string? previousCompanyRole,
+        string? previousMembershipStatus,
+        string companyRole,
+        string membershipStatus,
+        CancellationToken cancellationToken);
 }

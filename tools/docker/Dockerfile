@@ -2,13 +2,16 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# copy csproj(s) and restore as distinct layers
+# Copy every referenced project before restore so Docker layer caching works.
 COPY ./src/RMS.Identity.Service.Api/*.csproj ./RMS.Identity.Service.Api/
-# copy other project files if you split projects - adjust as needed
+COPY ./src/RMS.Identity.Service.Application/*.csproj ./RMS.Identity.Service.Application/
+COPY ./src/RMS.Identity.Service.Domain/*.csproj ./RMS.Identity.Service.Domain/
+COPY ./src/RMS.Identity.Service.Infrastructure/*.csproj ./RMS.Identity.Service.Infrastructure/
+COPY ./src/RMS.Identity.Service.Infrastructure.Abstractions/*.csproj ./RMS.Identity.Service.Infrastructure.Abstractions/
 RUN dotnet restore ./RMS.Identity.Service.Api/RMS.Identity.Service.Api.csproj
 
-# copy everything else and publish
-COPY . .
+# Copy solution source into the same layout used during restore.
+COPY ./src/ ./
 WORKDIR /src/RMS.Identity.Service.Api
 RUN dotnet publish -c Release -o /app/publish /p:PublishTrimmed=false
 
@@ -16,9 +19,8 @@ RUN dotnet publish -c Release -o /app/publish /p:PublishTrimmed=false
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 ENV DOTNET_RUNNING_IN_CONTAINER=true
-# environment variables for production can be set in compose or orchestrator
 COPY --from=build /app/publish ./
-# non-root user
+USER $APP_UID
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "RMS.Identity.Service.Api.dll"]

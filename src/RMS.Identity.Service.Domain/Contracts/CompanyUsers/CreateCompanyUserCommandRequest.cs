@@ -6,4 +6,5 @@ public sealed record CreateCompanyUserCommandRequest(
     Guid CompanyUuid,
     string Username,
     string? DisplayName,
-    string CompanyRole) : ICommand<CreateCompanyUserCommandResponse>;
+    CompanyRole CompanyRole,
+    Guid ActorUserUuid = default) : ICommand<CreateCompanyUserCommandResponse>;

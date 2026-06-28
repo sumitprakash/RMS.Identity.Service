@@ -62,7 +62,8 @@ public sealed class OutboxMySqlRepository : IOutboxWriteRepository, IOutboxProce
                 account.UserUuid,
                 EmailAddress = account.Username,
                 Token = token,
-                ExpiresAt = expiresAt
+                ExpiresAt = expiresAt,
+                account.PasswordSetupRequired
             }));
 
         await command.ExecuteNonQueryAsync(cancellationToken);

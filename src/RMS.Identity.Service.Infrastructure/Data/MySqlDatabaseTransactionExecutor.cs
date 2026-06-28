@@ -19,6 +19,11 @@ public sealed class MySqlDatabaseTransactionExecutor : IDatabaseTransactionExecu
         Func<CancellationToken, Task<TResult>> operation,
         CancellationToken cancellationToken)
     {
+        if (_transactionAccessor.Current is not null)
+        {
+            return await operation(cancellationToken);
+        }
+
         await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
         var databaseTransaction = new MySqlDatabaseTransaction(connection, transaction);
