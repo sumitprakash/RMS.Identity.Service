@@ -338,7 +338,7 @@ components:
         legalName:
           type: string
           minLength: 2
-          maxLength: 256
+          maxLength: 255
           example: Example Retail Pvt Ltd
         tradeName:
           type: string
@@ -373,7 +373,7 @@ components:
         addressLine2:
           type: string
           minLength: 2
-          maxLength: 256
+          maxLength: 255
           nullable: true
           example: Near Market
         city:
@@ -577,6 +577,12 @@ components:
           type: object
           nullable: true
           additionalProperties: true
+        correlationTraceId:
+          type: string
+          nullable: true
+          maxLength: 128
+          description: Correlation trace identifier returned by the service for log lookup.
+          example: 4bf92f3577b34da6a3ce929d0e0e4736
       additionalProperties: false
 
   responses:
