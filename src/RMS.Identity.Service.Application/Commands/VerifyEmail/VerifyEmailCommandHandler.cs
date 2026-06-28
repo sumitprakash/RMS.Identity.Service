@@ -42,21 +42,6 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
         VerifyEmailCommandRequest command,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(command.Token))
-        {
-            throw ValidationError("Verification token is required.");
-        }
-
-        if (command.Token.Length > 256)
-        {
-            throw ValidationError("Verification token must not exceed 256 characters.");
-        }
-
-        if ((command.Password?.Length ?? 0) > 128)
-        {
-            throw ValidationError("Password must not exceed 128 characters.");
-        }
-
         var tokenHash = _textHasher.Hash(command.Token.Trim());
         var token = await _emailVerificationReadRepository.GetByTokenHashAsync(
             tokenHash,
@@ -89,9 +74,9 @@ public sealed class VerifyEmailCommandHandler : ICommandHandler<VerifyEmailComma
         }
 
         if (user.PasswordSetupRequired
-            && (string.IsNullOrWhiteSpace(command.Password) || command.Password.Length < 8))
+            && string.IsNullOrWhiteSpace(command.Password))
         {
-            throw ValidationError("Password must be at least 8 characters long to activate this account.");
+            throw ValidationError("Password is required to activate this account.");
         }
 
         var consumed = await _emailVerificationWriteRepository.TryConsumeAsync(

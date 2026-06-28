@@ -8,7 +8,7 @@ public sealed class RegisterCompanyRequestBody
 {
     [Required]
     [MinLength(2)]
-    [MaxLength(256)]
+    [MaxLength(255)]
     public required string LegalName { get; init; }
 
     [MinLength(2)]
@@ -37,7 +37,7 @@ public sealed class RegisterCompanyRequestBody
     public required string AddressLine1 { get; init; }
 
     [MinLength(2)]
-    [MaxLength(256)]
+    [MaxLength(255)]
     public string? AddressLine2 { get; init; }
 
     [Required]

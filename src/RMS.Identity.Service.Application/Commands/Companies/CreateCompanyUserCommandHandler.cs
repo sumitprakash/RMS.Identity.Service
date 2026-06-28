@@ -61,13 +61,6 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
         CancellationToken cancellationToken)
     {
         var normalizedUsername = EmailAddressValidator.Normalize(command.Username);
-        if (normalizedUsername.Length > 150 || (command.DisplayName?.Trim().Length ?? 0) > 255)
-        {
-            throw new ApplicationServiceException(
-                ServiceStatusErrorCodes.BadRequest,
-                "Username or display name exceeds the supported length.");
-        }
-
         if (await _userAccountReadRepository.ExistsByUsernameAsync(normalizedUsername, cancellationToken))
         {
             _logger.LogWarning("Company user creation rejected because username already exists for company {CompanyUuid}.", command.CompanyUuid);
