@@ -2,10 +2,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.OpenApi;
 using RMS.Identity.Service.Api.Endpoint.SignUp;
+using RMS.Identity.Service.Api.Logging;
 using RMS.Identity.Service.Api.Middleware;
+using RMS.Identity.Service.Api.RateLimiting;
 using RMS.Identity.Service.Api.Shared.Auth;
 using RMS.Identity.Service.Api.Shared.ErrorHandling;
 using RMS.Identity.Service.Api.Shared.Idempotency;
@@ -13,6 +14,7 @@ using RMS.Identity.Service.Api.Shared.Validation;
 using RMS.Identity.Service.Infrastructure.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.AddErrorFileLogger(builder.Configuration, builder.Environment);
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.Limits.MaxRequestBodySize = 64 * 1024;
@@ -50,6 +52,9 @@ builder.Services.AddSwaggerGen(options =>
         Description = "JWT bearer access token."
     });
 });
+var globalRateLimitOptions = builder.Configuration
+    .GetSection(GlobalRateLimitOptions.SectionName)
+    .Get<GlobalRateLimitOptions>() ?? new GlobalRateLimitOptions();
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -57,20 +62,34 @@ builder.Services.AddRateLimiter(options =>
     {
         context.HttpContext.Response.ContentType = "application/json";
         await context.HttpContext.Response.WriteAsJsonAsync(
-            ApiErrorResponse.Create("429", "Too many authentication requests. Try again later."),
+            ApiErrorResponse.Create("429", globalRateLimitOptions.RejectionMessage),
             cancellationToken);
     };
-    options.AddPolicy("auth", context =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 10,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0,
-                AutoReplenishment = true
-            }));
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    {
+        var partitionKey = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        return globalRateLimitOptions.Enabled
+            ? RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey,
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = globalRateLimitOptions.PermitLimit,
+                    Window = TimeSpan.FromSeconds(globalRateLimitOptions.WindowSeconds),
+                    QueueLimit = globalRateLimitOptions.QueueLimit,
+                    AutoReplenishment = globalRateLimitOptions.AutoReplenishment
+                })
+            : RateLimitPartition.GetNoLimiter(partitionKey);
+    });
 });
+
+builder.Services.AddOptions<GlobalRateLimitOptions>()
+    .Bind(builder.Configuration.GetSection(GlobalRateLimitOptions.SectionName))
+    .Validate(options => options.PermitLimit > 0, "Global rate limit permit limit must be greater than zero.")
+    .Validate(options => options.WindowSeconds > 0, "Global rate limit window must be greater than zero.")
+    .Validate(options => options.QueueLimit >= 0, "Global rate limit queue limit cannot be negative.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.RejectionMessage), "Global rate limit rejection message is required.")
+    .ValidateOnStart();
 
 builder.Services.AddIdentityServiceInfrastructure(builder.Configuration);
 builder.Services.AddScoped<IIdempotencyService, IdempotencyService>();

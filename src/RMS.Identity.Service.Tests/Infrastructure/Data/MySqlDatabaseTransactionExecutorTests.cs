@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using MySqlConnector;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
 using RMS.Identity.Service.Infrastructure.Data;
@@ -11,7 +12,10 @@ public sealed class MySqlDatabaseTransactionExecutorTests
     {
         var accessor = new FakeTransactionAccessor { Current = new FakeTransaction() };
         var connectionFactory = new ThrowingConnectionFactory();
-        var executor = new MySqlDatabaseTransactionExecutor(connectionFactory, accessor);
+        var executor = new MySqlDatabaseTransactionExecutor(
+            connectionFactory,
+            accessor,
+            NullLogger<MySqlDatabaseTransactionExecutor>.Instance);
 
         var result = await executor.ExecuteAsync(
             _ => Task.FromResult("completed"),

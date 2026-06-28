@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using RMS.Identity.Service.Domain.Contracts.Refresh;
 using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 
@@ -17,7 +16,6 @@ public sealed class RefreshController : ControllerBase
     }
 
     [HttpPost]
-    [EnableRateLimiting("auth")]
     [ProducesResponseType(typeof(RefreshResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
