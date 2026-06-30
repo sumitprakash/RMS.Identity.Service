@@ -39,13 +39,13 @@ public sealed class GetCompanyController : ControllerBase
         var company = await _databaseTransactionExecutor.ExecuteAsync(
             async transactionCancellationToken =>
             {
-                var loadedCompany = await _getCompanyCommandHandler.HandleAsync(
-                    new GetCompanyCommandRequest(companyUuid),
-                    transactionCancellationToken);
-
                 await _companyAccessAuthorizer.AuthorizeMembershipAsync(
                     userUuid,
                     companyUuid,
+                    transactionCancellationToken);
+
+                var loadedCompany = await _getCompanyCommandHandler.HandleAsync(
+                    new GetCompanyCommandRequest(companyUuid),
                     transactionCancellationToken);
 
                 return loadedCompany;

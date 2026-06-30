@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using RMS.Identity.Service.Api.Shared.Validation;
 
 namespace RMS.Identity.Service.Api.Endpoint.Companies.RegisterCompany;
 
@@ -7,6 +8,7 @@ namespace RMS.Identity.Service.Api.Endpoint.Companies.RegisterCompany;
 public sealed class RegisterCompanyRequestBody
 {
     [Required]
+    [NotBlank]
     [MinLength(2)]
     [MaxLength(255)]
     public required string LegalName { get; init; }
@@ -32,6 +34,7 @@ public sealed class RegisterCompanyRequestBody
     public required string ContactPhoneNumber { get; init; }
 
     [Required]
+    [NotBlank]
     [MinLength(5)]
     [MaxLength(160)]
     public required string AddressLine1 { get; init; }
@@ -41,11 +44,13 @@ public sealed class RegisterCompanyRequestBody
     public string? AddressLine2 { get; init; }
 
     [Required]
+    [NotBlank]
     [MinLength(2)]
     [MaxLength(32)]
     public required string City { get; init; }
 
     [Required]
+    [NotBlank]
     [MinLength(2)]
     [MaxLength(32)]
     public required string State { get; init; }

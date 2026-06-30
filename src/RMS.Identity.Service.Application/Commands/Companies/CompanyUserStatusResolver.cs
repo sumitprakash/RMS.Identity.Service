@@ -11,6 +11,11 @@ internal static class CompanyUserStatusResolver
             return "suspended";
         }
 
+        if (!string.Equals(user.MembershipStatus, "active", StringComparison.OrdinalIgnoreCase))
+        {
+            return "pending";
+        }
+
         return user.EmailVerified ? "active" : "pending";
     }
 }
