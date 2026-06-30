@@ -13,4 +13,6 @@ public sealed class DatabaseLoggerOptions
     public LogLevel MinimumLevel { get; set; } = LogLevel.Information;
 
     public int CommandTimeoutSeconds { get; set; } = 5;
+
+    public int QueueCapacity { get; set; } = 10000;
 }

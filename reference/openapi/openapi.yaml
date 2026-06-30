@@ -432,7 +432,8 @@ components:
         - status
       properties:
         status:
-          $ref: '#/components/schemas/CompanyStatus'
+          type: string
+          enum: [verified, rejected, suspended]
       additionalProperties: false
 
     CurrentUserCompanyResponse:

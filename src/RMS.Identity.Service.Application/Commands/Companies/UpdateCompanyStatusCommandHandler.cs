@@ -47,7 +47,7 @@ public sealed class UpdateCompanyStatusCommandHandler : ICommandHandler<UpdateCo
         EnsureValidTransition(company.Status, targetStatus);
 
         await _companyWriteRepository.UpdateStatusAsync(
-            new UpdateCompanyStatusCommand(command.CompanyUuid, targetStatus),
+            new UpdateCompanyStatusCommand(command.CompanyUuid, company.Status, targetStatus),
             cancellationToken);
 
         var updatedCompany = await _companyReadRepository.GetByUuidAsync(command.CompanyUuid, cancellationToken);

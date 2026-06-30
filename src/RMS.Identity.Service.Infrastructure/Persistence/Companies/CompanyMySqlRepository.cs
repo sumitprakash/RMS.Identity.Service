@@ -167,14 +167,16 @@ public sealed class CompanyMySqlRepository :
             UPDATE {CompanyTable.Name}
             SET {CompanyTable.Columns.CompanyStatus} = @CompanyStatus
             WHERE {CompanyTable.Columns.CompanyUuid} = UUID_TO_BIN(@CompanyUuid)
+              AND {CompanyTable.Columns.CompanyStatus} = @ExpectedStatus
               AND {CompanyTable.Columns.IsDeleted} = 0;
             """;
         updateCommand.Parameters.AddWithValue("@CompanyUuid", command.CompanyUuid.ToString());
+        updateCommand.Parameters.AddWithValue("@ExpectedStatus", command.ExpectedStatus);
         updateCommand.Parameters.AddWithValue("@CompanyStatus", command.Status);
 
         if (await updateCommand.ExecuteNonQueryAsync(cancellationToken) == 0)
         {
-            throw new ApplicationServiceException(ServiceErrorDefinitions.Companies.CompanyNotFound);
+            throw new ApplicationServiceException(ServiceErrorDefinitions.Companies.InvalidCompanyStatusTransition);
         }
     }
 

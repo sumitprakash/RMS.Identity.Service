@@ -40,6 +40,7 @@ public sealed class UpdateCompanyStatusCommandHandlerTests
             CancellationToken.None);
 
         Assert.Equal(expectedStatus, response.Status);
+        Assert.Equal(currentStatus, companyRepository.UpdatedStatus?.ExpectedStatus);
         Assert.Equal(expectedStatus, companyRepository.UpdatedStatus?.Status);
         Assert.Equal(currentStatus, auditRepository.PreviousStatus);
         Assert.Equal(expectedStatus, auditRepository.Company?.Status);
@@ -111,6 +112,11 @@ public sealed class UpdateCompanyStatusCommandHandlerTests
         public Task UpdateStatusAsync(UpdateCompanyStatusCommand command, CancellationToken cancellationToken)
         {
             UpdatedStatus = command;
+            if (!string.Equals(_company.Status, command.ExpectedStatus, StringComparison.Ordinal))
+            {
+                throw new ApplicationServiceException(ServiceErrorDefinitions.Companies.InvalidCompanyStatusTransition);
+            }
+
             _company = _company with { Status = command.Status };
             return Task.CompletedTask;
         }
