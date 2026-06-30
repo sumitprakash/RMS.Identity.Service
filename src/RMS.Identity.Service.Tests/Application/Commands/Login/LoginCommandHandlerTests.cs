@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.Logging.Abstractions;
 using RMS.Identity.Service.Application.Commands.Login;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.Login;
@@ -19,7 +20,8 @@ public sealed class LoginCommandHandlerTests
             repository,
             new FakePasswordHasher(validPassword: "StrongPass@123"),
             new FakeAuthTokenGenerator(),
-            new FakeTextHasher());
+            new FakeTextHasher(),
+            NullLogger<LoginCommandHandler>.Instance);
 
         var response = await handler.HandleAsync(
             new LoginCommandRequest(" Alice@Example.com ", "StrongPass@123"),
@@ -44,7 +46,8 @@ public sealed class LoginCommandHandlerTests
             repository,
             new FakePasswordHasher(validPassword: "StrongPass@123"),
             new FakeAuthTokenGenerator(),
-            new FakeTextHasher());
+            new FakeTextHasher(),
+            NullLogger<LoginCommandHandler>.Instance);
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(
@@ -64,7 +67,8 @@ public sealed class LoginCommandHandlerTests
             repository,
             new FakePasswordHasher(validPassword: "StrongPass@123"),
             new FakeAuthTokenGenerator(),
-            new FakeTextHasher());
+            new FakeTextHasher(),
+            NullLogger<LoginCommandHandler>.Instance);
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(
@@ -84,7 +88,8 @@ public sealed class LoginCommandHandlerTests
             repository,
             passwordHasher,
             new FakeAuthTokenGenerator(),
-            new FakeTextHasher());
+            new FakeTextHasher(),
+            NullLogger<LoginCommandHandler>.Instance);
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(
@@ -104,7 +109,8 @@ public sealed class LoginCommandHandlerTests
             repository,
             new FakePasswordHasher(validPassword: "StrongPass@123"),
             new FakeAuthTokenGenerator(),
-            new FakeTextHasher());
+            new FakeTextHasher(),
+            NullLogger<LoginCommandHandler>.Instance);
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(

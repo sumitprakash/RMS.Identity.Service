@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.Logging.Abstractions;
 using RMS.Identity.Service.Application.Commands.Companies;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.Companies;
@@ -25,7 +26,8 @@ public sealed class RegisterCompanyCommandHandlerTests
             userRepository,
             companyRepository,
             companyRepository,
-            companyUserRepository);
+            companyUserRepository,
+            NullLogger<RegisterCompanyCommandHandler>.Instance);
 
         var response = await handler.HandleAsync(CreateRequest(), CancellationToken.None);
 
@@ -53,7 +55,8 @@ public sealed class RegisterCompanyCommandHandlerTests
             userRepository,
             companyRepository,
             companyRepository,
-            companyUserRepository);
+            companyUserRepository,
+            NullLogger<RegisterCompanyCommandHandler>.Instance);
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(CreateRequest(), CancellationToken.None));
@@ -73,7 +76,8 @@ public sealed class RegisterCompanyCommandHandlerTests
             userRepository,
             companyRepository,
             companyRepository,
-            new FakeCompanyUserWriteRepository());
+            new FakeCompanyUserWriteRepository(),
+            NullLogger<RegisterCompanyCommandHandler>.Instance);
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(CreateRequest(), CancellationToken.None));

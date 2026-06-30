@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
 using RMS.Identity.Service.Domain.Contracts.Companies;
@@ -15,17 +16,20 @@ public sealed class RegisterCompanyCommandHandler : ICommandHandler<RegisterComp
     private readonly ICompanyReadRepository _companyReadRepository;
     private readonly ICompanyWriteRepository _companyWriteRepository;
     private readonly ICompanyUserWriteRepository _companyUserWriteRepository;
+    private readonly ILogger<RegisterCompanyCommandHandler> _logger;
 
     public RegisterCompanyCommandHandler(
         IUserAccountReadRepository userAccountReadRepository,
         ICompanyReadRepository companyReadRepository,
         ICompanyWriteRepository companyWriteRepository,
-        ICompanyUserWriteRepository companyUserWriteRepository)
+        ICompanyUserWriteRepository companyUserWriteRepository,
+        ILogger<RegisterCompanyCommandHandler> logger)
     {
         _userAccountReadRepository = userAccountReadRepository;
         _companyReadRepository = companyReadRepository;
         _companyWriteRepository = companyWriteRepository;
         _companyUserWriteRepository = companyUserWriteRepository;
+        _logger = logger;
     }
 
     public async Task<RegisterCompanyCommandResponse> HandleAsync(
@@ -35,13 +39,14 @@ public sealed class RegisterCompanyCommandHandler : ICommandHandler<RegisterComp
         var owner = await _userAccountReadRepository.GetByUuidAsync(command.OwnerUserUuid, cancellationToken);
         if (!owner.IsActive || owner.IsDeleted)
         {
+            _logger.LogWarning("Company registration rejected because owner user {OwnerUserUuid} is inactive.", command.OwnerUserUuid);
             throw new ApplicationServiceException(ServiceErrorDefinitions.Auth.UserNotActive);
         }
 
         var normalizedGstin = NormalizeGstin(command.Gstin);
-        EnsureSupportedLengths(command);
         if (await _companyReadRepository.ExistsByGstinAsync(normalizedGstin, cancellationToken))
         {
+            _logger.LogWarning("Company registration rejected because GSTIN already exists.");
             throw new ApplicationServiceException(ServiceErrorDefinitions.Companies.CompanyExists);
         }
 
@@ -66,6 +71,10 @@ public sealed class RegisterCompanyCommandHandler : ICommandHandler<RegisterComp
             cancellationToken);
 
         var company = await _companyReadRepository.GetByIdAsync(companyId, cancellationToken);
+        _logger.LogInformation(
+            "Registered company {CompanyUuid} for owner user {OwnerUserUuid}.",
+            company.CompanyUuid,
+            command.OwnerUserUuid);
         return new RegisterCompanyCommandResponse(
             company.CompanyUuid,
             company.LegalName,
@@ -91,35 +100,4 @@ public sealed class RegisterCompanyCommandHandler : ICommandHandler<RegisterComp
         return value.Trim();
     }
 
-    private static void EnsureSupportedLengths(RegisterCompanyCommandRequest command)
-    {
-        if (command.LegalName.Trim().Length > 255
-            || (command.TradeName?.Trim().Length ?? 0) > 255
-            || command.Gstin.Trim().Length > 32
-            || command.ContactEmailAddress.Trim().Length > 150
-            || !IsTenDigitPhoneNumber(command.ContactPhoneNumber)
-            || command.AddressLine1.Trim().Length > 255
-            || (command.AddressLine2?.Trim().Length ?? 0) > 255
-            || command.City.Trim().Length > 128
-            || command.State.Trim().Length > 128
-            || !IsSixDigitPostalCode(command.PostalCode)
-            || command.Country.Trim().Length != 2)
-        {
-            throw new ApplicationServiceException(
-                ServiceStatusErrorCodes.BadRequest,
-                "One or more company fields are invalid or exceed the supported length.");
-        }
-    }
-
-    private static bool IsTenDigitPhoneNumber(string value)
-    {
-        var trimmed = value.Trim();
-        return trimmed.Length == 10 && trimmed.All(char.IsDigit);
-    }
-
-    private static bool IsSixDigitPostalCode(string value)
-    {
-        var trimmed = value.Trim();
-        return trimmed.Length == 6 && trimmed.All(char.IsDigit);
-    }
 }

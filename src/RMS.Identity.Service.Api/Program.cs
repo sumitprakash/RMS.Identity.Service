@@ -8,13 +8,15 @@ using RMS.Identity.Service.Api.Logging;
 using RMS.Identity.Service.Api.Middleware;
 using RMS.Identity.Service.Api.RateLimiting;
 using RMS.Identity.Service.Api.Shared.Auth;
+using RMS.Identity.Service.Api.Shared.Correlation;
 using RMS.Identity.Service.Api.Shared.ErrorHandling;
 using RMS.Identity.Service.Api.Shared.Idempotency;
 using RMS.Identity.Service.Api.Shared.Validation;
 using RMS.Identity.Service.Infrastructure.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Logging.AddErrorFileLogger(builder.Configuration, builder.Environment);
+builder.Logging.AddFileLogger(builder.Configuration, builder.Environment);
+builder.Logging.AddDatabaseLogger(builder.Configuration);
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.Limits.MaxRequestBodySize = 64 * 1024;
@@ -62,7 +64,10 @@ builder.Services.AddRateLimiter(options =>
     {
         context.HttpContext.Response.ContentType = "application/json";
         await context.HttpContext.Response.WriteAsJsonAsync(
-            ApiErrorResponse.Create("429", globalRateLimitOptions.RejectionMessage),
+            ApiErrorResponse.Create(
+                "429",
+                globalRateLimitOptions.RejectionMessage,
+                correlationTraceId: CorrelationTraceContext.GetCorrelationTraceId(context.HttpContext)),
             cancellationToken);
     };
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
@@ -90,6 +95,10 @@ builder.Services.AddOptions<GlobalRateLimitOptions>()
     .Validate(options => options.QueueLimit >= 0, "Global rate limit queue limit cannot be negative.")
     .Validate(options => !string.IsNullOrWhiteSpace(options.RejectionMessage), "Global rate limit rejection message is required.")
     .ValidateOnStart();
+builder.Services.AddOptions<CorrelationTraceOptions>()
+    .Bind(builder.Configuration.GetSection(CorrelationTraceOptions.SectionName))
+    .Validate(options => !string.IsNullOrWhiteSpace(options.ResponseHeaderName), "Correlation trace response header name is required.")
+    .ValidateOnStart();
 
 builder.Services.AddIdentityServiceInfrastructure(builder.Configuration);
 builder.Services.AddScoped<IIdempotencyService, IdempotencyService>();
@@ -101,6 +110,7 @@ builder.Services.AddScoped<IPlatformAdminAuthorizer, PlatformAdminAuthorizer>();
 
 var app = builder.Build();
 
+app.UseMiddleware<CorrelationTraceMiddleware>();
 app.UseMiddleware<ApiExceptionHandlingMiddleware>();
 app.UseRateLimiter();
 app.UseMiddleware<IdempotencyMiddleware>();

@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.Logging.Abstractions;
 using RMS.Identity.Service.Application.Commands.Refresh;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.Refresh;
@@ -24,7 +25,8 @@ public sealed class RefreshCommandHandlerTests
         var handler = new RefreshCommandHandler(
             repository,
             new FakeAuthTokenGenerator(),
-            new FakeTextHasher());
+            new FakeTextHasher(),
+            NullLogger<RefreshCommandHandler>.Instance);
 
         var response = await handler.HandleAsync(
             new RefreshCommandRequest("refresh-token"),
@@ -46,7 +48,8 @@ public sealed class RefreshCommandHandlerTests
         var handler = new RefreshCommandHandler(
             new FakeAuthenticationRepository(session: null),
             new FakeAuthTokenGenerator(),
-            new FakeTextHasher());
+            new FakeTextHasher(),
+            NullLogger<RefreshCommandHandler>.Instance);
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(new RefreshCommandRequest("refresh-token"), CancellationToken.None));
@@ -66,7 +69,8 @@ public sealed class RefreshCommandHandlerTests
                 DateTime.UtcNow,
                 CreateUser())),
             new FakeAuthTokenGenerator(),
-            new FakeTextHasher());
+            new FakeTextHasher(),
+            NullLogger<RefreshCommandHandler>.Instance);
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(new RefreshCommandRequest("refresh-token"), CancellationToken.None));
@@ -90,7 +94,8 @@ public sealed class RefreshCommandHandlerTests
         var handler = new RefreshCommandHandler(
             repository,
             new FakeAuthTokenGenerator(),
-            new FakeTextHasher());
+            new FakeTextHasher(),
+            NullLogger<RefreshCommandHandler>.Instance);
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(new RefreshCommandRequest("refresh-token"), CancellationToken.None));

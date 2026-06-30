@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using RMS.Identity.Service.Application.Commands.SignUp;
 using RMS.Identity.Service.Domain.Contracts.SignUp;
 using RMS.Identity.Service.Domain.Contracts.UserAccounts;
@@ -27,7 +28,8 @@ public sealed class SignUpCommandHandlerTests
             emailVerificationRepository,
             outboxRepository,
             new FakePasswordHasher(),
-            new FakeTextHasher());
+            new FakeTextHasher(),
+            NullLogger<SignUpCommandHandler>.Instance);
 
         var response = await handler.HandleAsync(
             new SignUpCommandRequest(

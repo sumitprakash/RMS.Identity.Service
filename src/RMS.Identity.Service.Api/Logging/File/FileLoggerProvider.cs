@@ -1,17 +1,17 @@
-using Microsoft.Extensions.Logging;
 using System.Threading.Channels;
 
-namespace RMS.Identity.Service.Api.Logging;
+namespace RMS.Identity.Service.Api.Logging.File;
 
-public sealed class ErrorFileLoggerProvider : ILoggerProvider
+public sealed class FileLoggerProvider : ILoggerProvider, ISupportExternalScope
 {
-    private readonly ErrorFileLoggerOptions _options;
+    private readonly FileLoggerOptions _options;
     private readonly string _filePath;
     private readonly Channel<string> _entries;
     private readonly Task _writerTask;
+    private IExternalScopeProvider _scopeProvider = new LoggerExternalScopeProvider();
     private int _disposed;
 
-    public ErrorFileLoggerProvider(ErrorFileLoggerOptions options, IHostEnvironment environment)
+    public FileLoggerProvider(FileLoggerOptions options, IHostEnvironment environment)
     {
         _options = options;
         _filePath = System.IO.Path.IsPathFullyQualified(options.Path)
@@ -25,12 +25,19 @@ public sealed class ErrorFileLoggerProvider : ILoggerProvider
         _writerTask = Task.Run(ProcessQueueAsync);
     }
 
-    public ILogger CreateLogger(string categoryName) => new ErrorFileLogger(categoryName, this);
+    public IExternalScopeProvider ScopeProvider => _scopeProvider;
+
+    public ILogger CreateLogger(string categoryName) => new FileLogger(categoryName, this);
 
     public bool IsEnabled(LogLevel logLevel) =>
         _options.Enabled &&
         logLevel != LogLevel.None &&
         logLevel >= _options.MinimumLevel;
+
+    public void SetScopeProvider(IExternalScopeProvider scopeProvider)
+    {
+        _scopeProvider = scopeProvider;
+    }
 
     public void Enqueue(string entry)
     {
@@ -53,7 +60,7 @@ public sealed class ErrorFileLoggerProvider : ILoggerProvider
 
         try
         {
-            _writerTask.GetAwaiter().GetResult();
+            _writerTask.Wait(TimeSpan.FromSeconds(5));
         }
         catch
         {

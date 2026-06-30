@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Microsoft.Extensions.Logging;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
 using RMS.Identity.Service.Domain.Contracts.CompanyUsers;
@@ -29,6 +30,7 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
     private readonly IPasswordHasher _passwordHasher;
     private readonly ITextHasher _textHasher;
     private readonly IAuditLogWriteRepository _auditLogWriteRepository;
+    private readonly ILogger<CreateCompanyUserCommandHandler> _logger;
 
     public CreateCompanyUserCommandHandler(
         ICompanyReadRepository companyReadRepository,
@@ -39,7 +41,8 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
         IOutboxWriteRepository outboxWriteRepository,
         IPasswordHasher passwordHasher,
         ITextHasher textHasher,
-        IAuditLogWriteRepository auditLogWriteRepository)
+        IAuditLogWriteRepository auditLogWriteRepository,
+        ILogger<CreateCompanyUserCommandHandler> logger)
     {
         _companyReadRepository = companyReadRepository;
         _userAccountReadRepository = userAccountReadRepository;
@@ -50,6 +53,7 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
         _passwordHasher = passwordHasher;
         _textHasher = textHasher;
         _auditLogWriteRepository = auditLogWriteRepository;
+        _logger = logger;
     }
 
     public async Task<CreateCompanyUserCommandResponse> HandleAsync(
@@ -57,15 +61,9 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
         CancellationToken cancellationToken)
     {
         var normalizedUsername = EmailAddressValidator.Normalize(command.Username);
-        if (normalizedUsername.Length > 150 || (command.DisplayName?.Trim().Length ?? 0) > 255)
-        {
-            throw new ApplicationServiceException(
-                ServiceStatusErrorCodes.BadRequest,
-                "Username or display name exceeds the supported length.");
-        }
-
         if (await _userAccountReadRepository.ExistsByUsernameAsync(normalizedUsername, cancellationToken))
         {
+            _logger.LogWarning("Company user creation rejected because username already exists for company {CompanyUuid}.", command.CompanyUuid);
             throw new ApplicationServiceException(ServiceErrorDefinitions.Users.UserExists);
         }
 
@@ -73,6 +71,7 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
         var company = await _companyReadRepository.GetByUuidAsync(command.CompanyUuid, cancellationToken);
         if (company.IsDeleted)
         {
+            _logger.LogWarning("Company user creation rejected because company {CompanyUuid} is deleted.", command.CompanyUuid);
             throw new ApplicationServiceException(ServiceErrorDefinitions.Companies.CompanyNotFound);
         }
 
@@ -119,6 +118,11 @@ public sealed class CreateCompanyUserCommandHandler : ICommandHandler<CreateComp
                 "active",
                 cancellationToken);
         }
+        _logger.LogInformation(
+            "Created company user {UserUuid} in company {CompanyUuid} with role {CompanyRole}.",
+            user.UserUuid,
+            command.CompanyUuid,
+            companyRole);
 
         return new CreateCompanyUserCommandResponse(
             user.UserUuid,

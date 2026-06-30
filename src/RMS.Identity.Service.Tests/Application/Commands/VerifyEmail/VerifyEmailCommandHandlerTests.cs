@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.Logging.Abstractions;
 using RMS.Identity.Service.Application.Commands.VerifyEmail;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Entities.UserAccounts;
@@ -24,7 +25,8 @@ public sealed class VerifyEmailCommandHandlerTests
             new FakePasswordHasher(),
             new FakeTextHasher(),
             userRepository,
-            userRepository);
+            userRepository,
+            NullLogger<VerifyEmailCommandHandler>.Instance);
 
         var response = await handler.HandleAsync(
             new VerifyEmailCommandRequest("valid-token"),
@@ -49,7 +51,8 @@ public sealed class VerifyEmailCommandHandlerTests
             new FakePasswordHasher(),
             new FakeTextHasher(),
             userRepository,
-            userRepository);
+            userRepository,
+            NullLogger<VerifyEmailCommandHandler>.Instance);
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(new VerifyEmailCommandRequest("valid-token"), CancellationToken.None));
@@ -70,7 +73,8 @@ public sealed class VerifyEmailCommandHandlerTests
             new FakePasswordHasher(),
             new FakeTextHasher(),
             new FakeUserAccountRepository(),
-            new FakeUserAccountRepository());
+            new FakeUserAccountRepository(),
+            NullLogger<VerifyEmailCommandHandler>.Instance);
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(new VerifyEmailCommandRequest("missing-token"), CancellationToken.None));
@@ -89,7 +93,8 @@ public sealed class VerifyEmailCommandHandlerTests
             new FakePasswordHasher(),
             new FakeTextHasher(),
             new FakeUserAccountRepository(),
-            new FakeUserAccountRepository());
+            new FakeUserAccountRepository(),
+            NullLogger<VerifyEmailCommandHandler>.Instance);
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(new VerifyEmailCommandRequest("valid-token"), CancellationToken.None));
@@ -108,7 +113,8 @@ public sealed class VerifyEmailCommandHandlerTests
             new FakePasswordHasher(),
             new FakeTextHasher(),
             new FakeUserAccountRepository(),
-            new FakeUserAccountRepository());
+            new FakeUserAccountRepository(),
+            NullLogger<VerifyEmailCommandHandler>.Instance);
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(new VerifyEmailCommandRequest("valid-token"), CancellationToken.None));
@@ -128,7 +134,8 @@ public sealed class VerifyEmailCommandHandlerTests
             new FakePasswordHasher(),
             new FakeTextHasher(),
             userRepository,
-            userRepository);
+            userRepository,
+            NullLogger<VerifyEmailCommandHandler>.Instance);
 
         var response = await handler.HandleAsync(
             new VerifyEmailCommandRequest("valid-token", "StrongPass@123"),
@@ -151,7 +158,8 @@ public sealed class VerifyEmailCommandHandlerTests
             new FakePasswordHasher(),
             new FakeTextHasher(),
             userRepository,
-            userRepository);
+            userRepository,
+            NullLogger<VerifyEmailCommandHandler>.Instance);
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(new VerifyEmailCommandRequest("valid-token"), CancellationToken.None));

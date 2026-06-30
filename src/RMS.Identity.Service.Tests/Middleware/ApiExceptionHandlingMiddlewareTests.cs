@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using RMS.Identity.Service.Api.Middleware;
+using RMS.Identity.Service.Api.Shared.Correlation;
 using RMS.Identity.Service.Api.Shared.ErrorHandling;
 using RMS.Identity.Service.Application.Shared.Errors;
 
@@ -41,6 +42,19 @@ public sealed class ApiExceptionHandlingMiddlewareTests
         Assert.Equal(ServiceIdentity.Code, response.ServiceCode);
         Assert.Equal("500-1-1", response.Code);
         Assert.Equal("An unexpected error occurred.", response.Message);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithCorrelationTrace_WritesCorrelationTraceInErrorResponse()
+    {
+        var middleware = CreateMiddleware(_ => throw new InvalidOperationException("Failure."));
+        var context = CreateHttpContext();
+        context.Items[CorrelationTraceContext.ItemKey] = "trace-test-1";
+
+        await middleware.InvokeAsync(context);
+
+        var response = await ReadResponseAsync(context);
+        Assert.Equal("trace-test-1", response.CorrelationTraceId);
     }
 
     private static ApiExceptionHandlingMiddleware CreateMiddleware(RequestDelegate next)

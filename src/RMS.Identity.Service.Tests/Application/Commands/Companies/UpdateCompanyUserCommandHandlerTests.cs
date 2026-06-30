@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.Logging.Abstractions;
 using RMS.Identity.Service.Application.Commands.Companies;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.CompanyUsers;
@@ -20,7 +21,11 @@ public sealed class UpdateCompanyUserCommandHandlerTests
     {
         var repository = new FakeCompanyUserRepository(CreateUser("MEMBER", "active"), activeOwnerCount: 1);
         var auditRepository = new FakeAuditLogWriteRepository();
-        var handler = new UpdateCompanyUserCommandHandler(repository, repository, auditRepository);
+        var handler = new UpdateCompanyUserCommandHandler(
+            repository,
+            repository,
+            auditRepository,
+            NullLogger<UpdateCompanyUserCommandHandler>.Instance);
 
         var response = await handler.HandleAsync(
             new UpdateCompanyUserCommandRequest(
@@ -47,7 +52,8 @@ public sealed class UpdateCompanyUserCommandHandlerTests
         var handler = new UpdateCompanyUserCommandHandler(
             repository,
             repository,
-            new FakeAuditLogWriteRepository());
+            new FakeAuditLogWriteRepository(),
+            NullLogger<UpdateCompanyUserCommandHandler>.Instance);
 
         var exception = await Assert.ThrowsAnyAsync<ServiceException>(() =>
             handler.HandleAsync(

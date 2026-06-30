@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Application.Shared.Validation;
 using RMS.Identity.Service.Domain.Contracts.Login;
@@ -14,17 +15,20 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommandRequest, L
     private readonly IPasswordHasher _passwordHasher;
     private readonly IAuthTokenGenerator _authTokenGenerator;
     private readonly ITextHasher _textHasher;
+    private readonly ILogger<LoginCommandHandler> _logger;
 
     public LoginCommandHandler(
         IAuthenticationRepository authenticationRepository,
         IPasswordHasher passwordHasher,
         IAuthTokenGenerator authTokenGenerator,
-        ITextHasher textHasher)
+        ITextHasher textHasher,
+        ILogger<LoginCommandHandler> logger)
     {
         _authenticationRepository = authenticationRepository;
         _passwordHasher = passwordHasher;
         _authTokenGenerator = authTokenGenerator;
         _textHasher = textHasher;
+        _logger = logger;
     }
 
     public async Task<LoginCommandResponse> HandleAsync(LoginCommandRequest command, CancellationToken cancellationToken)
@@ -35,12 +39,14 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommandRequest, L
         if (user is null)
         {
             _ = _passwordHasher.Hash(command.Password);
+            _logger.LogWarning("Login failed because username {Username} was not found.", username);
             throw InvalidCredentials();
         }
 
         if (!_passwordHasher.Verify(command.Password, user.PasswordHash))
         {
             await _authenticationRepository.RecordFailedLoginAsync(user.UserId, cancellationToken);
+            _logger.LogWarning("Login failed for user {UserUuid} because credentials were invalid.", user.UserUuid);
             throw InvalidCredentials();
         }
 
@@ -52,6 +58,7 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommandRequest, L
             _textHasher.Hash(tokens.RefreshToken),
             tokens.RefreshTokenExpiresAt,
             cancellationToken);
+        _logger.LogInformation("Login succeeded for user {UserUuid}.", user.UserUuid);
 
         return new LoginCommandResponse(
             tokens.AccessToken,

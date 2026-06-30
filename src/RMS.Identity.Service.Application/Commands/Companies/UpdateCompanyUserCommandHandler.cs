@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.CompanyUsers;
 using RMS.Identity.Service.Domain.Entities.Companies;
@@ -12,15 +13,18 @@ public sealed class UpdateCompanyUserCommandHandler : ICommandHandler<UpdateComp
     private readonly ICompanyUserReadRepository _companyUserReadRepository;
     private readonly ICompanyUserWriteRepository _companyUserWriteRepository;
     private readonly IAuditLogWriteRepository _auditLogWriteRepository;
+    private readonly ILogger<UpdateCompanyUserCommandHandler> _logger;
 
     public UpdateCompanyUserCommandHandler(
         ICompanyUserReadRepository companyUserReadRepository,
         ICompanyUserWriteRepository companyUserWriteRepository,
-        IAuditLogWriteRepository auditLogWriteRepository)
+        IAuditLogWriteRepository auditLogWriteRepository,
+        ILogger<UpdateCompanyUserCommandHandler> logger)
     {
         _companyUserReadRepository = companyUserReadRepository;
         _companyUserWriteRepository = companyUserWriteRepository;
         _auditLogWriteRepository = auditLogWriteRepository;
+        _logger = logger;
     }
 
     public async Task<UpdateCompanyUserCommandResponse> HandleAsync(
@@ -60,6 +64,12 @@ public sealed class UpdateCompanyUserCommandHandler : ICommandHandler<UpdateComp
             updatedUser.CompanyRole,
             updatedUser.MembershipStatus,
             cancellationToken);
+        _logger.LogInformation(
+            "Updated company user {UserUuid} in company {CompanyUuid} to role {CompanyRole} and status {MembershipStatus}.",
+            command.UserUuid,
+            command.CompanyUuid,
+            updatedUser.CompanyRole,
+            updatedUser.MembershipStatus);
 
         return ToResponse(updatedUser);
     }
@@ -91,6 +101,9 @@ public sealed class UpdateCompanyUserCommandHandler : ICommandHandler<UpdateComp
 
         if (await _companyUserWriteRepository.CountActiveOwnersForUpdateAsync(companyUuid, cancellationToken) <= 1)
         {
+            _logger.LogWarning(
+                "Company user update rejected because company {CompanyUuid} must keep at least one active owner.",
+                companyUuid);
             throw new ApplicationServiceException(ServiceErrorDefinitions.CompanyUsers.LastOwnerRequired);
         }
     }

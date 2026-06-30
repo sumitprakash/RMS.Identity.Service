@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using RMS.Identity.Service.Application.Shared.Errors;
 using RMS.Identity.Service.Domain.Contracts.Refresh;
 using RMS.Identity.Service.Domain.Entities.Auth;
@@ -12,15 +13,18 @@ public sealed class RefreshCommandHandler : ICommandHandler<RefreshCommandReques
     private readonly IAuthenticationRepository _authenticationRepository;
     private readonly IAuthTokenGenerator _authTokenGenerator;
     private readonly ITextHasher _textHasher;
+    private readonly ILogger<RefreshCommandHandler> _logger;
 
     public RefreshCommandHandler(
         IAuthenticationRepository authenticationRepository,
         IAuthTokenGenerator authTokenGenerator,
-        ITextHasher textHasher)
+        ITextHasher textHasher,
+        ILogger<RefreshCommandHandler> logger)
     {
         _authenticationRepository = authenticationRepository;
         _authTokenGenerator = authTokenGenerator;
         _textHasher = textHasher;
+        _logger = logger;
     }
 
     public async Task<RefreshCommandResponse> HandleAsync(RefreshCommandRequest command, CancellationToken cancellationToken)
@@ -32,6 +36,7 @@ public sealed class RefreshCommandHandler : ICommandHandler<RefreshCommandReques
 
         if (session is null || !CanUseRefreshToken(session))
         {
+            _logger.LogWarning("Refresh token rotation rejected because the refresh token session is missing or unusable.");
             throw InvalidRefreshToken();
         }
 
@@ -48,8 +53,12 @@ public sealed class RefreshCommandHandler : ICommandHandler<RefreshCommandReques
 
         if (!rotated)
         {
+            _logger.LogWarning(
+                "Refresh token rotation failed for user {UserUuid} because the token was already changed.",
+                session.User.UserUuid);
             throw InvalidRefreshToken();
         }
+        _logger.LogInformation("Refresh token rotated for user {UserUuid}.", session.User.UserUuid);
 
         return new RefreshCommandResponse(
             tokens.AccessToken,

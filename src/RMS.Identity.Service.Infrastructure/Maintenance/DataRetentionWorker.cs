@@ -25,6 +25,7 @@ public sealed class DataRetentionWorker : BackgroundService
     {
         if (!_options.Enabled)
         {
+            using var disabledScope = BeginCorrelationScope("data-retention-disabled");
             _logger.LogInformation("Data retention worker is disabled.");
             return;
         }
@@ -32,10 +33,11 @@ public sealed class DataRetentionWorker : BackgroundService
         using var timer = new PeriodicTimer(TimeSpan.FromHours(_options.RunIntervalHours));
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
+            using var scope = BeginCorrelationScope($"data-retention-{Guid.NewGuid():N}");
             try
             {
-                using var scope = _scopeFactory.CreateScope();
-                var repository = scope.ServiceProvider.GetRequiredService<DataRetentionRepository>();
+                using var serviceScope = _scopeFactory.CreateScope();
+                var repository = serviceScope.ServiceProvider.GetRequiredService<DataRetentionRepository>();
                 var deleted = await repository.PurgeAsync(_options, stoppingToken);
                 _logger.LogInformation("Data retention purge deleted {DeletedRecordCount} records.", deleted);
             }
@@ -49,4 +51,10 @@ public sealed class DataRetentionWorker : BackgroundService
             }
         }
     }
+
+    private IDisposable? BeginCorrelationScope(string correlationTraceId) =>
+        _logger.BeginScope(new Dictionary<string, object?>
+        {
+            ["CorrelationTraceId"] = correlationTraceId
+        });
 }
