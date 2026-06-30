@@ -18,10 +18,11 @@ public sealed class DatabaseLoggerProvider : ILoggerProvider, ISupportExternalSc
         _options = options;
         _connectionString = connectionString;
         _tableName = IsValidIdentifier(options.TableName) ? options.TableName : "ApplicationLog";
-        _entries = Channel.CreateUnbounded<DatabaseLogEntry>(new UnboundedChannelOptions
+        _entries = Channel.CreateBounded<DatabaseLogEntry>(new BoundedChannelOptions(Math.Max(1, options.QueueCapacity))
         {
             SingleReader = true,
-            SingleWriter = false
+            SingleWriter = false,
+            FullMode = BoundedChannelFullMode.DropWrite
         });
         _writerTask = Task.Run(ProcessQueueAsync);
     }

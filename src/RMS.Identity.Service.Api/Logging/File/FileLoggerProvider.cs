@@ -17,10 +17,11 @@ public sealed class FileLoggerProvider : ILoggerProvider, ISupportExternalScope
         _filePath = System.IO.Path.IsPathFullyQualified(options.Path)
             ? options.Path
             : System.IO.Path.Combine(environment.ContentRootPath, options.Path);
-        _entries = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
+        _entries = Channel.CreateBounded<string>(new BoundedChannelOptions(Math.Max(1, options.QueueCapacity))
         {
             SingleReader = true,
-            SingleWriter = false
+            SingleWriter = false,
+            FullMode = BoundedChannelFullMode.DropWrite
         });
         _writerTask = Task.Run(ProcessQueueAsync);
     }

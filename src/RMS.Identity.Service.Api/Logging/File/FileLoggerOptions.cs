@@ -9,4 +9,6 @@ public sealed class FileLoggerOptions
     public string Path { get; set; } = "logs/application.log";
 
     public LogLevel MinimumLevel { get; set; } = LogLevel.Information;
+
+    public int QueueCapacity { get; set; } = 10000;
 }

@@ -12,6 +12,7 @@ using RMS.Identity.Service.Api.Shared.Correlation;
 using RMS.Identity.Service.Api.Shared.ErrorHandling;
 using RMS.Identity.Service.Api.Shared.Idempotency;
 using RMS.Identity.Service.Api.Shared.Validation;
+using RMS.Identity.Service.Api.Swagger;
 using RMS.Identity.Service.Infrastructure.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -53,6 +54,7 @@ builder.Services.AddSwaggerGen(options =>
         BearerFormat = "JWT",
         Description = "JWT bearer access token."
     });
+    options.OperationFilter<IdentityServiceOperationFilter>();
 });
 var globalRateLimitOptions = builder.Configuration
     .GetSection(GlobalRateLimitOptions.SectionName)
@@ -98,6 +100,15 @@ builder.Services.AddOptions<GlobalRateLimitOptions>()
 builder.Services.AddOptions<CorrelationTraceOptions>()
     .Bind(builder.Configuration.GetSection(CorrelationTraceOptions.SectionName))
     .Validate(options => !string.IsNullOrWhiteSpace(options.ResponseHeaderName), "Correlation trace response header name is required.")
+    .ValidateOnStart();
+builder.Services.AddOptions<RMS.Identity.Service.Api.Logging.File.FileLoggerOptions>()
+    .Bind(builder.Configuration.GetSection(RMS.Identity.Service.Api.Logging.File.FileLoggerOptions.SectionName))
+    .Validate(options => options.QueueCapacity > 0, "File logger queue capacity must be greater than zero.")
+    .ValidateOnStart();
+builder.Services.AddOptions<RMS.Identity.Service.Api.Logging.Database.DatabaseLoggerOptions>()
+    .Bind(builder.Configuration.GetSection(RMS.Identity.Service.Api.Logging.Database.DatabaseLoggerOptions.SectionName))
+    .Validate(options => options.QueueCapacity > 0, "Database logger queue capacity must be greater than zero.")
+    .Validate(options => options.CommandTimeoutSeconds > 0, "Database logger command timeout must be greater than zero.")
     .ValidateOnStart();
 
 builder.Services.AddIdentityServiceInfrastructure(builder.Configuration);
