@@ -1,11 +1,11 @@
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using RMS.Identity.Service.Api.Logging;
+using RMS.Identity.Service.Api.Logging.File;
 
 namespace RMS.Identity.Service.Tests.Logging;
 
-public sealed class ErrorFileLoggerTests
+public sealed class FileLoggerTests
 {
     [Fact]
     public void Log_WithScope_WritesScopeValuesToFile()
@@ -14,30 +14,28 @@ public sealed class ErrorFileLoggerTests
         try
         {
             Directory.CreateDirectory(tempDirectory);
-            using var provider = new ErrorFileLoggerProvider(
-                new ErrorFileLoggerOptions
+            using var provider = new FileLoggerProvider(
+                new FileLoggerOptions
                 {
-                    Path = "errors.log",
-                    MinimumLevel = LogLevel.Error
+                    Path = "application.log",
+                    MinimumLevel = LogLevel.Information
                 },
                 new TestHostEnvironment(tempDirectory));
             var logger = provider.CreateLogger("TestCategory");
 
             using (logger.BeginScope(new Dictionary<string, object?>
                    {
-                       ["CorrelationTraceId"] = "trace-test-1",
-                       ["RequestTraceId"] = "request-test-1"
+                       ["CorrelationTraceId"] = "trace-test-1"
                    }))
             {
-                logger.LogError(new InvalidOperationException("failure"), "Something failed.");
+                logger.LogInformation("Something happened.");
             }
 
             provider.Dispose();
 
-            var log = File.ReadAllText(Path.Combine(tempDirectory, "errors.log"));
+            var log = File.ReadAllText(Path.Combine(tempDirectory, "application.log"));
             Assert.Contains("CorrelationTraceId=trace-test-1", log);
-            Assert.Contains("RequestTraceId=request-test-1", log);
-            Assert.Contains("Something failed.", log);
+            Assert.Contains("Something happened.", log);
         }
         finally
         {
@@ -55,22 +53,22 @@ public sealed class ErrorFileLoggerTests
         try
         {
             Directory.CreateDirectory(tempDirectory);
-            using var provider = new ErrorFileLoggerProvider(
-                new ErrorFileLoggerOptions
+            using var provider = new FileLoggerProvider(
+                new FileLoggerOptions
                 {
-                    Path = "errors.log",
-                    MinimumLevel = LogLevel.Error
+                    Path = "application.log",
+                    MinimumLevel = LogLevel.Information
                 },
                 new TestHostEnvironment(tempDirectory));
             var logger = provider.CreateLogger("TestCategory");
 
-            logger.LogError("Something failed.");
+            logger.LogInformation("Something happened.");
 
             provider.Dispose();
 
-            var log = File.ReadAllText(Path.Combine(tempDirectory, "errors.log"));
+            var log = File.ReadAllText(Path.Combine(tempDirectory, "application.log"));
             Assert.Contains("CorrelationTraceId=unavailable", log);
-            Assert.Contains("Something failed.", log);
+            Assert.Contains("Something happened.", log);
         }
         finally
         {
@@ -80,7 +78,6 @@ public sealed class ErrorFileLoggerTests
             }
         }
     }
-
 
     private sealed class TestHostEnvironment : IHostEnvironment
     {

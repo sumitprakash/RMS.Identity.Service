@@ -9,17 +9,18 @@ namespace RMS.Identity.Service.Tests.Middleware;
 public sealed class CorrelationTraceMiddlewareTests
 {
     [Fact]
-    public async Task InvokeAsync_WithIncomingCorrelationTrace_StoresScopesAndEchoesResponseHeader()
+    public async Task InvokeAsync_WithIncomingCorrelationTrace_IgnoresClientValueAndReturnsGeneratedTrace()
     {
-        const string correlationTraceId = "client-trace-1";
+        const string clientCorrelationTraceId = "client-trace-1";
         var context = new DefaultHttpContext();
-        context.Request.Headers["X-Correlation-Trace-ID"] = correlationTraceId;
+        context.Request.Headers["X-Correlation-Trace-ID"] = clientCorrelationTraceId;
         context.Response.Body = new MemoryStream();
         var middleware = new CorrelationTraceMiddleware(
             async nextContext =>
             {
-                Assert.Equal(correlationTraceId, nextContext.TraceIdentifier);
-                Assert.Equal(correlationTraceId, CorrelationTraceContext.GetCorrelationTraceId(nextContext));
+                Assert.False(string.IsNullOrWhiteSpace(nextContext.TraceIdentifier));
+                Assert.NotEqual(clientCorrelationTraceId, nextContext.TraceIdentifier);
+                Assert.Equal(nextContext.TraceIdentifier, CorrelationTraceContext.GetCorrelationTraceId(nextContext));
                 await nextContext.Response.WriteAsync("ok");
             },
             Options.Create(new CorrelationTraceOptions()),
@@ -28,7 +29,9 @@ public sealed class CorrelationTraceMiddlewareTests
         await middleware.InvokeAsync(context);
         await context.Response.StartAsync();
 
-        Assert.Equal(correlationTraceId, context.Response.Headers["X-Correlation-Trace-ID"]);
+        var responseCorrelationTraceId = context.Response.Headers["X-Correlation-Trace-ID"].ToString();
+        Assert.NotEqual(clientCorrelationTraceId, responseCorrelationTraceId);
+        Assert.False(string.IsNullOrWhiteSpace(responseCorrelationTraceId));
     }
 
     [Fact]

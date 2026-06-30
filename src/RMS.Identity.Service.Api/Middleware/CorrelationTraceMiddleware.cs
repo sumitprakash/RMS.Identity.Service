@@ -23,8 +23,7 @@ public sealed class CorrelationTraceMiddleware
     public async Task InvokeAsync(HttpContext context)
     {
         var stopwatch = Stopwatch.StartNew();
-        var correlationTraceId = ResolveCorrelationTraceId(context);
-        var originalTraceIdentifier = context.TraceIdentifier;
+        var correlationTraceId = ResolveCorrelationTraceId();
         context.TraceIdentifier = correlationTraceId;
         context.Items[CorrelationTraceContext.ItemKey] = correlationTraceId;
         context.Response.Headers[_options.ResponseHeaderName] = correlationTraceId;
@@ -36,10 +35,7 @@ public sealed class CorrelationTraceMiddleware
 
         using var scope = _logger.BeginScope(new Dictionary<string, object?>
         {
-            ["CorrelationTraceId"] = correlationTraceId,
-            ["RequestTraceId"] = originalTraceIdentifier,
-            ["ActivityTraceId"] = Activity.Current?.TraceId.ToString(),
-            ["ActivitySpanId"] = Activity.Current?.SpanId.ToString()
+            ["CorrelationTraceId"] = correlationTraceId
         });
 
         await _next(context);
@@ -53,33 +49,11 @@ public sealed class CorrelationTraceMiddleware
             stopwatch.ElapsedMilliseconds);
     }
 
-    private string ResolveCorrelationTraceId(HttpContext context)
+    private static string ResolveCorrelationTraceId()
     {
-        if (context.Request.Headers.TryGetValue(_options.RequestHeaderName, out var headerValues))
-        {
-            var headerValue = headerValues.FirstOrDefault();
-            if (IsValidCorrelationTraceId(headerValue))
-            {
-                return headerValue!;
-            }
-        }
-
         var activityTraceId = Activity.Current?.TraceId.ToString();
         return !string.IsNullOrWhiteSpace(activityTraceId)
             ? activityTraceId
             : Guid.NewGuid().ToString("N");
-    }
-
-    private bool IsValidCorrelationTraceId(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value)
-            || value.Length > _options.MaxLength)
-        {
-            return false;
-        }
-
-        return value.All(static character =>
-            char.IsAsciiLetterOrDigit(character)
-            || character is '-' or '_' or '.' or ':');
     }
 }

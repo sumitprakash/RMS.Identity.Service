@@ -15,7 +15,8 @@ using RMS.Identity.Service.Api.Shared.Validation;
 using RMS.Identity.Service.Infrastructure.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Logging.AddErrorFileLogger(builder.Configuration, builder.Environment);
+builder.Logging.AddFileLogger(builder.Configuration, builder.Environment);
+builder.Logging.AddDatabaseLogger(builder.Configuration);
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.Limits.MaxRequestBodySize = 64 * 1024;
@@ -96,9 +97,7 @@ builder.Services.AddOptions<GlobalRateLimitOptions>()
     .ValidateOnStart();
 builder.Services.AddOptions<CorrelationTraceOptions>()
     .Bind(builder.Configuration.GetSection(CorrelationTraceOptions.SectionName))
-    .Validate(options => !string.IsNullOrWhiteSpace(options.RequestHeaderName), "Correlation trace request header name is required.")
     .Validate(options => !string.IsNullOrWhiteSpace(options.ResponseHeaderName), "Correlation trace response header name is required.")
-    .Validate(options => options.MaxLength > 0, "Correlation trace max length must be greater than zero.")
     .ValidateOnStart();
 
 builder.Services.AddIdentityServiceInfrastructure(builder.Configuration);

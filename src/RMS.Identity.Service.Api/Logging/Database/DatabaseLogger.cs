@@ -1,14 +1,13 @@
-using System.Globalization;
-using Microsoft.Extensions.Logging;
+using RMS.Identity.Service.Api.Logging.Common;
 
-namespace RMS.Identity.Service.Api.Logging;
+namespace RMS.Identity.Service.Api.Logging.Database;
 
-public sealed class ErrorFileLogger : ILogger
+public sealed class DatabaseLogger : ILogger
 {
     private readonly string _categoryName;
-    private readonly ErrorFileLoggerProvider _provider;
+    private readonly DatabaseLoggerProvider _provider;
 
-    public ErrorFileLogger(string categoryName, ErrorFileLoggerProvider provider)
+    public DatabaseLogger(string categoryName, DatabaseLoggerProvider provider)
     {
         _categoryName = categoryName;
         _provider = provider;
@@ -40,9 +39,13 @@ public sealed class ErrorFileLogger : ILogger
             return;
         }
 
-        _provider.Enqueue(
-            string.Create(
-                CultureInfo.InvariantCulture,
-                $"{DateTimeOffset.UtcNow:O} [{logLevel}] {_categoryName} [{eventId.Id}]{_provider.GetScopeText()} {message}{Environment.NewLine}{exception}{Environment.NewLine}"));
+        _provider.Enqueue(new DatabaseLogEntry(
+            DateTimeOffset.UtcNow,
+            logLevel,
+            _categoryName,
+            eventId.Id,
+            LogScopeFormatter.Capture(_provider.ScopeProvider),
+            message,
+            exception?.ToString()));
     }
 }

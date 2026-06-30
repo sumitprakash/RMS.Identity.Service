@@ -19,6 +19,8 @@ public class TestDatabaseWebApplicationFactory : WebApplicationFactory<Program>
                 ["ConnectionStrings:Default"] = ConnectionString,
                 ["Jwt:SigningKey"] = "replace-this-development-signing-key-with-a-secure-secret",
                 ["Jwt:SigningKeyEnvVar"] = string.Empty,
+                ["FileLogging:Enabled"] = "false",
+                ["DatabaseLogging:Enabled"] = "false",
                 ["RateLimiting:Global:Enabled"] = "false"
             });
         });
