@@ -80,9 +80,9 @@ CREATE TABLE CompanyUser (
   UpdatedAt TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   UpdatedBy BIGINT NULL,
   UNIQUE KEY ux_company_user (CompanyID, UserID),
-  KEY ix_companyuser_company (CompanyID),
   KEY ix_companyuser_user (UserID),
-  KEY ix_companyuser_role (CompanyRole)
+  KEY ix_companyuser_role (CompanyRole),
+  KEY ix_companyuser_company_role_status (CompanyID, CompanyRole, MembershipStatus)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =========================================================
@@ -127,7 +127,8 @@ CREATE TABLE RefreshToken (
   ReplacedByTokenHash VARCHAR(512) NULL,
   UNIQUE KEY ux_refresh_token_hash (TokenHash),
   KEY ix_refresh_userid (UserID),
-  KEY ix_refresh_expiry (ExpiresAt)
+  KEY ix_refresh_expiry (ExpiresAt),
+  KEY ix_refresh_revoked (RevokedAt)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =========================================================
@@ -142,7 +143,7 @@ CREATE TABLE EmailVerification (
   CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   Consumed TINYINT(1) NOT NULL DEFAULT 0,
   KEY ix_ev_userid (UserID),
-  KEY ix_ev_tokenhash (TokenHash),
+  KEY ix_ev_tokenhash_purpose (TokenHash, Purpose),
   KEY ix_ev_created (CreatedAt)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -176,9 +177,9 @@ CREATE TABLE Outbox (
   Retries INT NOT NULL DEFAULT 0,
   CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   AvailableAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  KEY ix_outbox_status (Status),
   KEY ix_outbox_available (AvailableAt),
-  KEY ix_outbox_status_created (Status, CreatedAt)
+  KEY ix_outbox_status_created (Status, CreatedAt),
+  KEY ix_outbox_claim (EventType, Status, AvailableAt, Retries, OutboxID)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =========================================================
