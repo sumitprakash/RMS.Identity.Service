@@ -13,7 +13,7 @@ Company registration is a separate authenticated flow:
 3. Client calls `GET /api/v1/current-user/companies`.
 4. User registers a company with `POST /api/v1/companies`.
 
-Email verification or other account activation flows are outside the scope of this company registration change.
+Email verification is completed through `POST /api/v1/users/verify-email`.
 
 ## 2. Endpoint Summary
 
@@ -42,7 +42,7 @@ Email verification or other account activation flows are outside the scope of th
   "firstName": "First",
   "middleName": "Middle",
   "lastName": "Last",
-  "phoneNumber": "+919876543210"
+  "phoneNumber": "9876543210"
 }
 ```
 
@@ -51,11 +51,11 @@ Email verification or other account activation flows are outside the scope of th
 | Field | Rules |
 | --- | --- |
 | `emailAddress` | Required, valid email, globally unique |
-| `password` | Required, minimum 8 characters |
-| `firstName` | Required |
+| `password` | Required, 8-128 characters, must include uppercase, digit, and one of `@#$&=` |
+| `firstName` | Required, not whitespace-only |
 | `middleName` | Optional |
-| `lastName` | Required |
-| `phoneNumber` | Required, valid phone number |
+| `lastName` | Required, not whitespace-only |
+| `phoneNumber` | Required, exactly 10 digits |
 
 ## 4. Successful Response
 
@@ -76,7 +76,7 @@ Email verification or other account activation flows are outside the scope of th
 - The validated phone number is stored on the user account.
 - `UserAccount.CompanyID` remains `NULL`; it is not the source of company membership.
 - No company or `CompanyUser` membership is created during signup.
-- User remains `pending` until a future account activation flow updates it.
+- User remains `pending` until email verification succeeds.
 
 ## 5. Error Responses
 

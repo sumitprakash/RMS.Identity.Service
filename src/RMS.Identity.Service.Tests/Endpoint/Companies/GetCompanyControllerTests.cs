@@ -60,6 +60,9 @@ public sealed class GetCompanyControllerTests
         }
 
         public Guid ResolveRequiredUserUuid(HttpContext context) => _userUuid;
+
+        public AccessTokenUser ResolveRequiredUser(HttpContext context) =>
+            new(_userUuid, "owner@example.com");
     }
 
     private sealed class StubCompanyAccessAuthorizer : ICompanyAccessAuthorizer

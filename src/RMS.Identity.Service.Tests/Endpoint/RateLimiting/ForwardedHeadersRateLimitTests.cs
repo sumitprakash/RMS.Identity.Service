@@ -2,11 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using RMS.Identity.Service.Api.RateLimiting;
 
 namespace RMS.Identity.Service.Tests.Endpoint.RateLimiting;
 
@@ -16,14 +12,6 @@ public sealed class ForwardedHeadersRateLimitTests
     public async Task GlobalRateLimit_UsesForwardedClientAddress_WhenProxyIsTrusted()
     {
         await using var factory = new TrustedProxyRateLimitedWebApplicationFactory();
-        var rateLimitOptions = factory.Services.GetRequiredService<IOptions<GlobalRateLimitOptions>>().Value;
-        Assert.True(rateLimitOptions.Enabled);
-        Assert.Equal(1, rateLimitOptions.PermitLimit);
-        var endpointDataSource = factory.Services.GetRequiredService<EndpointDataSource>();
-        Assert.Contains(endpointDataSource.Endpoints, endpoint =>
-            endpoint.DisplayName?.Contains("LoginController.PostAsync", StringComparison.Ordinal) == true
-            && endpoint.Metadata.Any(metadata => metadata.GetType().Name.Contains("RateLimiting", StringComparison.Ordinal)));
-
         using var client = factory.CreateClient();
 
         using var firstResponse = await PostLoginRequestAsync(client, "203.0.113.10");

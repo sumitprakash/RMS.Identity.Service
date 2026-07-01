@@ -332,7 +332,8 @@ Common examples:
 - Company access is not trusted from JWT claims. It is checked against the database.
 - Platform-admin authorization checks `UserRole` membership for `PLATFORM_ADMIN`.
 - Request DTOs reject unexpected JSON fields where the OpenAPI schema is closed.
-- Login and refresh endpoints are rate limited per client IP.
+- Mapped HTTP endpoints are globally rate limited per client IP.
+- When the service runs behind a reverse proxy or load balancer, forwarded client headers are trusted only from configured known proxies or networks.
 - Unknown-user login attempts perform a BCrypt operation to reduce username timing differences.
 
 ## Configuration
@@ -384,6 +385,27 @@ Important options:
 - `MaxRetries`
 - `RetryDelaySeconds`
 - `ProcessingTimeoutSeconds`
+
+### Rate Limiting and Forwarded Headers
+
+`RateLimiting:Global` controls the fixed-window global API limiter. The limiter partitions requests by `HttpContext.Connection.RemoteIpAddress`.
+
+When the API is deployed behind a reverse proxy or load balancer, configure `ForwardedHeaders` so ASP.NET Core updates `RemoteIpAddress` from trusted `X-Forwarded-For` headers before rate limiting runs.
+
+Important options:
+
+- `RateLimiting:Global:Enabled`
+- `RateLimiting:Global:PermitLimit`
+- `RateLimiting:Global:WindowSeconds`
+- `RateLimiting:Global:QueueLimit`
+- `RateLimiting:Global:AutoReplenishment`
+- `RateLimiting:Global:RejectionMessage`
+- `ForwardedHeaders:Enabled`
+- `ForwardedHeaders:ForwardLimit`
+- `ForwardedHeaders:KnownProxies`
+- `ForwardedHeaders:KnownNetworks`
+
+Set `KnownProxies` or `KnownNetworks` to the actual proxy IP addresses or CIDR ranges for non-local deployments. Do not trust arbitrary forwarded headers from the public internet.
 
 ### Data Retention
 
@@ -492,7 +514,6 @@ The OpenAPI file is the machine-readable contract. The docs files explain specif
 - Use `ConnectionStrings__Default` for production database configuration.
 - Use `JWT_SIGNING_KEY` for production JWT signing key material.
 - Keep production secrets out of committed JSON files.
-- Apply `reference/db/migrations/20260625_review_fixes.sql` once when upgrading an existing database.
 - Use a canonical schema database for integration tests.
 - Mutating endpoint handlers should either run under idempotency middleware or explicitly open a transaction.
 - Any repository that calls `IDatabaseTransactionAccessor.GetCurrent()` requires an active `IDatabaseTransactionExecutor` scope.
@@ -513,13 +534,12 @@ Currently out of scope for this service:
 
 ## Current Validation Baseline
 
-The review-fix branch was validated with:
+The current service branch was validated with:
 
 ```text
-dotnet build src\RMS.Identity.Service.sln --configuration Release --no-restore -v minimal
-dotnet test src\RMS.Identity.Service.Tests\RMS.Identity.Service.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName!~SignUpEndpointTests&FullyQualifiedName!~CompanyEndpointTests" -v minimal
+dotnet build src\RMS.Identity.Service.Api\RMS.Identity.Service.Api.csproj -v minimal
+dotnet test src\RMS.Identity.Service.Tests\RMS.Identity.Service.Tests.csproj -v minimal
 ```
 
-The release build passes with zero warnings, all 85 non-database tests pass,
-and all 108 tests pass against an isolated MySQL 8.4 database initialized from
-the updated `reference/db/sql_schema.sql`.
+The API build passes with zero warnings, and all 123 tests pass against the
+current test configuration.
