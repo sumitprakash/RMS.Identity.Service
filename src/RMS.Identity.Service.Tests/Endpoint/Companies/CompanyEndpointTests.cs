@@ -215,7 +215,7 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
     }
 
     [Fact]
-    public async Task GetCompany_WithUnknownCompany_ReturnsNotFound()
+    public async Task GetCompany_WithUnknownCompany_ReturnsForbidden()
     {
         await _factory.EnsureCompanySchemaAsync();
 
@@ -229,10 +229,10 @@ public sealed class CompanyEndpointTests : IClassFixture<TestDatabaseWebApplicat
             using var client = CreateAuthorizedClient(userUuid);
 
             using var response = await client.GetAsync($"/api/v1/companies/{Guid.NewGuid()}");
-            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
             var json = await response.Content.ReadAsStringAsync();
-            Assert.Contains("\"code\":\"404-4-1\"", json);
+            Assert.Contains("\"code\":\"403-2-7\"", json);
         }
         finally
         {

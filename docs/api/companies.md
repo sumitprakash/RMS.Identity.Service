@@ -72,7 +72,7 @@ An empty `companies` array means the user does not currently belong to any compa
   "tradeName": "Example Retail",
   "gstin": "29ABCDE1234F1Z5",
   "contactEmailAddress": "accounts@example.com",
-  "contactPhoneNumber": "+919876543211",
+  "contactPhoneNumber": "9876543211",
   "addressLine1": "1 Main Road",
   "addressLine2": "Near Market",
   "city": "Bengaluru",
@@ -86,17 +86,17 @@ An empty `companies` array means the user does not currently belong to any compa
 
 | Field | Rules |
 | --- | --- |
-| `legalName` | Required |
+| `legalName` | Required, not whitespace-only |
 | `tradeName` | Optional |
 | `gstin` | Required, valid GSTIN, globally unique |
 | `contactEmailAddress` | Required, valid email |
-| `contactPhoneNumber` | Required, valid phone number |
-| `addressLine1` | Required |
+| `contactPhoneNumber` | Required, exactly 10 digits |
+| `addressLine1` | Required, not whitespace-only |
 | `addressLine2` | Optional |
-| `city` | Required |
-| `state` | Required |
-| `postalCode` | Required |
-| `country` | Required, default client value should be `IN` |
+| `city` | Required, not whitespace-only |
+| `state` | Required, not whitespace-only |
+| `postalCode` | Required, exactly 6 digits |
+| `country` | Server-managed, defaults to `IN` |
 
 ## 5. Register Company Successful Response
 
@@ -181,7 +181,7 @@ If membership creation fails after company creation, the transaction must roll b
 - GSTIN ownership verification workflow.
 - General forgotten-password reset.
 - Operational/job permissions such as cashier, inventory, billing, and reporting.
-- Company approval/rejection implementation beyond initial `pending_verification` status.
+- Automated GSTIN ownership verification. Manual company status changes are handled by the platform-admin status endpoint.
 
 ## 10. Company-created User Activation
 
@@ -197,7 +197,7 @@ Content-Type: application/json
 
 ```json
 {
-  "token": "verification-token",
+  "token": "0123456789abcdef0123456789abcdef",
   "password": "StrongPass@123"
 }
 ```

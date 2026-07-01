@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
@@ -18,6 +19,19 @@ public sealed class JwtAccessTokenUserResolver : IAccessTokenUserResolver
 
     public Guid ResolveRequiredUserUuid(HttpContext context)
     {
+        return ResolveRequiredUser(context).UserUuid;
+    }
+
+    public AccessTokenUser ResolveRequiredUser(HttpContext context)
+    {
+        var authenticatedUserUuid = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (Guid.TryParse(authenticatedUserUuid, out var resolvedUserUuid))
+        {
+            return new AccessTokenUser(
+                resolvedUserUuid,
+                context.User.FindFirstValue(ClaimTypes.Name));
+        }
+
         var authorizationHeader = context.Request.Headers.Authorization.ToString();
         if (string.IsNullOrWhiteSpace(authorizationHeader)
             || !authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
@@ -76,7 +90,7 @@ public sealed class JwtAccessTokenUserResolver : IAccessTokenUserResolver
                 throw Unauthorized("Authorization bearer token is invalid.");
             }
 
-            return userUuid;
+            return new AccessTokenUser(userUuid, GetOptionalStringClaim(root, "username"));
         }
         catch (ServiceException)
         {
@@ -107,6 +121,11 @@ public sealed class JwtAccessTokenUserResolver : IAccessTokenUserResolver
             && claim.ValueKind == JsonValueKind.Number
             && claim.TryGetInt64(out value);
     }
+
+    private static string? GetOptionalStringClaim(JsonElement root, string claimName) =>
+        root.TryGetProperty(claimName, out var claim) && claim.ValueKind == JsonValueKind.String
+            ? claim.GetString()
+            : null;
 
     private static byte[] Base64UrlDecode(string value)
     {

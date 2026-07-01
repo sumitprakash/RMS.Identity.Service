@@ -15,16 +15,18 @@ public sealed class ListCompanyUsersCommandHandlerTests
         var handler = new ListCompanyUsersCommandHandler(new FakeCompanyUserReadRepository(new[]
         {
             CreateUser(Guid.NewGuid(), "owner@example.com", "OWNER", "active", emailVerified: true),
-            CreateUser(Guid.NewGuid(), "cashier@example.com", "MEMBER", "suspended", emailVerified: true)
+            CreateUser(Guid.NewGuid(), "cashier@example.com", "MEMBER", "suspended", emailVerified: true),
+            CreateUser(Guid.NewGuid(), "invitee@example.com", "MEMBER", "invited", emailVerified: true)
         }));
 
         var response = await handler.HandleAsync(
             new ListCompanyUsersCommandRequest(CompanyUuid),
             CancellationToken.None);
 
-        Assert.Equal(2, response.Users.Count);
+        Assert.Equal(3, response.Users.Count);
         Assert.Contains(response.Users, user => user.Username == "owner@example.com" && user.Status == "active");
         Assert.Contains(response.Users, user => user.Username == "cashier@example.com" && user.Status == "suspended");
+        Assert.Contains(response.Users, user => user.Username == "invitee@example.com" && user.Status == "pending");
     }
 
     private static CompanyUserAccount CreateUser(

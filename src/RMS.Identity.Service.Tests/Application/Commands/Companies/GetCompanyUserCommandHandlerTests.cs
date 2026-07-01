@@ -67,6 +67,19 @@ public sealed class GetCompanyUserCommandHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_WithInvitedVerifiedCompanyUser_ReturnsPendingStatus()
+    {
+        var handler = new GetCompanyUserCommandHandler(new FakeCompanyUserReadRepository(
+            CreateUser(emailVerified: true, isActive: true, membershipStatus: "invited")));
+
+        var response = await handler.HandleAsync(
+            new GetCompanyUserCommandRequest(CompanyUuid, UserUuid),
+            CancellationToken.None);
+
+        Assert.Equal("pending", response.Status);
+    }
+
+    [Fact]
     public async Task HandleAsync_WithMissingCompanyUser_ThrowsNotFound()
     {
         var handler = new GetCompanyUserCommandHandler(new FakeCompanyUserReadRepository(null));

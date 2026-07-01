@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using RMS.Identity.Service.Api.Shared.Validation;
 
 namespace RMS.Identity.Service.Api.Endpoint.Users.VerifyEmail;
 
@@ -7,6 +8,7 @@ namespace RMS.Identity.Service.Api.Endpoint.Users.VerifyEmail;
 public sealed class VerifyEmailRequestBody
 {
     [Required]
+    [NotEmptyOrWhiteSpace]
     [MinLength(32)]
     [MaxLength(256)]
     public required string Token { get; init; }

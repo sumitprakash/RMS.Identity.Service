@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RMS.Identity.Service.Domain.Contracts.Login;
 using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
@@ -5,6 +6,7 @@ using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 namespace RMS.Identity.Service.Api.Endpoint.Auth.Login;
 
 [ApiController]
+[AllowAnonymous]
 [Route("api/v1/auth/login")]
 public sealed class LoginController : ControllerBase
 {

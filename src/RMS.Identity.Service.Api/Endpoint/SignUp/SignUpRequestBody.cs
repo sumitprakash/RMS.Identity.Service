@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using RMS.Identity.Service.Api.Shared.Validation;
 
 namespace RMS.Identity.Service.Api.Endpoint.SignUp;
 
@@ -19,6 +20,7 @@ public sealed class SignUpRequestBody
     public required string Password { get; init; }
 
     [Required]
+    [NotEmptyOrWhiteSpace]
     [MinLength(2)]
     [MaxLength(32)]
     public required string FirstName { get; init; }
@@ -28,6 +30,7 @@ public sealed class SignUpRequestBody
     public string? MiddleName { get; init; }
 
     [Required]
+    [NotEmptyOrWhiteSpace]
     [MinLength(2)]
     [MaxLength(32)]
     public required string LastName { get; init; }

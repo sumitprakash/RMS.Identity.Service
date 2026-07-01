@@ -44,10 +44,6 @@ public sealed class GetCompanyUserController : ControllerBase
         var user = await _databaseTransactionExecutor.ExecuteAsync(
             async transactionCancellationToken =>
             {
-                var loadedUser = await _getCompanyUserCommandHandler.HandleAsync(
-                    new GetCompanyUserCommandRequest(companyUuid, userUuid),
-                    transactionCancellationToken);
-
                 if (actorUserUuid == userUuid)
                 {
                     await _companyAccessAuthorizer.AuthorizeMembershipAsync(
@@ -63,6 +59,10 @@ public sealed class GetCompanyUserController : ControllerBase
                         CompanyUserReaderRoles,
                         transactionCancellationToken);
                 }
+
+                var loadedUser = await _getCompanyUserCommandHandler.HandleAsync(
+                    new GetCompanyUserCommandRequest(companyUuid, userUuid),
+                    transactionCancellationToken);
 
                 return loadedUser;
             },
