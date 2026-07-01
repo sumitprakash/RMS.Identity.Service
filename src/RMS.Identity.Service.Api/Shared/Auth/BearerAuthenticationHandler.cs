@@ -31,13 +31,19 @@ public sealed class BearerAuthenticationHandler : AuthenticationHandler<Authenti
 
         try
         {
-            var userUuid = _accessTokenUserResolver.ResolveRequiredUserUuid(Context);
-            var claims = new[]
+            var user = _accessTokenUserResolver.ResolveRequiredUser(Context);
+            var userUuid = user.UserUuid.ToString();
+            var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, userUuid.ToString()),
-                new Claim(ClaimTypes.Name, userUuid.ToString()),
-                new Claim("sub", userUuid.ToString())
+                new(ClaimTypes.NameIdentifier, userUuid),
+                new("sub", userUuid)
             };
+
+            if (!string.IsNullOrWhiteSpace(user.Username))
+            {
+                claims.Add(new Claim(ClaimTypes.Name, user.Username));
+            }
+
             var identity = new ClaimsIdentity(claims, Scheme.Name);
             var principal = new ClaimsPrincipal(identity);
             var ticket = new AuthenticationTicket(principal, Scheme.Name);
