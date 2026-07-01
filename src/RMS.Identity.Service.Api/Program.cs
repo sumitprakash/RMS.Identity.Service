@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi;
 using RMS.Identity.Service.Api.Endpoint.SignUp;
@@ -44,6 +45,12 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 });
 
 builder.Services.AddEndpointsApiExplorer();
+builder.Services
+    .AddAuthentication(BearerAuthenticationDefaults.Scheme)
+    .AddScheme<AuthenticationSchemeOptions, BearerAuthenticationHandler>(
+        BearerAuthenticationDefaults.Scheme,
+        options => { });
+builder.Services.AddAuthorization();
 builder.Services.AddSwaggerGen(options =>
 {
     options.CustomSchemaIds(type => type.FullName?.Replace('+', '.') ?? type.Name);
@@ -124,6 +131,8 @@ var app = builder.Build();
 app.UseMiddleware<CorrelationTraceMiddleware>();
 app.UseMiddleware<ApiExceptionHandlingMiddleware>();
 app.UseRateLimiter();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseMiddleware<IdempotencyMiddleware>();
 
 if (app.Environment.IsDevelopment())
@@ -133,7 +142,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.MapControllers();
+app.MapControllers().RequireAuthorization();
 app.MapGet("/", () => Results.Ok(new { service = "RMS.Identity.Service", version = "1.0.0" }));
 
 app.Run();

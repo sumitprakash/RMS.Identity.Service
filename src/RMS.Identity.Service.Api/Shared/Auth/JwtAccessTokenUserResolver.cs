@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
@@ -18,6 +19,12 @@ public sealed class JwtAccessTokenUserResolver : IAccessTokenUserResolver
 
     public Guid ResolveRequiredUserUuid(HttpContext context)
     {
+        var authenticatedUserUuid = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (Guid.TryParse(authenticatedUserUuid, out var resolvedUserUuid))
+        {
+            return resolvedUserUuid;
+        }
+
         var authorizationHeader = context.Request.Headers.Authorization.ToString();
         if (string.IsNullOrWhiteSpace(authorizationHeader)
             || !authorizationHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))

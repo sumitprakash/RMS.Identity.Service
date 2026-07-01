@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RMS.Identity.Service.Domain.Contracts.VerifyEmail;
 using RMS.Identity.Service.Domain.Interfaces.Persistence;
@@ -6,6 +7,7 @@ using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 namespace RMS.Identity.Service.Api.Endpoint.Users.VerifyEmail;
 
 [ApiController]
+[AllowAnonymous]
 [Route("api/v1/users/verify-email")]
 public sealed class VerifyEmailController : ControllerBase
 {

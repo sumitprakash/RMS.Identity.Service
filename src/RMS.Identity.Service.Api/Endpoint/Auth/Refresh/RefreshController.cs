@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RMS.Identity.Service.Domain.Contracts.Refresh;
 using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
@@ -5,6 +6,7 @@ using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 namespace RMS.Identity.Service.Api.Endpoint.Auth.Refresh;
 
 [ApiController]
+[AllowAnonymous]
 [Route("api/v1/auth/refresh")]
 public sealed class RefreshController : ControllerBase
 {

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RMS.Identity.Service.Domain.Contracts.SignUp;
 using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
@@ -5,6 +6,7 @@ using RMS.Identity.Service.Infrastructure.Abstractions.Cqrs;
 namespace RMS.Identity.Service.Api.Endpoint.SignUp;
 
 [ApiController]
+[AllowAnonymous]
 [Route("api/v1/signup")]
 public sealed class SignUpController : ControllerBase
 {
