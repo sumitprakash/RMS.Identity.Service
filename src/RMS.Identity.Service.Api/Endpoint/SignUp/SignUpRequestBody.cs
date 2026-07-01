@@ -20,7 +20,7 @@ public sealed class SignUpRequestBody
     public required string Password { get; init; }
 
     [Required]
-    [NotBlank]
+    [NotEmptyOrWhiteSpace]
     [MinLength(2)]
     [MaxLength(32)]
     public required string FirstName { get; init; }
@@ -30,7 +30,7 @@ public sealed class SignUpRequestBody
     public string? MiddleName { get; init; }
 
     [Required]
-    [NotBlank]
+    [NotEmptyOrWhiteSpace]
     [MinLength(2)]
     [MaxLength(32)]
     public required string LastName { get; init; }

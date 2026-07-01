@@ -3,11 +3,11 @@ using System.ComponentModel.DataAnnotations;
 namespace RMS.Identity.Service.Api.Shared.Validation;
 
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter)]
-public sealed class NotBlankAttribute : ValidationAttribute
+public sealed class NotEmptyOrWhiteSpaceAttribute : ValidationAttribute
 {
-    public NotBlankAttribute()
+    public NotEmptyOrWhiteSpaceAttribute()
     {
-        ErrorMessage = "The {0} field must not be blank.";
+        ErrorMessage = "The {0} field must not be empty or whitespace.";
     }
 
     public override bool IsValid(object? value) =>

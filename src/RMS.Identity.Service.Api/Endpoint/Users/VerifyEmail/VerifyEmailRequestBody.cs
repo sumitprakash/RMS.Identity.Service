@@ -8,7 +8,7 @@ namespace RMS.Identity.Service.Api.Endpoint.Users.VerifyEmail;
 public sealed class VerifyEmailRequestBody
 {
     [Required]
-    [NotBlank]
+    [NotEmptyOrWhiteSpace]
     [MinLength(32)]
     [MaxLength(256)]
     public required string Token { get; init; }
